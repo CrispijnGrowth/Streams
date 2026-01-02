@@ -188,7 +188,7 @@ export function Timeline({
       <div className="relative flex">
         <div
           ref={containerRef}
-          className="flex-1 relative h-24 bg-card rounded-lg border overflow-hidden"
+          className="flex-1 relative h-24 bg-card rounded-lg border overflow-visible"
         >
           <div className="absolute inset-0 flex">
             {monthMarkers.map((marker, i) => {

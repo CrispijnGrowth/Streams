@@ -94,7 +94,8 @@ export function TimelineBall({
       </TooltipTrigger>
       <TooltipContent
         side="top"
-        className="min-w-64 max-w-sm p-4 space-y-2"
+        sideOffset={8}
+        className="min-w-64 max-w-sm p-4 space-y-2 z-[100]"
         data-testid={`tooltip-${id}`}
       >
         <div className="space-y-1">
