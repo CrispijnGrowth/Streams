@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Switch, Route, useLocation, useRoute } from "wouter";
+import { Switch, Route, useLocation, useRoute, Link } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -8,12 +8,8 @@ import { ThemeProvider } from "@/lib/theme-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { DescriptionsToggle } from "@/components/descriptions-toggle";
 import { BreadcrumbNav } from "@/components/breadcrumb-nav";
-import { AppSidebar } from "@/components/app-sidebar";
-import {
-  SidebarProvider,
-  SidebarTrigger,
-  SidebarInset,
-} from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
+import { Layers, LayoutGrid } from "lucide-react";
 import { StreamsOverview } from "@/pages/streams-overview";
 import { StreamView } from "@/pages/stream-view";
 import { DeliverableView } from "@/pages/deliverable-view";
@@ -117,6 +113,37 @@ function Router({ showDescriptions }: { showDescriptions: boolean }) {
   );
 }
 
+function TopNav() {
+  const [location] = useLocation();
+
+  return (
+    <nav className="flex items-center gap-1">
+      <Link href="/">
+        <Button
+          variant={location === "/" ? "secondary" : "ghost"}
+          size="sm"
+          className="gap-2"
+          data-testid="nav-streams"
+        >
+          <Layers className="h-4 w-4" />
+          <span>Streams</span>
+        </Button>
+      </Link>
+      <Link href="/kanban">
+        <Button
+          variant={location === "/kanban" ? "secondary" : "ghost"}
+          size="sm"
+          className="gap-2"
+          data-testid="nav-kanban"
+        >
+          <LayoutGrid className="h-4 w-4" />
+          <span>Kanban</span>
+        </Button>
+      </Link>
+    </nav>
+  );
+}
+
 function AppContent() {
   const [showDescriptions, setShowDescriptions] = useState(() => {
     if (typeof window !== "undefined") {
@@ -150,35 +177,30 @@ function AppContent() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleToggleDescriptions]);
 
-  const sidebarStyle = {
-    "--sidebar-width": "14rem",
-    "--sidebar-width-icon": "3rem",
-  };
-
   return (
-    <SidebarProvider style={sidebarStyle as React.CSSProperties}>
-      <div className="flex h-screen w-full">
-        <AppSidebar />
-        <SidebarInset className="flex flex-col flex-1 overflow-hidden">
-          <header className="flex items-center justify-between gap-2 p-2 border-b bg-background sticky top-0 z-50">
-            <div className="flex items-center gap-2">
-              <SidebarTrigger data-testid="button-sidebar-toggle" />
+    <div className="flex flex-col h-screen w-full">
+      <header className="flex items-center justify-between gap-4 px-4 py-2 border-b bg-background sticky top-0 z-50">
+        <div className="flex items-center gap-4">
+          <TopNav />
+          {items.length > 0 && (
+            <>
+              <div className="h-4 w-px bg-border" />
               <BreadcrumbNav items={items} onUpLevel={onUpLevel} />
-            </div>
-            <div className="flex items-center gap-1">
-              <DescriptionsToggle
-                showDescriptions={showDescriptions}
-                onToggle={handleToggleDescriptions}
-              />
-              <ThemeToggle />
-            </div>
-          </header>
-          <main className="flex-1 overflow-auto">
-            <Router showDescriptions={showDescriptions} />
-          </main>
-        </SidebarInset>
-      </div>
-    </SidebarProvider>
+            </>
+          )}
+        </div>
+        <div className="flex items-center gap-1">
+          <DescriptionsToggle
+            showDescriptions={showDescriptions}
+            onToggle={handleToggleDescriptions}
+          />
+          <ThemeToggle />
+        </div>
+      </header>
+      <main className="flex-1 overflow-auto">
+        <Router showDescriptions={showDescriptions} />
+      </main>
+    </div>
   );
 }
 
