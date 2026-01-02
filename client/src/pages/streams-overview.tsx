@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Layers } from "lucide-react";
@@ -8,9 +8,10 @@ import { QuickAddForm } from "@/components/quick-add-form";
 import { EmptyState } from "@/components/empty-state";
 import { StreamCardSkeleton, TimelineSkeleton } from "@/components/loading-skeleton";
 import { EditStreamDialog } from "@/components/edit-stream-dialog";
+import { FilterBar } from "@/components/filter-bar";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { StreamWithProgress, Stream } from "@shared/schema";
+import type { StreamWithProgress, Stream, MomentumStatus } from "@shared/schema";
 
 interface StreamsOverviewProps {
   showDescriptions: boolean;
@@ -20,10 +21,86 @@ export function StreamsOverview({ showDescriptions }: StreamsOverviewProps) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [editingStream, setEditingStream] = useState<Stream | null>(null);
+  const [activeFilters, setActiveFilters] = useState<Record<string, string[]>>({
+    phase: [],
+    owner: [],
+    label: [],
+    momentum: [],
+  });
 
   const { data: streams, isLoading: streamsLoading } = useQuery<StreamWithProgress[]>({
     queryKey: ["/api/streams"],
   });
+
+  const filterConfigs = useMemo(() => {
+    if (!streams) return [];
+    
+    const phases = new Set<string>();
+    const owners = new Set<string>();
+    const labels = new Set<string>();
+    const momentums = new Set<string>();
+    
+    streams.filter((s) => !s.isDeleted).forEach((stream) => {
+      stream.phases?.forEach((p) => phases.add(p));
+      stream.owners?.forEach((o) => owners.add(o));
+      stream.labels?.forEach((l) => labels.add(l));
+      if (stream.momentumStatus) momentums.add(stream.momentumStatus);
+    });
+
+    return [
+      {
+        key: "phase",
+        label: "Phase",
+        options: Array.from(phases).sort().map((p) => ({ value: p, label: p })),
+      },
+      {
+        key: "owner",
+        label: "Owner",
+        options: Array.from(owners).sort().map((o) => ({ value: o, label: o })),
+      },
+      {
+        key: "label",
+        label: "Label",
+        options: Array.from(labels).sort().map((l) => ({ value: l, label: l })),
+      },
+      {
+        key: "momentum",
+        label: "Momentum",
+        options: Array.from(momentums).map((m) => ({ value: m, label: m })),
+      },
+    ];
+  }, [streams]);
+
+  const filteredStreams = useMemo(() => {
+    if (!streams) return [];
+    
+    return streams.filter((stream) => {
+      if (stream.isDeleted) return false;
+      
+      if (activeFilters.phase.length > 0) {
+        if (!stream.phases?.some((p) => activeFilters.phase.includes(p))) return false;
+      }
+      if (activeFilters.owner.length > 0) {
+        if (!stream.owners?.some((o) => activeFilters.owner.includes(o))) return false;
+      }
+      if (activeFilters.label.length > 0) {
+        if (!stream.labels?.some((l) => activeFilters.label.includes(l))) return false;
+      }
+      if (activeFilters.momentum.length > 0) {
+        if (!stream.momentumStatus || !activeFilters.momentum.includes(stream.momentumStatus)) return false;
+      }
+      
+      return true;
+    });
+  }, [streams, activeFilters]);
+
+  const handleFilterChange = (key: string, values: string[]) => {
+    setActiveFilters((prev) => ({ ...prev, [key]: values }));
+  };
+
+  const handleClearFilters = () => {
+    setActiveFilters({ phase: [], owner: [], label: [], momentum: [] });
+  };
 
   const createStream = useMutation({
     mutationFn: async (name: string) => {
@@ -95,16 +172,24 @@ export function StreamsOverview({ showDescriptions }: StreamsOverviewProps) {
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-auto p-6">
         <div className="space-y-4">
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
             <h2 className="text-lg font-semibold">All Streams</h2>
             <span className="text-sm text-muted-foreground">
-              {streams.length} stream{streams.length !== 1 ? "s" : ""}
+              {filteredStreams.length} of {streams?.filter((s) => !s.isDeleted).length || 0} stream{(streams?.filter((s) => !s.isDeleted).length || 0) !== 1 ? "s" : ""}
             </span>
           </div>
 
+          {filterConfigs.length > 0 && (
+            <FilterBar
+              filters={filterConfigs}
+              activeFilters={activeFilters}
+              onFilterChange={handleFilterChange}
+              onClearAll={handleClearFilters}
+            />
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {streams
-              .filter((s) => !s.isDeleted)
+            {filteredStreams
               .sort((a, b) => a.ordinal - b.ordinal)
               .map((stream) => (
                 <StreamCard

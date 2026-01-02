@@ -8,8 +8,9 @@ import { ThemeProvider } from "@/lib/theme-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { DescriptionsToggle } from "@/components/descriptions-toggle";
 import { BreadcrumbNav } from "@/components/breadcrumb-nav";
+import { GlobalSearch } from "@/components/global-search";
 import { Button } from "@/components/ui/button";
-import { Layers, LayoutGrid, Trash2 } from "lucide-react";
+import { Layers, LayoutGrid, Trash2, Search } from "lucide-react";
 import { StreamsOverview } from "@/pages/streams-overview";
 import { StreamView } from "@/pages/stream-view";
 import { DeliverableView } from "@/pages/deliverable-view";
@@ -166,6 +167,7 @@ function AppContent() {
     }
     return true;
   });
+  const [searchOpen, setSearchOpen] = useState(false);
 
   const { items, onUpLevel } = useBreadcrumbs();
 
@@ -179,12 +181,17 @@ function AppContent() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "d" && !e.metaKey && !e.ctrlKey && !e.altKey) {
-        const target = e.target as HTMLElement;
-        if (target.tagName !== "INPUT" && target.tagName !== "TEXTAREA" && !target.isContentEditable) {
-          e.preventDefault();
-          handleToggleDescriptions();
-        }
+      const target = e.target as HTMLElement;
+      const isEditing = target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable;
+
+      if (e.key === "d" && !e.metaKey && !e.ctrlKey && !e.altKey && !isEditing) {
+        e.preventDefault();
+        handleToggleDescriptions();
+      }
+
+      if ((e.metaKey || e.ctrlKey) && e.key === "k" && !isEditing) {
+        e.preventDefault();
+        setSearchOpen(true);
       }
     };
 
@@ -205,6 +212,16 @@ function AppContent() {
           )}
         </div>
         <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-2"
+            onClick={() => setSearchOpen(true)}
+            data-testid="button-search"
+          >
+            <Search className="h-4 w-4" />
+            <span className="hidden sm:inline text-muted-foreground text-xs">Ctrl+K</span>
+          </Button>
           <DescriptionsToggle
             showDescriptions={showDescriptions}
             onToggle={handleToggleDescriptions}
@@ -212,6 +229,7 @@ function AppContent() {
           <ThemeToggle />
         </div>
       </header>
+      <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
       <main className="flex-1 overflow-auto">
         <Router showDescriptions={showDescriptions} />
       </main>
