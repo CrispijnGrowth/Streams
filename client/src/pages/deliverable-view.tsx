@@ -1,14 +1,17 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { CheckSquare } from "lucide-react";
+import { CheckSquare, Users, Tag, Calendar } from "lucide-react";
 import { Timeline } from "@/components/timeline";
 import { KanbanBoard } from "@/components/kanban-board";
 import { QuickAddForm } from "@/components/quick-add-form";
 import { EmptyState } from "@/components/empty-state";
 import { KanbanSkeleton, TimelineSkeleton } from "@/components/loading-skeleton";
+import { StatusBadge } from "@/components/status-badge";
+import { ProgressBar } from "@/components/progress-bar";
+import { Badge } from "@/components/ui/badge";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { Deliverable, ActionWithProgress } from "@shared/schema";
+import type { DeliverableWithProgress, ActionWithProgress } from "@shared/schema";
 
 interface DeliverableViewProps {
   streamId: string;
@@ -20,7 +23,7 @@ export function DeliverableView({ streamId, deliverableId, showDescriptions }: D
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
-  const { data: deliverable, isLoading: deliverableLoading } = useQuery<Deliverable>({
+  const { data: deliverable, isLoading: deliverableLoading } = useQuery<DeliverableWithProgress>({
     queryKey: ["/api/deliverables", deliverableId],
   });
 
@@ -120,27 +123,88 @@ export function DeliverableView({ streamId, deliverableId, showDescriptions }: D
   return (
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-auto p-6">
-        <div className="space-y-4">
-          <div className="flex items-center justify-between gap-4">
-            <h2 className="text-lg font-semibold">Actions Kanban</h2>
-            <span className="text-sm text-muted-foreground">
-              {actions.length} action{actions.length !== 1 ? "s" : ""}
-            </span>
+        <div className="space-y-6">
+          <div className="space-y-3 pb-4 border-b">
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-mono text-muted-foreground" data-testid="text-deliverable-key">{deliverable.key}</span>
+                  <StatusBadge status={deliverable.status} />
+                </div>
+                <h1 className="text-xl font-semibold" data-testid="text-deliverable-name">{deliverable.name}</h1>
+              </div>
+              {deliverable.milestoneDate && (
+                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                  <Calendar className="w-4 h-4" />
+                  <span>Due: {new Date(deliverable.milestoneDate).toLocaleDateString()}</span>
+                </div>
+              )}
+            </div>
+
+            {showDescriptions && deliverable.description && (
+              <p className="text-sm text-muted-foreground max-w-3xl" data-testid="text-deliverable-description">
+                {deliverable.description}
+              </p>
+            )}
+
+            <div className="flex items-center gap-4 flex-wrap">
+              <div className="w-32">
+                <ProgressBar value={deliverable.progress || 0} size="sm" showLabel={false} />
+              </div>
+              <span className="text-sm text-muted-foreground">{deliverable.progress || 0}% complete</span>
+            </div>
+
+            <div className="flex items-center gap-4 flex-wrap text-sm">
+              {deliverable.owners && deliverable.owners.length > 0 && (
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <Users className="w-4 h-4" />
+                  <span>{deliverable.owners.join(", ")}</span>
+                </div>
+              )}
+              {deliverable.phases && deliverable.phases.length > 0 && (
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {deliverable.phases.map((phase) => (
+                    <Badge key={phase} variant="outline" className="text-xs">
+                      {phase}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+              {deliverable.labels && deliverable.labels.length > 0 && (
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <Tag className="w-4 h-4 text-muted-foreground" />
+                  {deliverable.labels.map((label) => (
+                    <Badge key={label} variant="secondary" className="text-xs">
+                      {label}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
-          <KanbanBoard
-            actions={actions.filter((a) => !a.isDeleted)}
-            onActionClick={handleActionClick}
-            onStatusChange={(actionId, status) => updateActionStatus.mutate({ actionId, status })}
-            showDescription={showDescriptions}
-          />
+          <div className="space-y-4">
+            <div className="flex items-center justify-between gap-4">
+              <h2 className="text-lg font-semibold">Actions Kanban</h2>
+              <span className="text-sm text-muted-foreground">
+                {actions.length} action{actions.length !== 1 ? "s" : ""}
+              </span>
+            </div>
 
-          <div className="max-w-sm">
-            <QuickAddForm
-              placeholder="Add new action..."
-              onAdd={(name) => createAction.mutate(name)}
-              isLoading={createAction.isPending}
+            <KanbanBoard
+              actions={actions.filter((a) => !a.isDeleted)}
+              onActionClick={handleActionClick}
+              onStatusChange={(actionId, status) => updateActionStatus.mutate({ actionId, status })}
+              showDescription={showDescriptions}
             />
+
+            <div className="max-w-sm">
+              <QuickAddForm
+                placeholder="Add new action..."
+                onAdd={(name) => createAction.mutate(name)}
+                isLoading={createAction.isPending}
+              />
+            </div>
           </div>
         </div>
       </div>
