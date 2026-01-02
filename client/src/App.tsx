@@ -9,12 +9,13 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { DescriptionsToggle } from "@/components/descriptions-toggle";
 import { BreadcrumbNav } from "@/components/breadcrumb-nav";
 import { Button } from "@/components/ui/button";
-import { Layers, LayoutGrid } from "lucide-react";
+import { Layers, LayoutGrid, Trash2 } from "lucide-react";
 import { StreamsOverview } from "@/pages/streams-overview";
 import { StreamView } from "@/pages/stream-view";
 import { DeliverableView } from "@/pages/deliverable-view";
 import { ActionView } from "@/pages/action-view";
 import { GlobalKanban } from "@/pages/global-kanban";
+import { RecycleBin } from "@/pages/recycle-bin";
 import NotFound from "@/pages/not-found";
 import type { Stream, Deliverable, Action } from "@shared/schema";
 
@@ -85,6 +86,9 @@ function Router({ showDescriptions }: { showDescriptions: boolean }) {
       <Route path="/kanban">
         <GlobalKanban showDescriptions={showDescriptions} />
       </Route>
+      <Route path="/recycle-bin">
+        <RecycleBin />
+      </Route>
       <Route path="/stream/:streamId">
         {(params) => (
           <StreamView streamId={params.streamId} showDescriptions={showDescriptions} />
@@ -138,6 +142,17 @@ function TopNav() {
         >
           <LayoutGrid className="h-4 w-4" />
           <span>Kanban</span>
+        </Button>
+      </Link>
+      <Link href="/recycle-bin">
+        <Button
+          variant={location === "/recycle-bin" ? "secondary" : "ghost"}
+          size="sm"
+          className="gap-2"
+          data-testid="nav-recycle-bin"
+        >
+          <Trash2 className="h-4 w-4" />
+          <span>Recycle Bin</span>
         </Button>
       </Link>
     </nav>

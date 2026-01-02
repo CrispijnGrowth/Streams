@@ -467,7 +467,7 @@ export class MemStorage implements IStorage {
   async updateDeliverable(id: string, data: Partial<InsertDeliverable>): Promise<Deliverable | undefined> {
     const del = this.deliverables.get(id);
     if (!del || del.isDeleted) return undefined;
-    const updated = { ...del, ...data };
+    const updated: Deliverable = { ...del, ...data } as Deliverable;
     this.deliverables.set(id, updated);
     this.updateStreamMilestone(del.streamId);
     return updated;
@@ -546,7 +546,7 @@ export class MemStorage implements IStorage {
   async updateAction(id: string, data: Partial<InsertAction>): Promise<Action | undefined> {
     const action = this.actions.get(id);
     if (!action || action.isDeleted) return undefined;
-    const updated = { ...action, ...data };
+    const updated: Action = { ...action, ...data } as Action;
     this.actions.set(id, updated);
     return updated;
   }
