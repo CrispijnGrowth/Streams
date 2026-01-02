@@ -80,6 +80,18 @@ export default {
           away: "rgb(245 158 11)",
           busy: "rgb(239 68 68)",
           offline: "rgb(156 163 175)",
+          backlog: "hsl(var(--status-backlog) / <alpha-value>)",
+          "to-execute": "hsl(var(--status-to-execute) / <alpha-value>)",
+          executing: "hsl(var(--status-executing) / <alpha-value>)",
+          blocked: "hsl(var(--status-blocked) / <alpha-value>)",
+          delegated: "hsl(var(--status-delegated) / <alpha-value>)",
+          done: "hsl(var(--status-done) / <alpha-value>)",
+          archive: "hsl(var(--status-archive) / <alpha-value>)",
+        },
+        momentum: {
+          active: "hsl(var(--momentum-active) / <alpha-value>)",
+          slowing: "hsl(var(--momentum-slowing) / <alpha-value>)",
+          stalled: "hsl(var(--momentum-stalled) / <alpha-value>)",
         },
       },
       fontFamily: {
