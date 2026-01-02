@@ -1,14 +1,16 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/status-badge";
 import { ProgressBar } from "@/components/progress-bar";
-import { Calendar, User, GripVertical } from "lucide-react";
+import { Calendar, User, GripVertical, Pencil } from "lucide-react";
 import { format } from "date-fns";
 import type { ActionWithProgress } from "@shared/schema";
 
 interface ActionCardProps {
   action: ActionWithProgress;
   onClick?: () => void;
+  onEdit?: () => void;
   showDescription?: boolean;
   isDragging?: boolean;
   showDragHandle?: boolean;
@@ -17,6 +19,7 @@ interface ActionCardProps {
 export function ActionCard({
   action,
   onClick,
+  onEdit,
   showDescription = true,
   isDragging = false,
   showDragHandle = false,
@@ -27,9 +30,14 @@ export function ActionCard({
     action.status !== "Done" &&
     action.status !== "Archive";
 
+  const handleEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onEdit?.();
+  };
+
   return (
     <Card
-      className={`p-3 space-y-2 cursor-pointer hover-elevate active-elevate-2 transition-all ${
+      className={`p-3 space-y-2 cursor-pointer hover-elevate active-elevate-2 transition-all group ${
         isDragging ? "shadow-xl scale-105 opacity-90" : ""
       }`}
       onClick={onClick}
@@ -51,6 +59,15 @@ export function ActionCard({
             </p>
           )}
         </div>
+        <Button
+          size="icon"
+          variant="ghost"
+          className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+          onClick={handleEdit}
+          data-testid={`button-edit-action-${action.id}`}
+        >
+          <Pencil className="h-3 w-3" />
+        </Button>
       </div>
 
       <div className="flex items-center gap-2 text-xs flex-wrap">

@@ -1,15 +1,19 @@
+import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { Package, Users, Tag, Calendar, Activity } from "lucide-react";
+import { Package, Users, Tag, Calendar, Activity, Pencil } from "lucide-react";
 import { Timeline } from "@/components/timeline";
 import { DeliverableCard } from "@/components/deliverable-card";
 import { QuickAddForm } from "@/components/quick-add-form";
 import { EmptyState } from "@/components/empty-state";
 import { DeliverableCardSkeleton, TimelineSkeleton } from "@/components/loading-skeleton";
+import { EditStreamDialog } from "@/components/edit-stream-dialog";
+import { EditDeliverableDialog } from "@/components/edit-deliverable-dialog";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { Stream, DeliverableWithProgress } from "@shared/schema";
+import type { Stream, DeliverableWithProgress, Deliverable } from "@shared/schema";
 
 interface StreamViewProps {
   streamId: string;
@@ -19,6 +23,8 @@ interface StreamViewProps {
 export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const [editingStream, setEditingStream] = useState(false);
+  const [editingDeliverable, setEditingDeliverable] = useState<Deliverable | null>(null);
 
   const { data: stream, isLoading: streamLoading } = useQuery<Stream>({
     queryKey: ["/api/streams", streamId],
@@ -139,7 +145,18 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
                     </Badge>
                   )}
                 </div>
-                <h1 className="text-xl font-semibold" data-testid="text-stream-name">{stream.name}</h1>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-xl font-semibold" data-testid="text-stream-name">{stream.name}</h1>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-7 w-7"
+                    onClick={() => setEditingStream(true)}
+                    data-testid="button-edit-stream"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
               {stream.computedMilestoneDate && (
                 <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
@@ -201,6 +218,7 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
                     key={deliverable.id}
                     deliverable={deliverable}
                     onClick={() => handleDeliverableClick(deliverable.id)}
+                    onEdit={() => setEditingDeliverable(deliverable)}
                     showDescription={showDescriptions}
                   />
                 ))}
@@ -225,6 +243,19 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
           defaultWindowMonths={12}
         />
       </div>
+
+      <EditStreamDialog
+        stream={stream}
+        open={editingStream}
+        onOpenChange={setEditingStream}
+        onDeleted={() => setLocation("/")}
+      />
+
+      <EditDeliverableDialog
+        deliverable={editingDeliverable}
+        open={editingDeliverable !== null}
+        onOpenChange={(open) => !open && setEditingDeliverable(null)}
+      />
     </div>
   );
 }

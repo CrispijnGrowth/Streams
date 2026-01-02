@@ -1,6 +1,7 @@
+import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { CheckSquare, Users, Tag, Calendar } from "lucide-react";
+import { CheckSquare, Users, Tag, Calendar, Pencil } from "lucide-react";
 import { Timeline } from "@/components/timeline";
 import { KanbanBoard } from "@/components/kanban-board";
 import { QuickAddForm } from "@/components/quick-add-form";
@@ -9,9 +10,12 @@ import { KanbanSkeleton, TimelineSkeleton } from "@/components/loading-skeleton"
 import { StatusBadge } from "@/components/status-badge";
 import { ProgressBar } from "@/components/progress-bar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { EditDeliverableDialog } from "@/components/edit-deliverable-dialog";
+import { EditActionDialog } from "@/components/edit-action-dialog";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { DeliverableWithProgress, ActionWithProgress } from "@shared/schema";
+import type { DeliverableWithProgress, ActionWithProgress, Action } from "@shared/schema";
 
 interface DeliverableViewProps {
   streamId: string;
@@ -22,6 +26,8 @@ interface DeliverableViewProps {
 export function DeliverableView({ streamId, deliverableId, showDescriptions }: DeliverableViewProps) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const [editingDeliverable, setEditingDeliverable] = useState(false);
+  const [editingAction, setEditingAction] = useState<Action | null>(null);
 
   const { data: deliverable, isLoading: deliverableLoading } = useQuery<DeliverableWithProgress>({
     queryKey: ["/api/deliverables", deliverableId],
@@ -131,7 +137,18 @@ export function DeliverableView({ streamId, deliverableId, showDescriptions }: D
                   <span className="text-xs font-mono text-muted-foreground" data-testid="text-deliverable-key">{deliverable.key}</span>
                   <StatusBadge status={deliverable.status} />
                 </div>
-                <h1 className="text-xl font-semibold" data-testid="text-deliverable-name">{deliverable.name}</h1>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-xl font-semibold" data-testid="text-deliverable-name">{deliverable.name}</h1>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-7 w-7"
+                    onClick={() => setEditingDeliverable(true)}
+                    data-testid="button-edit-deliverable"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
               {deliverable.milestoneDate && (
                 <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
@@ -194,6 +211,7 @@ export function DeliverableView({ streamId, deliverableId, showDescriptions }: D
             <KanbanBoard
               actions={actions.filter((a) => !a.isDeleted)}
               onActionClick={handleActionClick}
+              onActionEdit={(action) => setEditingAction(action)}
               onStatusChange={(actionId, status) => updateActionStatus.mutate({ actionId, status })}
               showDescription={showDescriptions}
             />
@@ -217,6 +235,19 @@ export function DeliverableView({ streamId, deliverableId, showDescriptions }: D
           defaultWindowMonths={6}
         />
       </div>
+
+      <EditDeliverableDialog
+        deliverable={deliverable}
+        open={editingDeliverable}
+        onOpenChange={setEditingDeliverable}
+        onDeleted={() => setLocation(`/stream/${streamId}`)}
+      />
+
+      <EditActionDialog
+        action={editingAction}
+        open={editingAction !== null}
+        onOpenChange={(open) => !open && setEditingAction(null)}
+      />
     </div>
   );
 }

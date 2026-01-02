@@ -1,14 +1,16 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/status-badge";
 import { ProgressBar } from "@/components/progress-bar";
-import { Calendar, User } from "lucide-react";
+import { Calendar, User, Pencil } from "lucide-react";
 import { format } from "date-fns";
 import type { DeliverableWithProgress } from "@shared/schema";
 
 interface DeliverableCardProps {
   deliverable: DeliverableWithProgress;
   onClick?: () => void;
+  onEdit?: () => void;
   showDescription?: boolean;
   isDragging?: boolean;
 }
@@ -16,6 +18,7 @@ interface DeliverableCardProps {
 export function DeliverableCard({
   deliverable,
   onClick,
+  onEdit,
   showDescription = true,
   isDragging = false,
 }: DeliverableCardProps) {
@@ -25,9 +28,14 @@ export function DeliverableCard({
     deliverable.status !== "Done" &&
     deliverable.status !== "Archive";
 
+  const handleEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onEdit?.();
+  };
+
   return (
     <Card
-      className={`p-3 space-y-2 cursor-pointer hover-elevate active-elevate-2 transition-all ${
+      className={`p-3 space-y-2 cursor-pointer hover-elevate active-elevate-2 transition-all group ${
         isDragging ? "shadow-xl scale-105 opacity-90" : ""
       }`}
       onClick={onClick}
@@ -44,6 +52,15 @@ export function DeliverableCard({
             </p>
           )}
         </div>
+        <Button
+          size="icon"
+          variant="ghost"
+          className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+          onClick={handleEdit}
+          data-testid={`button-edit-deliverable-${deliverable.id}`}
+        >
+          <Pencil className="h-3 w-3" />
+        </Button>
       </div>
 
       <div className="flex items-center gap-2 text-xs flex-wrap">

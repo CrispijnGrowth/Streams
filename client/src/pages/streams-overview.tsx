@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Layers } from "lucide-react";
 import { Timeline } from "@/components/timeline";
@@ -6,10 +7,10 @@ import { StreamCard } from "@/components/stream-card";
 import { QuickAddForm } from "@/components/quick-add-form";
 import { EmptyState } from "@/components/empty-state";
 import { StreamCardSkeleton, TimelineSkeleton } from "@/components/loading-skeleton";
-import { useMutation } from "@tanstack/react-query";
+import { EditStreamDialog } from "@/components/edit-stream-dialog";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { StreamWithProgress } from "@shared/schema";
+import type { StreamWithProgress, Stream } from "@shared/schema";
 
 interface StreamsOverviewProps {
   showDescriptions: boolean;
@@ -18,6 +19,7 @@ interface StreamsOverviewProps {
 export function StreamsOverview({ showDescriptions }: StreamsOverviewProps) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const [editingStream, setEditingStream] = useState<Stream | null>(null);
 
   const { data: streams, isLoading: streamsLoading } = useQuery<StreamWithProgress[]>({
     queryKey: ["/api/streams"],
@@ -109,10 +111,17 @@ export function StreamsOverview({ showDescriptions }: StreamsOverviewProps) {
                   key={stream.id}
                   stream={stream}
                   onClick={() => handleStreamClick(stream.id)}
+                  onEdit={() => setEditingStream(stream)}
                   showDescription={showDescriptions}
                 />
               ))}
           </div>
+
+          <EditStreamDialog
+            stream={editingStream}
+            open={editingStream !== null}
+            onOpenChange={(open) => !open && setEditingStream(null)}
+          />
 
           <div className="max-w-sm">
             <QuickAddForm

@@ -1,13 +1,18 @@
+import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { ListChecks, Plus, Calendar, User, Clock } from "lucide-react";
+import { useLocation } from "wouter";
+import { ListChecks, Plus, Calendar, User, Clock, Pencil } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { StepList } from "@/components/step-list";
 import { QuickAddForm } from "@/components/quick-add-form";
 import { EmptyState } from "@/components/empty-state";
 import { StatusBadge } from "@/components/status-badge";
 import { ProgressBar } from "@/components/progress-bar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EditActionDialog } from "@/components/edit-action-dialog";
+import { EditStepDialog } from "@/components/edit-step-dialog";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -20,7 +25,10 @@ interface ActionViewProps {
 }
 
 export function ActionView({ streamId, deliverableId, actionId }: ActionViewProps) {
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const [editingAction, setEditingAction] = useState(false);
+  const [editingStep, setEditingStep] = useState<Step | null>(null);
 
   const { data: action, isLoading: actionLoading } = useQuery<ActionWithProgress>({
     queryKey: ["/api/actions", actionId],
@@ -103,9 +111,20 @@ export function ActionView({ streamId, deliverableId, actionId }: ActionViewProp
       <Card className="p-6 space-y-4">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
-            <h1 className="text-xl font-semibold" data-testid="text-action-title">
-              {action.name}
-            </h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-semibold" data-testid="text-action-title">
+                {action.name}
+              </h1>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-7 w-7"
+                onClick={() => setEditingAction(true)}
+                data-testid="button-edit-action"
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+            </div>
             {action.description && (
               <p className="text-sm text-muted-foreground mt-1">{action.description}</p>
             )}
@@ -178,6 +197,7 @@ export function ActionView({ streamId, deliverableId, actionId }: ActionViewProp
           <StepList
             steps={steps.filter((s) => !s.isDeleted)}
             onToggle={(stepId, isDone) => toggleStep.mutate({ stepId, isDone })}
+            onEdit={(step) => setEditingStep(step)}
           />
         )}
 
@@ -187,6 +207,19 @@ export function ActionView({ streamId, deliverableId, actionId }: ActionViewProp
           isLoading={createStep.isPending}
         />
       </div>
+
+      <EditActionDialog
+        action={action}
+        open={editingAction}
+        onOpenChange={setEditingAction}
+        onDeleted={() => setLocation(`/stream/${streamId}/deliverable/${deliverableId}`)}
+      />
+
+      <EditStepDialog
+        step={editingStep}
+        open={editingStep !== null}
+        onOpenChange={(open) => !open && setEditingStep(null)}
+      />
     </div>
   );
 }

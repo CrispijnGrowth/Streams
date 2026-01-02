@@ -8,6 +8,7 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 interface KanbanBoardProps {
   actions: ActionWithProgress[];
   onActionClick?: (id: string) => void;
+  onActionEdit?: (action: ActionWithProgress) => void;
   onStatusChange?: (actionId: string, newStatus: ActionStatusType) => void;
   showDescription?: boolean;
 }
@@ -25,6 +26,7 @@ const kanbanColumns: { status: ActionStatusType; label: string; color: string }[
 export function KanbanBoard({
   actions,
   onActionClick,
+  onActionEdit,
   onStatusChange,
   showDescription = true,
 }: KanbanBoardProps) {
@@ -66,6 +68,7 @@ export function KanbanBoard({
                     key={action.id}
                     action={action}
                     onClick={() => onActionClick?.(action.id)}
+                    onEdit={() => onActionEdit?.(action)}
                     showDescription={showDescription}
                     showDragHandle
                   />

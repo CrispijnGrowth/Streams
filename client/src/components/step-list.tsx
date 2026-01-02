@@ -1,15 +1,17 @@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, User } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Calendar, User, Pencil } from "lucide-react";
 import { format } from "date-fns";
 import type { Step } from "@shared/schema";
 
 interface StepListProps {
   steps: Step[];
   onToggle?: (stepId: string, isDone: boolean) => void;
+  onEdit?: (step: Step) => void;
 }
 
-export function StepList({ steps, onToggle }: StepListProps) {
+export function StepList({ steps, onToggle, onEdit }: StepListProps) {
   const sortedSteps = [...steps].sort((a, b) => a.ordinal - b.ordinal);
 
   if (steps.length === 0) {
@@ -31,7 +33,7 @@ export function StepList({ steps, onToggle }: StepListProps) {
         return (
           <div
             key={step.id}
-            className={`flex items-start gap-3 p-3 rounded-lg border transition-colors ${
+            className={`flex items-start gap-3 p-3 rounded-lg border transition-colors group ${
               step.isDone ? "bg-muted/50" : "bg-card"
             }`}
             data-testid={`step-${step.id}`}
@@ -66,11 +68,22 @@ export function StepList({ steps, onToggle }: StepListProps) {
                 )}
               </div>
             </div>
-            {step.isDone && (
-              <Badge variant="outline" className="bg-status-done/10 text-status-done border-status-done/30 text-xs">
-                Done
-              </Badge>
-            )}
+            <div className="flex items-center gap-1">
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={() => onEdit?.(step)}
+                data-testid={`button-edit-step-${step.id}`}
+              >
+                <Pencil className="h-3 w-3" />
+              </Button>
+              {step.isDone && (
+                <Badge variant="outline" className="bg-status-done/10 text-status-done border-status-done/30 text-xs">
+                  Done
+                </Badge>
+              )}
+            </div>
           </div>
         );
       })}

@@ -1,26 +1,33 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { MomentumBadge } from "@/components/status-badge";
 import { ProgressBar } from "@/components/progress-bar";
-import { Calendar } from "lucide-react";
+import { Calendar, Pencil } from "lucide-react";
 import { format } from "date-fns";
 import type { StreamWithProgress } from "@shared/schema";
 
 interface StreamCardProps {
   stream: StreamWithProgress;
   onClick?: () => void;
+  onEdit?: () => void;
   showDescription?: boolean;
 }
 
-export function StreamCard({ stream, onClick, showDescription = true }: StreamCardProps) {
+export function StreamCard({ stream, onClick, onEdit, showDescription = true }: StreamCardProps) {
   const isOverdue =
     stream.computedMilestoneDate &&
     new Date(stream.computedMilestoneDate) < new Date() &&
     stream.progress < 100;
 
+  const handleEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onEdit?.();
+  };
+
   return (
     <Card
-      className="p-4 space-y-3 cursor-pointer hover-elevate active-elevate-2 transition-shadow"
+      className="p-4 space-y-3 cursor-pointer hover-elevate active-elevate-2 transition-shadow group"
       onClick={onClick}
       data-testid={`card-stream-${stream.id}`}
     >
@@ -35,7 +42,18 @@ export function StreamCard({ stream, onClick, showDescription = true }: StreamCa
             </p>
           )}
         </div>
-        <MomentumBadge status={stream.momentumStatus} />
+        <div className="flex items-center gap-2">
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={handleEdit}
+            data-testid={`button-edit-stream-${stream.id}`}
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </Button>
+          <MomentumBadge status={stream.momentumStatus} />
+        </div>
       </div>
 
       <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
