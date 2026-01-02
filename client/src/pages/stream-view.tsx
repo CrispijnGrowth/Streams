@@ -48,6 +48,16 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
     },
   });
 
+  const updateDeliverableDate = useMutation({
+    mutationFn: async ({ deliverableId, milestoneDate }: { deliverableId: string; milestoneDate: string }) => {
+      return apiRequest("PATCH", `/api/deliverables/${deliverableId}`, { milestoneDate });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/streams", streamId, "deliverables"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
+    },
+  });
+
   const timelineItems = deliverables?.map((d) => ({
     id: d.id,
     title: d.name,
@@ -239,6 +249,7 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
         <Timeline
           items={timelineItems}
           onItemClick={handleDeliverableClick}
+          onDateChange={(id, newDate) => updateDeliverableDate.mutate({ deliverableId: id, milestoneDate: newDate })}
           level="deliverable"
           defaultWindowMonths={12}
         />

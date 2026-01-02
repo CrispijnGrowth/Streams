@@ -72,6 +72,16 @@ export function DeliverableView({ streamId, deliverableId, showDescriptions }: D
     },
   });
 
+  const updateActionDate = useMutation({
+    mutationFn: async ({ actionId, dueDate }: { actionId: string; dueDate: string }) => {
+      return apiRequest("PATCH", `/api/actions/${actionId}`, { dueDate });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/deliverables", deliverableId, "actions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/deliverables"] });
+    },
+  });
+
   const timelineItems = actions?.map((a) => ({
     id: a.id,
     title: a.name,
@@ -241,6 +251,7 @@ export function DeliverableView({ streamId, deliverableId, showDescriptions }: D
         <Timeline
           items={timelineItems}
           onItemClick={handleActionClick}
+          onDateChange={(id, newDate) => updateActionDate.mutate({ actionId: id, dueDate: newDate })}
           level="action"
           defaultWindowMonths={6}
         />
