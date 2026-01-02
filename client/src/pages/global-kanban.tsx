@@ -29,6 +29,15 @@ export function GlobalKanban({ showDescriptions }: GlobalKanbanProps) {
     },
   });
 
+  const updateActionOrder = useMutation({
+    mutationFn: async ({ actionId, kanbanOrder }: { actionId: string; kanbanOrder: number }) => {
+      return apiRequest("PATCH", `/api/actions/${actionId}`, { kanbanOrder });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
+    },
+  });
+
   const handleActionClick = (actionId: string) => {
     const action = actions?.find((a) => a.id === actionId);
     if (action) {
@@ -81,6 +90,7 @@ export function GlobalKanban({ showDescriptions }: GlobalKanbanProps) {
         actions={actions.filter((a) => !a.isDeleted)}
         onActionClick={handleActionClick}
         onStatusChange={(actionId, status) => updateActionStatus.mutate({ actionId, status })}
+        onReorder={(actionId, kanbanOrder) => updateActionOrder.mutate({ actionId, kanbanOrder })}
         showDescription={showDescriptions}
       />
     </div>

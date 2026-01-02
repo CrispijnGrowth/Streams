@@ -63,6 +63,15 @@ export function DeliverableView({ streamId, deliverableId, showDescriptions }: D
     },
   });
 
+  const updateActionOrder = useMutation({
+    mutationFn: async ({ actionId, kanbanOrder }: { actionId: string; kanbanOrder: number }) => {
+      return apiRequest("PATCH", `/api/actions/${actionId}`, { kanbanOrder });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/deliverables", deliverableId, "actions"] });
+    },
+  });
+
   const timelineItems = actions?.map((a) => ({
     id: a.id,
     title: a.name,
@@ -213,6 +222,7 @@ export function DeliverableView({ streamId, deliverableId, showDescriptions }: D
               onActionClick={handleActionClick}
               onActionEdit={(action) => setEditingAction(action)}
               onStatusChange={(actionId, status) => updateActionStatus.mutate({ actionId, status })}
+              onReorder={(actionId, kanbanOrder) => updateActionOrder.mutate({ actionId, kanbanOrder })}
               showDescription={showDescriptions}
             />
 
