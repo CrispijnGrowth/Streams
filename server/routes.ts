@@ -307,5 +307,62 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/recycle-bin", async (req, res) => {
+    try {
+      const deletedItems = await storage.getDeletedItems();
+      res.json(deletedItems);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch deleted items" });
+    }
+  });
+
+  app.post("/api/recycle-bin/restore/stream/:id", async (req, res) => {
+    try {
+      const restored = await storage.restoreStream(req.params.id);
+      if (!restored) {
+        return res.status(404).json({ error: "Stream not found in recycle bin" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to restore stream" });
+    }
+  });
+
+  app.post("/api/recycle-bin/restore/deliverable/:id", async (req, res) => {
+    try {
+      const restored = await storage.restoreDeliverable(req.params.id);
+      if (!restored) {
+        return res.status(404).json({ error: "Deliverable not found in recycle bin" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to restore deliverable" });
+    }
+  });
+
+  app.post("/api/recycle-bin/restore/action/:id", async (req, res) => {
+    try {
+      const restored = await storage.restoreAction(req.params.id);
+      if (!restored) {
+        return res.status(404).json({ error: "Action not found in recycle bin" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to restore action" });
+    }
+  });
+
+  app.post("/api/recycle-bin/restore/step/:id", async (req, res) => {
+    try {
+      const restored = await storage.restoreStep(req.params.id);
+      if (!restored) {
+        return res.status(404).json({ error: "Step not found in recycle bin" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to restore step" });
+    }
+  });
+
   return httpServer;
 }

@@ -42,6 +42,17 @@ export interface IStorage {
   createStep(data: InsertStep): Promise<Step>;
   updateStep(id: string, data: Partial<InsertStep>): Promise<Step | undefined>;
   deleteStep(id: string): Promise<boolean>;
+
+  getDeletedItems(): Promise<{
+    streams: Stream[];
+    deliverables: Deliverable[];
+    actions: Action[];
+    steps: Step[];
+  }>;
+  restoreStream(id: string): Promise<boolean>;
+  restoreDeliverable(id: string): Promise<boolean>;
+  restoreAction(id: string): Promise<boolean>;
+  restoreStep(id: string): Promise<boolean>;
 }
 
 function excelDateToISO(excelDate: number): string {
@@ -601,6 +612,48 @@ export class MemStorage implements IStorage {
     const step = this.steps.get(id);
     if (!step) return false;
     step.isDeleted = true;
+    return true;
+  }
+
+  async getDeletedItems(): Promise<{
+    streams: Stream[];
+    deliverables: Deliverable[];
+    actions: Action[];
+    steps: Step[];
+  }> {
+    return {
+      streams: Array.from(this.streams.values()).filter((s) => s.isDeleted),
+      deliverables: Array.from(this.deliverables.values()).filter((d) => d.isDeleted),
+      actions: Array.from(this.actions.values()).filter((a) => a.isDeleted),
+      steps: Array.from(this.steps.values()).filter((s) => s.isDeleted),
+    };
+  }
+
+  async restoreStream(id: string): Promise<boolean> {
+    const stream = this.streams.get(id);
+    if (!stream || !stream.isDeleted) return false;
+    stream.isDeleted = false;
+    return true;
+  }
+
+  async restoreDeliverable(id: string): Promise<boolean> {
+    const del = this.deliverables.get(id);
+    if (!del || !del.isDeleted) return false;
+    del.isDeleted = false;
+    return true;
+  }
+
+  async restoreAction(id: string): Promise<boolean> {
+    const action = this.actions.get(id);
+    if (!action || !action.isDeleted) return false;
+    action.isDeleted = false;
+    return true;
+  }
+
+  async restoreStep(id: string): Promise<boolean> {
+    const step = this.steps.get(id);
+    if (!step || !step.isDeleted) return false;
+    step.isDeleted = false;
     return true;
   }
 }
