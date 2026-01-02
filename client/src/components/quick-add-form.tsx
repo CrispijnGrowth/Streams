@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useImperativeHandle, forwardRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, X } from "lucide-react";
@@ -9,9 +9,22 @@ interface QuickAddFormProps {
   isLoading?: boolean;
 }
 
-export function QuickAddForm({ placeholder, onAdd, isLoading = false }: QuickAddFormProps) {
+export interface QuickAddFormRef {
+  focus: () => void;
+}
+
+export const QuickAddForm = forwardRef<QuickAddFormRef, QuickAddFormProps>(
+  function QuickAddForm({ placeholder, onAdd, isLoading = false }, ref) {
   const [isOpen, setIsOpen] = useState(false);
   const [value, setValue] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useImperativeHandle(ref, () => ({
+    focus: () => {
+      setIsOpen(true);
+      setTimeout(() => inputRef.current?.focus(), 0);
+    },
+  }));
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,6 +58,7 @@ export function QuickAddForm({ placeholder, onAdd, isLoading = false }: QuickAdd
   return (
     <form onSubmit={handleSubmit} className="flex items-center gap-2">
       <Input
+        ref={inputRef}
         autoFocus
         value={value}
         onChange={(e) => setValue(e.target.value)}
@@ -73,4 +87,4 @@ export function QuickAddForm({ placeholder, onAdd, isLoading = false }: QuickAdd
       </Button>
     </form>
   );
-}
+});

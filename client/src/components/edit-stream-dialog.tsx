@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -22,6 +22,8 @@ import { useToast } from "@/hooks/use-toast";
 import type { Stream } from "@shared/schema";
 import { Phases } from "@shared/schema";
 
+export type EditStreamFocusField = "owner" | "label" | null;
+
 const editStreamSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
@@ -37,12 +39,27 @@ interface EditStreamDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onDeleted?: () => void;
+  initialFocus?: EditStreamFocusField;
 }
 
-export function EditStreamDialog({ stream, open, onOpenChange, onDeleted }: EditStreamDialogProps) {
+export function EditStreamDialog({ stream, open, onOpenChange, onDeleted, initialFocus }: EditStreamDialogProps) {
   const { toast } = useToast();
   const [newOwner, setNewOwner] = useState("");
   const [newLabel, setNewLabel] = useState("");
+  const ownerInputRef = useRef<HTMLInputElement>(null);
+  const labelInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (open && initialFocus) {
+      setTimeout(() => {
+        if (initialFocus === "owner") {
+          ownerInputRef.current?.focus();
+        } else if (initialFocus === "label") {
+          labelInputRef.current?.focus();
+        }
+      }, 100);
+    }
+  }, [open, initialFocus]);
 
   const form = useForm<EditStreamForm>({
     resolver: zodResolver(editStreamSchema),
@@ -214,6 +231,7 @@ export function EditStreamDialog({ stream, open, onOpenChange, onDeleted }: Edit
             </div>
             <div className="flex gap-2">
               <Input
+                ref={ownerInputRef}
                 placeholder="Add owner..."
                 value={newOwner}
                 onChange={(e) => setNewOwner(e.target.value)}
@@ -250,6 +268,7 @@ export function EditStreamDialog({ stream, open, onOpenChange, onDeleted }: Edit
             </div>
             <div className="flex gap-2">
               <Input
+                ref={labelInputRef}
                 placeholder="Add label..."
                 value={newLabel}
                 onChange={(e) => setNewLabel(e.target.value)}

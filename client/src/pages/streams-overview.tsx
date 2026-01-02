@@ -1,10 +1,10 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Layers, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { Timeline } from "@/components/timeline";
 import { StreamCard } from "@/components/stream-card";
-import { QuickAddForm } from "@/components/quick-add-form";
+import { QuickAddForm, QuickAddFormRef } from "@/components/quick-add-form";
 import { EmptyState } from "@/components/empty-state";
 import { StreamCardSkeleton, TimelineSkeleton } from "@/components/loading-skeleton";
 import { EditStreamDialog } from "@/components/edit-stream-dialog";
@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import type { StreamWithProgress, Stream, MomentumStatus } from "@shared/schema";
 
 type SortField = "ordinal" | "name" | "date" | "progress";
@@ -47,10 +48,21 @@ export function StreamsOverview({ showDescriptions }: StreamsOverviewProps) {
     label: [],
     momentum: [],
   });
+  const quickAddRef = useRef<QuickAddFormRef>(null);
 
   const { data: streams, isLoading: streamsLoading } = useQuery<StreamWithProgress[]>({
     queryKey: ["/api/streams"],
   });
+
+  useKeyboardShortcuts([
+    {
+      key: "n",
+      handler: useCallback(() => {
+        quickAddRef.current?.focus();
+      }, []),
+      description: "Focus quick add input",
+    },
+  ]);
 
   const filterConfigs = useMemo(() => {
     if (!streams) return [];
@@ -291,6 +303,7 @@ export function StreamsOverview({ showDescriptions }: StreamsOverviewProps) {
 
           <div className="max-w-sm">
             <QuickAddForm
+              ref={quickAddRef}
               placeholder="Add new stream..."
               onAdd={(name) => createStream.mutate(name)}
               isLoading={createStream.isPending}

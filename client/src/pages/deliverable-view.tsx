@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { CheckSquare, Users, Tag, Calendar, Pencil } from "lucide-react";
 import { Timeline } from "@/components/timeline";
 import { KanbanBoard } from "@/components/kanban-board";
-import { QuickAddForm } from "@/components/quick-add-form";
+import { QuickAddForm, QuickAddFormRef } from "@/components/quick-add-form";
 import { EmptyState } from "@/components/empty-state";
 import { KanbanSkeleton, TimelineSkeleton } from "@/components/loading-skeleton";
 import { StatusBadge } from "@/components/status-badge";
@@ -15,6 +15,7 @@ import { EditDeliverableDialog } from "@/components/edit-deliverable-dialog";
 import { EditActionDialog } from "@/components/edit-action-dialog";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import type { DeliverableWithProgress, ActionWithProgress, Action } from "@shared/schema";
 
 interface DeliverableViewProps {
@@ -28,6 +29,7 @@ export function DeliverableView({ streamId, deliverableId, showDescriptions }: D
   const { toast } = useToast();
   const [editingDeliverable, setEditingDeliverable] = useState(false);
   const [editingAction, setEditingAction] = useState<Action | null>(null);
+  const quickAddRef = useRef<QuickAddFormRef>(null);
 
   const { data: deliverable, isLoading: deliverableLoading } = useQuery<DeliverableWithProgress>({
     queryKey: ["/api/deliverables", deliverableId],
@@ -36,6 +38,49 @@ export function DeliverableView({ streamId, deliverableId, showDescriptions }: D
   const { data: actions, isLoading: actionsLoading } = useQuery<ActionWithProgress[]>({
     queryKey: ["/api/deliverables", deliverableId, "actions"],
   });
+
+  const deleteDeliverable = useMutation({
+    mutationFn: async () => {
+      return apiRequest("PATCH", `/api/deliverables/${deliverableId}`, { isDeleted: true });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/deliverables"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
+      toast({ title: "Deliverable moved to recycle bin" });
+      setLocation(`/stream/${streamId}`);
+    },
+    onError: () => {
+      toast({ title: "Failed to delete deliverable", variant: "destructive" });
+    },
+  });
+
+  useKeyboardShortcuts([
+    {
+      key: "n",
+      handler: useCallback(() => {
+        quickAddRef.current?.focus();
+      }, []),
+      description: "Focus quick add input",
+    },
+    {
+      key: "e",
+      handler: useCallback(() => {
+        if (deliverable) {
+          setEditingDeliverable(true);
+        }
+      }, [deliverable]),
+      description: "Edit current deliverable",
+    },
+    {
+      key: "Delete",
+      handler: useCallback(() => {
+        if (deliverable && !deliverable.isDeleted) {
+          deleteDeliverable.mutate();
+        }
+      }, [deliverable]),
+      description: "Delete current deliverable",
+    },
+  ]);
 
   const createAction = useMutation({
     mutationFn: async (name: string) => {
@@ -238,6 +283,7 @@ export function DeliverableView({ streamId, deliverableId, showDescriptions }: D
 
             <div className="max-w-sm">
               <QuickAddForm
+                ref={quickAddRef}
                 placeholder="Add new action..."
                 onAdd={(name) => createAction.mutate(name)}
                 isLoading={createAction.isPending}

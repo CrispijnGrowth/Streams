@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -28,6 +28,8 @@ import { useToast } from "@/hooks/use-toast";
 import type { Action } from "@shared/schema";
 import { ActionStatus } from "@shared/schema";
 
+export type EditActionFocusField = "owner" | "label" | null;
+
 const editActionSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
@@ -45,12 +47,27 @@ interface EditActionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onDeleted?: () => void;
+  initialFocus?: EditActionFocusField;
 }
 
-export function EditActionDialog({ action, open, onOpenChange, onDeleted }: EditActionDialogProps) {
+export function EditActionDialog({ action, open, onOpenChange, onDeleted, initialFocus }: EditActionDialogProps) {
   const { toast } = useToast();
   const [newOwner, setNewOwner] = useState("");
   const [newLabel, setNewLabel] = useState("");
+  const ownerInputRef = useRef<HTMLInputElement>(null);
+  const labelInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (open && initialFocus) {
+      setTimeout(() => {
+        if (initialFocus === "owner") {
+          ownerInputRef.current?.focus();
+        } else if (initialFocus === "label") {
+          labelInputRef.current?.focus();
+        }
+      }, 100);
+    }
+  }, [open, initialFocus]);
 
   const form = useForm<EditActionForm>({
     resolver: zodResolver(editActionSchema),
@@ -242,6 +259,7 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted }: Edit
             </div>
             <div className="flex gap-2">
               <Input
+                ref={ownerInputRef}
                 placeholder="Add owner..."
                 value={newOwner}
                 onChange={(e) => setNewOwner(e.target.value)}
@@ -277,6 +295,7 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted }: Edit
             </div>
             <div className="flex gap-2">
               <Input
+                ref={labelInputRef}
                 placeholder="Add label..."
                 value={newLabel}
                 onChange={(e) => setNewLabel(e.target.value)}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { ListChecks, Plus, Calendar, User, Clock, Pencil } from "lucide-react";
@@ -6,17 +6,19 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { StepList } from "@/components/step-list";
-import { QuickAddForm } from "@/components/quick-add-form";
+import { QuickAddForm, QuickAddFormRef } from "@/components/quick-add-form";
 import { EmptyState } from "@/components/empty-state";
 import { StatusBadge } from "@/components/status-badge";
 import { ProgressBar } from "@/components/progress-bar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { EditActionDialog } from "@/components/edit-action-dialog";
+import { EditActionDialog, EditActionFocusField } from "@/components/edit-action-dialog";
 import { EditStepDialog } from "@/components/edit-step-dialog";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { format } from "date-fns";
-import type { ActionWithProgress, Step } from "@shared/schema";
+import type { ActionWithProgress, Step, ActionStatusType } from "@shared/schema";
+import { ActionStatus } from "@shared/schema";
 
 interface ActionViewProps {
   streamId: string;
@@ -28,7 +30,9 @@ export function ActionView({ streamId, deliverableId, actionId }: ActionViewProp
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [editingAction, setEditingAction] = useState(false);
+  const [editFocusField, setEditFocusField] = useState<EditActionFocusField>(null);
   const [editingStep, setEditingStep] = useState<Step | null>(null);
+  const quickAddRef = useRef<QuickAddFormRef>(null);
 
   const { data: action, isLoading: actionLoading } = useQuery<ActionWithProgress>({
     queryKey: ["/api/actions", actionId],
@@ -37,6 +41,102 @@ export function ActionView({ streamId, deliverableId, actionId }: ActionViewProp
   const { data: steps, isLoading: stepsLoading } = useQuery<Step[]>({
     queryKey: ["/api/actions", actionId, "steps"],
   });
+
+  const updateAction = useMutation({
+    mutationFn: async (updates: Partial<ActionWithProgress>) => {
+      return apiRequest("PATCH", `/api/actions/${actionId}`, updates);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/actions", actionId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/deliverables", deliverableId, "actions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
+    },
+    onError: () => {
+      toast({ title: "Failed to update action", variant: "destructive" });
+    },
+  });
+
+  const statusOrder: ActionStatusType[] = [
+    ActionStatus.BACKLOG,
+    ActionStatus.TO_EXECUTE,
+    ActionStatus.EXECUTING,
+    ActionStatus.BLOCKED,
+    ActionStatus.DELEGATED,
+    ActionStatus.DONE,
+    ActionStatus.ARCHIVE,
+  ];
+
+  const openEditWithFocus = useCallback((focus: EditActionFocusField) => {
+    if (action) {
+      setEditFocusField(focus);
+      setEditingAction(true);
+    }
+  }, [action]);
+
+  useKeyboardShortcuts([
+    {
+      key: "n",
+      handler: useCallback(() => {
+        quickAddRef.current?.focus();
+      }, []),
+      description: "Focus quick add input",
+    },
+    {
+      key: "e",
+      handler: useCallback(() => {
+        openEditWithFocus(null);
+      }, [openEditWithFocus]),
+      description: "Edit current action",
+    },
+    {
+      key: "Delete",
+      handler: useCallback(() => {
+        if (action && !action.isDeleted) {
+          updateAction.mutate({ isDeleted: true });
+          toast({ title: "Action moved to recycle bin" });
+          setLocation(`/stream/${streamId}/deliverable/${deliverableId}`);
+        }
+      }, [action, streamId, deliverableId]),
+      description: "Delete current action",
+    },
+    {
+      key: "a",
+      handler: useCallback(() => {
+        if (action) {
+          updateAction.mutate({ status: ActionStatus.ARCHIVE });
+          toast({ title: "Action archived" });
+        }
+      }, [action]),
+      description: "Archive current action",
+    },
+    {
+      key: "s",
+      handler: useCallback(() => {
+        if (action) {
+          const currentIndex = statusOrder.indexOf(action.status as ActionStatusType);
+          const nextIndex = (currentIndex + 1) % statusOrder.length;
+          const newStatus = statusOrder[nextIndex];
+          updateAction.mutate({ status: newStatus });
+          toast({ title: `Status changed to ${newStatus}` });
+        }
+      }, [action]),
+      description: "Cycle action status",
+    },
+    {
+      key: "o",
+      handler: useCallback(() => {
+        openEditWithFocus("owner");
+      }, [openEditWithFocus]),
+      description: "Edit action owners",
+    },
+    {
+      key: "l",
+      handler: useCallback(() => {
+        openEditWithFocus("label");
+      }, [openEditWithFocus]),
+      description: "Edit action labels",
+    },
+  ]);
 
   const createStep = useMutation({
     mutationFn: async (name: string) => {
@@ -202,6 +302,7 @@ export function ActionView({ streamId, deliverableId, actionId }: ActionViewProp
         )}
 
         <QuickAddForm
+          ref={quickAddRef}
           placeholder="Add new step..."
           onAdd={(name) => createStep.mutate(name)}
           isLoading={createStep.isPending}
@@ -211,8 +312,12 @@ export function ActionView({ streamId, deliverableId, actionId }: ActionViewProp
       <EditActionDialog
         action={action}
         open={editingAction}
-        onOpenChange={setEditingAction}
+        onOpenChange={(open) => {
+          setEditingAction(open);
+          if (!open) setEditFocusField(null);
+        }}
         onDeleted={() => setLocation(`/stream/${streamId}/deliverable/${deliverableId}`)}
+        initialFocus={editFocusField}
       />
 
       <EditStepDialog

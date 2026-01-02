@@ -1,18 +1,19 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Package, Users, Tag, Calendar, Activity, Pencil } from "lucide-react";
 import { Timeline } from "@/components/timeline";
 import { DeliverableCard } from "@/components/deliverable-card";
-import { QuickAddForm } from "@/components/quick-add-form";
+import { QuickAddForm, QuickAddFormRef } from "@/components/quick-add-form";
 import { EmptyState } from "@/components/empty-state";
 import { DeliverableCardSkeleton, TimelineSkeleton } from "@/components/loading-skeleton";
-import { EditStreamDialog } from "@/components/edit-stream-dialog";
+import { EditStreamDialog, EditStreamFocusField } from "@/components/edit-stream-dialog";
 import { EditDeliverableDialog } from "@/components/edit-deliverable-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import type { Stream, DeliverableWithProgress, Deliverable } from "@shared/schema";
 
 interface StreamViewProps {
@@ -24,7 +25,9 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [editingStream, setEditingStream] = useState(false);
+  const [editFocusField, setEditFocusField] = useState<EditStreamFocusField>(null);
   const [editingDeliverable, setEditingDeliverable] = useState<Deliverable | null>(null);
+  const quickAddRef = useRef<QuickAddFormRef>(null);
 
   const { data: stream, isLoading: streamLoading } = useQuery<Stream>({
     queryKey: ["/api/streams", streamId],
@@ -33,6 +36,67 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
   const { data: deliverables, isLoading: deliverablesLoading } = useQuery<DeliverableWithProgress[]>({
     queryKey: ["/api/streams", streamId, "deliverables"],
   });
+
+  const deleteStream = useMutation({
+    mutationFn: async () => {
+      return apiRequest("PATCH", `/api/streams/${streamId}`, { isDeleted: true });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
+      toast({ title: "Stream moved to recycle bin" });
+      setLocation("/");
+    },
+    onError: () => {
+      toast({ title: "Failed to delete stream", variant: "destructive" });
+    },
+  });
+
+  const openEditWithFocus = useCallback((focus: EditStreamFocusField) => {
+    if (stream) {
+      setEditFocusField(focus);
+      setEditingStream(true);
+    }
+  }, [stream]);
+
+  useKeyboardShortcuts([
+    {
+      key: "n",
+      handler: useCallback(() => {
+        quickAddRef.current?.focus();
+      }, []),
+      description: "Focus quick add input",
+    },
+    {
+      key: "e",
+      handler: useCallback(() => {
+        openEditWithFocus(null);
+      }, [openEditWithFocus]),
+      description: "Edit stream",
+    },
+    {
+      key: "Delete",
+      handler: useCallback(() => {
+        if (stream && !stream.isDeleted) {
+          deleteStream.mutate();
+        }
+      }, [stream]),
+      description: "Delete current stream",
+    },
+    {
+      key: "o",
+      handler: useCallback(() => {
+        openEditWithFocus("owner");
+      }, [openEditWithFocus]),
+      description: "Edit stream owners",
+    },
+    {
+      key: "l",
+      handler: useCallback(() => {
+        openEditWithFocus("label");
+      }, [openEditWithFocus]),
+      description: "Edit stream labels",
+    },
+  ]);
 
   const createDeliverable = useMutation({
     mutationFn: async (name: string) => {
@@ -236,6 +300,7 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
 
             <div className="max-w-sm">
               <QuickAddForm
+                ref={quickAddRef}
                 placeholder="Add new deliverable..."
                 onAdd={(name) => createDeliverable.mutate(name)}
                 isLoading={createDeliverable.isPending}
@@ -258,8 +323,12 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
       <EditStreamDialog
         stream={stream}
         open={editingStream}
-        onOpenChange={setEditingStream}
+        onOpenChange={(open) => {
+          setEditingStream(open);
+          if (!open) setEditFocusField(null);
+        }}
         onDeleted={() => setLocation("/")}
+        initialFocus={editFocusField}
       />
 
       <EditDeliverableDialog
