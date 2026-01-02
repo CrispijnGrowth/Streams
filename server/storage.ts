@@ -443,6 +443,7 @@ export class MemStorage implements IStorage {
     };
     this.deliverables.set(id, deliverable);
     this.updateStreamMilestone(data.streamId);
+    this.updateStreamMomentum(data.streamId);
     return deliverable;
   }
 
@@ -464,12 +465,42 @@ export class MemStorage implements IStorage {
     stream.computedMilestoneDate = earliest;
   }
 
+  private updateStreamMomentum(streamId: string) {
+    const stream = this.streams.get(streamId);
+    if (!stream) return;
+    
+    const now = new Date();
+    stream.lastMovementAt = now.toISOString();
+    
+    const daysSinceMovement = 0;
+    
+    if (daysSinceMovement <= 7) {
+      stream.momentumStatus = MomentumStatus.ACTIVE;
+    } else if (daysSinceMovement <= 14) {
+      stream.momentumStatus = MomentumStatus.SLOWING;
+    } else {
+      stream.momentumStatus = MomentumStatus.STALLED;
+    }
+  }
+
+  private getStreamIdFromDeliverable(deliverableId: string): string | undefined {
+    const deliverable = this.deliverables.get(deliverableId);
+    return deliverable?.streamId;
+  }
+
+  private getStreamIdFromAction(actionId: string): string | undefined {
+    const action = this.actions.get(actionId);
+    if (!action) return undefined;
+    return action.streamId;
+  }
+
   async updateDeliverable(id: string, data: Partial<InsertDeliverable>): Promise<Deliverable | undefined> {
     const del = this.deliverables.get(id);
     if (!del || del.isDeleted) return undefined;
     const updated: Deliverable = { ...del, ...data } as Deliverable;
     this.deliverables.set(id, updated);
     this.updateStreamMilestone(del.streamId);
+    this.updateStreamMomentum(del.streamId);
     return updated;
   }
 
@@ -540,6 +571,9 @@ export class MemStorage implements IStorage {
       isDeleted: false,
     };
     this.actions.set(id, action);
+    if (data.streamId) {
+      this.updateStreamMomentum(data.streamId);
+    }
     return action;
   }
 
@@ -548,6 +582,9 @@ export class MemStorage implements IStorage {
     if (!action || action.isDeleted) return undefined;
     const updated: Action = { ...action, ...data } as Action;
     this.actions.set(id, updated);
+    if (action.streamId) {
+      this.updateStreamMomentum(action.streamId);
+    }
     return updated;
   }
 
@@ -597,6 +634,10 @@ export class MemStorage implements IStorage {
       isDeleted: false,
     };
     this.steps.set(id, step);
+    const streamId = this.getStreamIdFromAction(data.actionId);
+    if (streamId) {
+      this.updateStreamMomentum(streamId);
+    }
     return step;
   }
 
@@ -605,6 +646,10 @@ export class MemStorage implements IStorage {
     if (!step || step.isDeleted) return undefined;
     const updated = { ...step, ...data };
     this.steps.set(id, updated);
+    const streamId = this.getStreamIdFromAction(step.actionId);
+    if (streamId) {
+      this.updateStreamMomentum(streamId);
+    }
     return updated;
   }
 
