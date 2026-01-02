@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { Package, Plus } from "lucide-react";
+import { Package } from "lucide-react";
 import { Timeline } from "@/components/timeline";
 import { DeliverableCard } from "@/components/deliverable-card";
 import { QuickAddForm } from "@/components/quick-add-form";
@@ -63,12 +63,16 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
 
   if (isLoading) {
     return (
-      <div className="space-y-8 p-6">
-        <TimelineSkeleton />
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <DeliverableCardSkeleton key={i} />
-          ))}
+      <div className="flex flex-col h-full">
+        <div className="flex-1 overflow-auto p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <DeliverableCardSkeleton key={i} />
+            ))}
+          </div>
+        </div>
+        <div className="shrink-0 border-t p-4 bg-background">
+          <TimelineSkeleton />
         </div>
       </div>
     );
@@ -88,61 +92,69 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
 
   if (!deliverables || deliverables.length === 0) {
     return (
-      <div className="space-y-8 p-6">
-        <Timeline
-          items={[]}
-          onItemClick={handleDeliverableClick}
-          level="deliverable"
-        />
-        <EmptyState
-          icon={Package}
-          title="No deliverables yet"
-          description="Create your first deliverable to start tracking progress in this stream."
-          actionLabel="Create Deliverable"
-          onAction={() => createDeliverable.mutate("New Deliverable")}
-        />
+      <div className="flex flex-col h-full">
+        <div className="flex-1 overflow-auto p-6">
+          <EmptyState
+            icon={Package}
+            title="No deliverables yet"
+            description="Create your first deliverable to start tracking progress in this stream."
+            actionLabel="Create Deliverable"
+            onAction={() => createDeliverable.mutate("New Deliverable")}
+          />
+        </div>
+        <div className="shrink-0 border-t p-4 bg-background">
+          <Timeline
+            items={[]}
+            onItemClick={handleDeliverableClick}
+            level="deliverable"
+          />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8 p-6">
-      <Timeline
-        items={timelineItems}
-        onItemClick={handleDeliverableClick}
-        level="deliverable"
-        defaultWindowMonths={12}
-      />
+    <div className="flex flex-col h-full">
+      <div className="flex-1 overflow-auto p-6">
+        <div className="space-y-4">
+          <div className="flex items-center justify-between gap-4">
+            <h2 className="text-lg font-semibold">Deliverables</h2>
+            <span className="text-sm text-muted-foreground">
+              {deliverables.length} deliverable{deliverables.length !== 1 ? "s" : ""}
+            </span>
+          </div>
 
-      <div className="space-y-4">
-        <div className="flex items-center justify-between gap-4">
-          <h2 className="text-lg font-semibold">Deliverables</h2>
-          <span className="text-sm text-muted-foreground">
-            {deliverables.length} deliverable{deliverables.length !== 1 ? "s" : ""}
-          </span>
-        </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {deliverables
+              .filter((d) => !d.isDeleted)
+              .sort((a, b) => a.ordinal - b.ordinal)
+              .map((deliverable) => (
+                <DeliverableCard
+                  key={deliverable.id}
+                  deliverable={deliverable}
+                  onClick={() => handleDeliverableClick(deliverable.id)}
+                  showDescription={showDescriptions}
+                />
+              ))}
+          </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {deliverables
-            .filter((d) => !d.isDeleted)
-            .sort((a, b) => a.ordinal - b.ordinal)
-            .map((deliverable) => (
-              <DeliverableCard
-                key={deliverable.id}
-                deliverable={deliverable}
-                onClick={() => handleDeliverableClick(deliverable.id)}
-                showDescription={showDescriptions}
-              />
-            ))}
+          <div className="max-w-sm">
+            <QuickAddForm
+              placeholder="Add new deliverable..."
+              onAdd={(name) => createDeliverable.mutate(name)}
+              isLoading={createDeliverable.isPending}
+            />
+          </div>
         </div>
+      </div>
 
-        <div className="max-w-sm">
-          <QuickAddForm
-            placeholder="Add new deliverable..."
-            onAdd={(name) => createDeliverable.mutate(name)}
-            isLoading={createDeliverable.isPending}
-          />
-        </div>
+      <div className="shrink-0 border-t p-4 bg-background">
+        <Timeline
+          items={timelineItems}
+          onItemClick={handleDeliverableClick}
+          level="deliverable"
+          defaultWindowMonths={12}
+        />
       </div>
     </div>
   );

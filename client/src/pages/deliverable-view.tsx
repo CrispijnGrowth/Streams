@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { CheckSquare, Plus } from "lucide-react";
+import { CheckSquare } from "lucide-react";
 import { Timeline } from "@/components/timeline";
 import { KanbanBoard } from "@/components/kanban-board";
 import { QuickAddForm } from "@/components/quick-add-form";
@@ -71,9 +71,13 @@ export function DeliverableView({ streamId, deliverableId, showDescriptions }: D
 
   if (isLoading) {
     return (
-      <div className="space-y-8 p-6">
-        <TimelineSkeleton />
-        <KanbanSkeleton />
+      <div className="flex flex-col h-full">
+        <div className="flex-1 overflow-auto p-6">
+          <KanbanSkeleton />
+        </div>
+        <div className="shrink-0 border-t p-4 bg-background">
+          <TimelineSkeleton />
+        </div>
       </div>
     );
   }
@@ -92,54 +96,62 @@ export function DeliverableView({ streamId, deliverableId, showDescriptions }: D
 
   if (!actions || actions.length === 0) {
     return (
-      <div className="space-y-8 p-6">
-        <Timeline
-          items={[]}
-          onItemClick={handleActionClick}
-          level="action"
-        />
-        <EmptyState
-          icon={CheckSquare}
-          title="No actions yet"
-          description="Create your first action to start tracking work in this deliverable."
-          actionLabel="Create Action"
-          onAction={() => createAction.mutate("New Action")}
-        />
+      <div className="flex flex-col h-full">
+        <div className="flex-1 overflow-auto p-6">
+          <EmptyState
+            icon={CheckSquare}
+            title="No actions yet"
+            description="Create your first action to start tracking work in this deliverable."
+            actionLabel="Create Action"
+            onAction={() => createAction.mutate("New Action")}
+          />
+        </div>
+        <div className="shrink-0 border-t p-4 bg-background">
+          <Timeline
+            items={[]}
+            onItemClick={handleActionClick}
+            level="action"
+          />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8 p-6">
-      <Timeline
-        items={timelineItems}
-        onItemClick={handleActionClick}
-        level="action"
-        defaultWindowMonths={6}
-      />
+    <div className="flex flex-col h-full">
+      <div className="flex-1 overflow-auto p-6">
+        <div className="space-y-4">
+          <div className="flex items-center justify-between gap-4">
+            <h2 className="text-lg font-semibold">Actions Kanban</h2>
+            <span className="text-sm text-muted-foreground">
+              {actions.length} action{actions.length !== 1 ? "s" : ""}
+            </span>
+          </div>
 
-      <div className="space-y-4">
-        <div className="flex items-center justify-between gap-4">
-          <h2 className="text-lg font-semibold">Actions Kanban</h2>
-          <span className="text-sm text-muted-foreground">
-            {actions.length} action{actions.length !== 1 ? "s" : ""}
-          </span>
-        </div>
-
-        <KanbanBoard
-          actions={actions.filter((a) => !a.isDeleted)}
-          onActionClick={handleActionClick}
-          onStatusChange={(actionId, status) => updateActionStatus.mutate({ actionId, status })}
-          showDescription={showDescriptions}
-        />
-
-        <div className="max-w-sm">
-          <QuickAddForm
-            placeholder="Add new action..."
-            onAdd={(name) => createAction.mutate(name)}
-            isLoading={createAction.isPending}
+          <KanbanBoard
+            actions={actions.filter((a) => !a.isDeleted)}
+            onActionClick={handleActionClick}
+            onStatusChange={(actionId, status) => updateActionStatus.mutate({ actionId, status })}
+            showDescription={showDescriptions}
           />
+
+          <div className="max-w-sm">
+            <QuickAddForm
+              placeholder="Add new action..."
+              onAdd={(name) => createAction.mutate(name)}
+              isLoading={createAction.isPending}
+            />
+          </div>
         </div>
+      </div>
+
+      <div className="shrink-0 border-t p-4 bg-background">
+        <Timeline
+          items={timelineItems}
+          onItemClick={handleActionClick}
+          level="action"
+          defaultWindowMonths={6}
+        />
       </div>
     </div>
   );
