@@ -47,7 +47,6 @@ export function StreamCard({ stream, onClick, onEdit, showDescription = true }: 
           </Button>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs font-mono text-muted-foreground">{stream.key}</span>
           <MomentumBadge status={stream.momentumStatus} />
           {stream.computedMilestoneDate && (
             <div
@@ -73,7 +72,6 @@ export function StreamCard({ stream, onClick, onEdit, showDescription = true }: 
           <ProgressBar value={stream.progress} size="sm" showLabel={false} />
         </div>
         <span className="text-xs font-mono text-muted-foreground shrink-0">{Math.round(stream.progress)}%</span>
-        <span className="text-xs text-muted-foreground shrink-0">{stream.deliverableCount}D</span>
       </div>
 
       <div className="flex items-center gap-1.5 flex-wrap">
