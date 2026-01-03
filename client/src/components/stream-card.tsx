@@ -77,11 +77,22 @@ export function StreamCard({ stream, onClick, onEdit, showDescription = true }: 
       <div className="flex items-center gap-1.5 flex-wrap">
         {stream.inProgressDeliverables.length > 0 && (
           <>
-            {stream.inProgressDeliverables.slice(0, 3).map((name) => (
-              <Badge key={name} variant="outline" className="text-xs py-0 h-5">
-                {name}
-              </Badge>
-            ))}
+            {stream.inProgressDeliverables
+              .sort((a, b) => {
+                if (a === stream.earliestDeliverable) return -1;
+                if (b === stream.earliestDeliverable) return 1;
+                return 0;
+              })
+              .slice(0, 3)
+              .map((name) => (
+                <Badge 
+                  key={name} 
+                  variant={name === stream.earliestDeliverable ? "default" : "outline"} 
+                  className={`text-xs py-0 h-5 ${name === stream.earliestDeliverable ? "font-medium" : ""}`}
+                >
+                  {name}
+                </Badge>
+              ))}
             {stream.inProgressDeliverables.length > 3 && (
               <span className="text-xs text-muted-foreground">
                 +{stream.inProgressDeliverables.length - 3}

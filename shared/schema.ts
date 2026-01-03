@@ -157,6 +157,7 @@ export interface StreamWithProgress extends Stream {
   blockedCount: number;
   delegatedCount: number;
   inProgressDeliverables: string[];
+  earliestDeliverable: string | null;
 }
 
 export interface DeliverableWithProgress extends Deliverable {

@@ -301,6 +301,7 @@ export class MemStorage implements IStorage {
     blockedCount: number;
     delegatedCount: number;
     inProgressDeliverables: string[];
+    earliestDeliverable: string | null;
   } {
     const streamDeliverables = Array.from(this.deliverables.values()).filter(
       (d) => d.streamId === streamId && !d.isDeleted
@@ -312,6 +313,8 @@ export class MemStorage implements IStorage {
     let blockedCount = 0;
     let delegatedCount = 0;
     const inProgressDeliverables: string[] = [];
+    let earliestDeliverable: string | null = null;
+    let earliestDate: Date | null = null;
     
     for (const del of streamDeliverables) {
       const delStats = this.computeDeliverableProgress(del.id);
@@ -321,6 +324,13 @@ export class MemStorage implements IStorage {
       delegatedCount += delStats.delegatedCount;
       if (del.status === DeliverableStatus.IN_PROGRESS) {
         inProgressDeliverables.push(del.name);
+        if (del.milestoneDate) {
+          const date = new Date(del.milestoneDate);
+          if (!earliestDate || date < earliestDate) {
+            earliestDate = date;
+            earliestDeliverable = del.name;
+          }
+        }
       }
     }
     
@@ -331,6 +341,7 @@ export class MemStorage implements IStorage {
       blockedCount,
       delegatedCount,
       inProgressDeliverables,
+      earliestDeliverable,
     };
   }
 
