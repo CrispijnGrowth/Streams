@@ -1,5 +1,12 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
+const SESSION_KEY = "streams-session-id";
+
+function getSessionHeaders(): HeadersInit {
+  const sessionId = typeof window !== "undefined" ? localStorage.getItem(SESSION_KEY) : null;
+  return sessionId ? { "x-session-id": sessionId } : {};
+}
+
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
@@ -12,9 +19,13 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
+  const headers: HeadersInit = { ...getSessionHeaders() };
+  if (data) {
+    (headers as Record<string, string>)["Content-Type"] = "application/json";
+  }
   const res = await fetch(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers,
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });
@@ -31,6 +42,7 @@ export const getQueryFn: <T>(options: {
   async ({ queryKey }) => {
     const res = await fetch(queryKey.join("/") as string, {
       credentials: "include",
+      headers: getSessionHeaders(),
     });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {

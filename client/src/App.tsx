@@ -21,6 +21,7 @@ import { DeliverableView } from "@/pages/deliverable-view";
 import { ActionView } from "@/pages/action-view";
 import { GlobalKanban } from "@/pages/global-kanban";
 import { RecycleBin } from "@/pages/recycle-bin";
+import { SettingsPage } from "@/pages/settings";
 import { LoginPage } from "@/pages/login";
 import { AuthVerifyPage } from "@/pages/auth-verify";
 import NotFound from "@/pages/not-found";
@@ -95,6 +96,9 @@ function Router({ showDescriptions }: { showDescriptions: boolean }) {
       </Route>
       <Route path="/recycle-bin">
         <RecycleBin />
+      </Route>
+      <Route path="/settings">
+        <SettingsPage />
       </Route>
       <Route path="/stream/:streamId">
         {(params) => (
