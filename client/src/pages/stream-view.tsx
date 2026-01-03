@@ -136,12 +136,21 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
     },
   });
 
+  const updateDeliverableStatus = useMutation({
+    mutationFn: async ({ deliverableId, status }: { deliverableId: string; status: string }) => {
+      return apiRequest("PATCH", `/api/deliverables/${deliverableId}`, { status });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/streams", streamId, "deliverables"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
+    },
+  });
+
   const timelineItems = deliverables?.map((d) => ({
     id: d.id,
     title: d.name,
     description: d.description,
     date: d.milestoneDate,
-    status: d.status,
     progress: d.progress,
     counts: {
       doing: d.doingCount,
@@ -310,6 +319,7 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
                     deliverable={deliverable}
                     onClick={() => handleDeliverableClick(deliverable.id)}
                     onEdit={() => setEditingDeliverable(deliverable)}
+                    onStatusToggle={(status) => updateDeliverableStatus.mutate({ deliverableId: deliverable.id, status })}
                     showDescription={showDescriptions}
                   />
                 ))}

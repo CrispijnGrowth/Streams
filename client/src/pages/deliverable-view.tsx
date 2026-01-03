@@ -7,7 +7,6 @@ import { KanbanBoard } from "@/components/kanban-board";
 import { QuickAddForm, QuickAddFormRef } from "@/components/quick-add-form";
 import { EmptyState } from "@/components/empty-state";
 import { KanbanSkeleton, TimelineSkeleton } from "@/components/loading-skeleton";
-import { DeliverableStatusBadge } from "@/components/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EditDeliverableDialog } from "@/components/edit-deliverable-dialog";
@@ -16,6 +15,8 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import type { DeliverableWithProgress, ActionWithProgress, Action } from "@shared/schema";
+import { DeliverableStatus } from "@shared/schema";
+import { Pause, Play } from "lucide-react";
 
 interface DeliverableViewProps {
   streamId: string;
@@ -103,6 +104,16 @@ export function DeliverableView({ streamId, deliverableId, showDescriptions }: D
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/deliverables", deliverableId, "actions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/deliverables"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
+    },
+  });
+
+  const updateDeliverableStatus = useMutation({
+    mutationFn: async (status: string) => {
+      return apiRequest("PATCH", `/api/deliverables/${deliverableId}`, { status });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/deliverables", deliverableId] });
       queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
     },
   });
@@ -195,8 +206,22 @@ export function DeliverableView({ streamId, deliverableId, showDescriptions }: D
         <div className="space-y-6">
           <div className="flex items-center justify-between gap-4 pb-3 border-b flex-wrap">
             <div className="flex items-center gap-3">
+              <Button
+                size="icon"
+                variant="ghost"
+                className={`h-7 w-7 ${deliverable.status === DeliverableStatus.ON_HOLD ? "text-muted-foreground" : "text-status-executing"}`}
+                onClick={() => {
+                  const newStatus = deliverable.status === DeliverableStatus.ON_HOLD 
+                    ? DeliverableStatus.IN_PROGRESS 
+                    : DeliverableStatus.ON_HOLD;
+                  updateDeliverableStatus.mutate(newStatus);
+                }}
+                data-testid="button-toggle-deliverable-status"
+                title={deliverable.status === DeliverableStatus.ON_HOLD ? "Resume" : "Put on hold"}
+              >
+                {deliverable.status === DeliverableStatus.ON_HOLD ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+              </Button>
               <h1 className="text-lg font-semibold" data-testid="text-deliverable-name">{deliverable.name}</h1>
-              <DeliverableStatusBadge status={deliverable.status} />
               <Button
                 size="icon"
                 variant="ghost"

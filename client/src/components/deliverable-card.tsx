@@ -1,17 +1,17 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { DeliverableStatusBadge } from "@/components/status-badge";
 import { ProgressBar } from "@/components/progress-bar";
-import { Calendar, Pencil, Pause } from "lucide-react";
+import { Calendar, Pencil, Pause, Play } from "lucide-react";
 import { format } from "date-fns";
-import type { DeliverableWithProgress } from "@shared/schema";
+import type { DeliverableWithProgress, DeliverableStatusType } from "@shared/schema";
 import { DeliverableStatus } from "@shared/schema";
 
 interface DeliverableCardProps {
   deliverable: DeliverableWithProgress;
   onClick?: () => void;
   onEdit?: () => void;
+  onStatusToggle?: (newStatus: DeliverableStatusType) => void;
   showDescription?: boolean;
   isDragging?: boolean;
 }
@@ -20,6 +20,7 @@ export function DeliverableCard({
   deliverable,
   onClick,
   onEdit,
+  onStatusToggle,
   showDescription = true,
   isDragging = false,
 }: DeliverableCardProps) {
@@ -34,6 +35,12 @@ export function DeliverableCard({
     onEdit?.();
   };
 
+  const handleStatusToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const newStatus = isOnHold ? DeliverableStatus.IN_PROGRESS : DeliverableStatus.ON_HOLD;
+    onStatusToggle?.(newStatus);
+  };
+
   return (
     <Card
       className={`p-2.5 space-y-1.5 cursor-pointer hover-elevate active-elevate-2 transition-all group ${
@@ -44,13 +51,21 @@ export function DeliverableCard({
     >
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 flex-1 min-w-0">
-          {isOnHold && <Pause className="h-3 w-3 text-muted-foreground shrink-0" />}
+          <Button
+            size="icon"
+            variant="ghost"
+            className={`h-5 w-5 shrink-0 ${isOnHold ? "text-muted-foreground" : "text-status-executing"}`}
+            onClick={handleStatusToggle}
+            data-testid={`button-toggle-status-${deliverable.id}`}
+            title={isOnHold ? "Resume" : "Put on hold"}
+          >
+            {isOnHold ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
+          </Button>
           <h4 className="font-medium text-sm truncate" data-testid={`text-deliverable-name-${deliverable.id}`}>
             {deliverable.name}
           </h4>
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          {isOnHold && <DeliverableStatusBadge status={deliverable.status} size="sm" />}
           {deliverable.milestoneDate && (
             <div
               className={`flex items-center gap-1 text-xs ${isOverdue ? "text-status-blocked" : "text-muted-foreground"}`}
