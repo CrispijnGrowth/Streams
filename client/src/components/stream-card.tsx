@@ -67,18 +67,20 @@ export function StreamCard({ stream, onClick, onEdit, showDescription = true }: 
         </p>
       )}
 
-      <div className="space-y-1.5">
+      <div className="space-y-2">
         {stream.inProgressDeliverables.slice(0, 3).map((del) => (
-          <div key={del.name} className="flex items-center gap-2">
-            <span className={`text-xs truncate min-w-0 flex-shrink ${del.isEarliest ? "font-medium" : "text-muted-foreground"}`} style={{ maxWidth: "45%" }}>
+          <div key={del.name} className="space-y-0.5">
+            <span className={`text-xs line-clamp-1 ${del.isEarliest ? "font-medium" : "text-muted-foreground"}`}>
               {del.name}
             </span>
-            <div className="flex-1">
-              <ProgressBar value={del.progress} size="sm" showLabel={false} />
+            <div className="flex items-center gap-2">
+              <div className="flex-1">
+                <ProgressBar value={del.progress} size="sm" showLabel={false} />
+              </div>
+              <span className="text-xs font-mono text-muted-foreground shrink-0">
+                {Math.round(del.progress)}%
+              </span>
             </div>
-            <span className="text-xs font-mono text-muted-foreground shrink-0 w-8 text-right">
-              {Math.round(del.progress)}%
-            </span>
           </div>
         ))}
         {stream.inProgressDeliverables.length > 3 && (
