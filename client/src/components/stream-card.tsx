@@ -67,38 +67,27 @@ export function StreamCard({ stream, onClick, onEdit, showDescription = true }: 
         </p>
       )}
 
-      <div className="flex items-center gap-2">
-        <div className="flex-1">
-          <ProgressBar value={stream.progress} size="sm" showLabel={false} />
-        </div>
-        <span className="text-xs font-mono text-muted-foreground shrink-0">{Math.round(stream.progress)}%</span>
-      </div>
-
-      <div className="flex items-center gap-1.5 flex-wrap">
-        {stream.inProgressDeliverables.length > 0 && (
-          <>
-            {stream.inProgressDeliverables
-              .sort((a, b) => {
-                if (a === stream.earliestDeliverable) return -1;
-                if (b === stream.earliestDeliverable) return 1;
-                return 0;
-              })
-              .slice(0, 3)
-              .map((name) => (
-                <Badge 
-                  key={name} 
-                  variant={name === stream.earliestDeliverable ? "default" : "outline"} 
-                  className={`text-xs py-0 h-5 ${name === stream.earliestDeliverable ? "font-medium" : ""}`}
-                >
-                  {name}
-                </Badge>
-              ))}
-            {stream.inProgressDeliverables.length > 3 && (
-              <span className="text-xs text-muted-foreground">
-                +{stream.inProgressDeliverables.length - 3}
-              </span>
-            )}
-          </>
+      <div className="space-y-1.5">
+        {stream.inProgressDeliverables.slice(0, 3).map((del) => (
+          <div key={del.name} className="flex items-center gap-2">
+            <span className={`text-xs truncate min-w-0 flex-shrink ${del.isEarliest ? "font-medium" : "text-muted-foreground"}`} style={{ maxWidth: "45%" }}>
+              {del.name}
+            </span>
+            <div className="flex-1">
+              <ProgressBar value={del.progress} size="sm" showLabel={false} />
+            </div>
+            <span className="text-xs font-mono text-muted-foreground shrink-0 w-8 text-right">
+              {Math.round(del.progress)}%
+            </span>
+          </div>
+        ))}
+        {stream.inProgressDeliverables.length > 3 && (
+          <span className="text-xs text-muted-foreground">
+            +{stream.inProgressDeliverables.length - 3} more
+          </span>
+        )}
+        {stream.inProgressDeliverables.length === 0 && (
+          <p className="text-xs text-muted-foreground italic">No active deliverables</p>
         )}
       </div>
     </Card>

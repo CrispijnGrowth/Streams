@@ -300,8 +300,7 @@ export class MemStorage implements IStorage {
     doingCount: number;
     blockedCount: number;
     delegatedCount: number;
-    inProgressDeliverables: string[];
-    earliestDeliverable: string | null;
+    inProgressDeliverables: { name: string; progress: number; isEarliest: boolean }[];
   } {
     const streamDeliverables = Array.from(this.deliverables.values()).filter(
       (d) => d.streamId === streamId && !d.isDeleted
@@ -312,9 +311,7 @@ export class MemStorage implements IStorage {
     let doingCount = 0;
     let blockedCount = 0;
     let delegatedCount = 0;
-    const inProgressDeliverables: string[] = [];
-    let earliestDeliverable: string | null = null;
-    let earliestDate: Date | null = null;
+    const inProgressDeliverables: { name: string; progress: number; milestoneDate: string | null }[] = [];
     
     for (const del of streamDeliverables) {
       const delStats = this.computeDeliverableProgress(del.id);
@@ -323,16 +320,37 @@ export class MemStorage implements IStorage {
       blockedCount += delStats.blockedCount;
       delegatedCount += delStats.delegatedCount;
       if (del.status === DeliverableStatus.IN_PROGRESS) {
-        inProgressDeliverables.push(del.name);
-        if (del.milestoneDate) {
-          const date = new Date(del.milestoneDate);
-          if (!earliestDate || date < earliestDate) {
-            earliestDate = date;
-            earliestDeliverable = del.name;
-          }
+        inProgressDeliverables.push({
+          name: del.name,
+          progress: delStats.progress,
+          milestoneDate: del.milestoneDate || null,
+        });
+      }
+    }
+    
+    let earliestName: string | null = null;
+    let earliestDate: Date | null = null;
+    for (const d of inProgressDeliverables) {
+      if (d.milestoneDate) {
+        const date = new Date(d.milestoneDate);
+        if (!earliestDate || date < earliestDate) {
+          earliestDate = date;
+          earliestName = d.name;
         }
       }
     }
+    
+    const result = inProgressDeliverables
+      .sort((a, b) => {
+        if (a.name === earliestName) return -1;
+        if (b.name === earliestName) return 1;
+        return 0;
+      })
+      .map((d) => ({
+        name: d.name,
+        progress: d.progress,
+        isEarliest: d.name === earliestName,
+      }));
     
     return {
       progress: deliverableCount > 0 ? Math.round(totalProgress / deliverableCount) : 0,
@@ -340,8 +358,7 @@ export class MemStorage implements IStorage {
       doingCount,
       blockedCount,
       delegatedCount,
-      inProgressDeliverables,
-      earliestDeliverable,
+      inProgressDeliverables: result,
     };
   }
 

@@ -150,14 +150,19 @@ export type InsertDeliverable = z.infer<typeof insertDeliverableSchema>;
 export type InsertAction = z.infer<typeof insertActionSchema>;
 export type InsertStep = z.infer<typeof insertStepSchema>;
 
+export interface InProgressDeliverableInfo {
+  name: string;
+  progress: number;
+  isEarliest: boolean;
+}
+
 export interface StreamWithProgress extends Stream {
   progress: number;
   deliverableCount: number;
   doingCount: number;
   blockedCount: number;
   delegatedCount: number;
-  inProgressDeliverables: string[];
-  earliestDeliverable: string | null;
+  inProgressDeliverables: InProgressDeliverableInfo[];
 }
 
 export interface DeliverableWithProgress extends Deliverable {
