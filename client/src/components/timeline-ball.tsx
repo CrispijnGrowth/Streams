@@ -24,6 +24,15 @@ interface TimelineBallProps {
   };
 }
 
+function generateAcronym(title: string): string {
+  const words = title.trim().split(/\s+/).filter(w => w.length > 0);
+  if (words.length === 0) return "";
+  if (words.length === 1) {
+    return words[0].substring(0, 3).toUpperCase();
+  }
+  return words.slice(0, 3).map(w => w[0]).join("").toUpperCase();
+}
+
 const statusColors: Record<ActionStatusType, string> = {
   Backlog: "bg-status-backlog",
   "To Execute": "bg-status-to-execute",
@@ -54,11 +63,18 @@ export function TimelineBall({
   counts,
 }: TimelineBallProps) {
   const [isHovered, setIsHovered] = useState(false);
+  const acronym = generateAcronym(title);
 
   const sizeClasses = {
-    sm: "w-5 h-5",
-    default: "w-8 h-8",
-    lg: "w-10 h-10",
+    sm: "w-6 h-6",
+    default: "w-9 h-9",
+    lg: "w-11 h-11",
+  };
+
+  const textSizeClasses = {
+    sm: "text-[7px]",
+    default: "text-[9px]",
+    lg: "text-[10px]",
   };
 
   const getBallColor = () => {
@@ -82,6 +98,7 @@ export function TimelineBall({
             transition-all duration-200 ease-out
             focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2
             cursor-pointer
+            flex items-center justify-center
             ${isHovered ? "scale-110 shadow-lg" : "shadow-sm"}
             ${momentumStatus === "Stalled" || momentumStatus === "Slowing" ? "opacity-70" : ""}
           `}
@@ -90,7 +107,11 @@ export function TimelineBall({
           onMouseLeave={() => setIsHovered(false)}
           data-testid={`ball-${id}`}
           aria-label={`${title}${date ? `, ${format(new Date(date), "MMM d, yyyy")}` : ", no date"}`}
-        />
+        >
+          <span className={`${textSizeClasses[size]} font-bold leading-none ${isNoDate ? 'text-muted-foreground' : 'text-white'}`}>
+            {acronym}
+          </span>
+        </button>
       </TooltipTrigger>
       <TooltipContent
         side="top"

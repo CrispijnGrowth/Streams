@@ -49,13 +49,13 @@
   --status-backlog: 220 13% 65%;
   --status-to-execute: 217 91% 55%;
   --status-executing: 45 93% 47%;
-  --status-blocked: 0 84% 50%;
+  --status-blocked: 348 51% 51%;
   --status-delegated: 280 60% 55%;
-  --status-done: 142 71% 45%;
+  --status-done: 181 80% 30%;
   --status-archive: 0 0% 55%;
-  --momentum-active: 142 71% 45%;
+  --momentum-active: 181 80% 30%;
   --momentum-slowing: 45 93% 47%;
-  --momentum-stalled: 0 84% 50%;
+  --momentum-stalled: 348 51% 51%;
   --radius: .5rem;
   --shadow-2xs: 0px 2px 0px 0px hsl(0 0% 0% / 0.00);
   --shadow-xs: 0px 2px 0px 0px hsl(0 0% 0% / 0.00);
@@ -140,13 +140,13 @@
   --status-backlog: 220 13% 70%;
   --status-to-execute: 217 91% 60%;
   --status-executing: 45 93% 52%;
-  --status-blocked: 0 84% 55%;
+  --status-blocked: 348 51% 56%;
   --status-delegated: 280 60% 60%;
-  --status-done: 142 71% 50%;
+  --status-done: 181 80% 35%;
   --status-archive: 0 0% 60%;
-  --momentum-active: 142 71% 50%;
+  --momentum-active: 181 80% 35%;
   --momentum-slowing: 45 93% 52%;
-  --momentum-stalled: 0 84% 55%;
+  --momentum-stalled: 348 51% 56%;
   --shadow-2xs: 0px 2px 0px 0px hsl(0 0% 0% / 0.00);
   --shadow-xs: 0px 2px 0px 0px hsl(0 0% 0% / 0.00);
   --shadow-sm: 0px 2px 0px 0px hsl(0 0% 0% / 0.00), 0px 1px 2px -1px hsl(0 0% 0% / 0.00);
@@ -305,4 +305,35 @@
   .border.hover-elevate:not(.no-hover-interaction-elevate)::after {
     inset: -1px;
   }
+}
+
+@keyframes bounce-fall {
+  0% {
+    transform: translateY(-50px);
+    opacity: 1;
+  }
+  40% {
+    transform: translateY(70vh);
+    opacity: 1;
+  }
+  55% {
+    transform: translateY(50vh);
+    opacity: 1;
+  }
+  70% {
+    transform: translateY(65vh);
+    opacity: 1;
+  }
+  85% {
+    transform: translateY(55vh);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(60vh);
+    opacity: 0;
+  }
+}
+
+.animate-bounce-fall {
+  animation: bounce-fall 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }

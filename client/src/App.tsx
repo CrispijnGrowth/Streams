@@ -9,6 +9,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { DescriptionsToggle } from "@/components/descriptions-toggle";
 import { BreadcrumbNav } from "@/components/breadcrumb-nav";
 import { GlobalSearch } from "@/components/global-search";
+import { PageTransition } from "@/components/page-transition";
 import { Button } from "@/components/ui/button";
 import { Layers, LayoutGrid, Trash2, Search } from "lucide-react";
 import { StreamsOverview } from "@/pages/streams-overview";
@@ -161,6 +162,7 @@ function TopNav() {
 }
 
 function AppContent() {
+  const [location] = useLocation();
   const [showDescriptions, setShowDescriptions] = useState(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("streams-show-descriptions") !== "false";
@@ -231,7 +233,9 @@ function AppContent() {
       </header>
       <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
       <main className="flex-1 overflow-auto">
-        <Router showDescriptions={showDescriptions} />
+        <PageTransition transitionKey={location}>
+          <Router showDescriptions={showDescriptions} />
+        </PageTransition>
       </main>
     </div>
   );
