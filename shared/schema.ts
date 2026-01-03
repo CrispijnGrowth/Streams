@@ -36,14 +36,46 @@ export const Phases = {
 
 export type PhaseType = (typeof Phases)[keyof typeof Phases];
 
+export const UserRole = {
+  ADMIN: "admin",
+  MEMBER: "member",
+  PENDING: "pending",
+} as const;
+
+export type UserRoleType = (typeof UserRole)[keyof typeof UserRole];
+
 export interface User {
   id: string;
   email: string;
   name: string;
-  role: "admin" | "member" | "pending";
+  role: UserRoleType;
   showDescriptions: boolean;
   themePreference: "light" | "dark" | "system";
+  createdAt: string;
 }
+
+export interface MagicLinkToken {
+  id: string;
+  email: string;
+  token: string;
+  expiresAt: string;
+  used: boolean;
+  createdAt: string;
+}
+
+export interface Session {
+  id: string;
+  userId: string;
+  expiresAt: string;
+  createdAt: string;
+}
+
+export const insertUserSchema = z.object({
+  email: z.string().email("Valid email is required"),
+  name: z.string().min(1, "Name is required"),
+});
+
+export type InsertUser = z.infer<typeof insertUserSchema>;
 
 export interface Stream {
   id: string;

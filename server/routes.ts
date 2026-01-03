@@ -1,17 +1,183 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { authStorage, generateMagicLinkUrl } from "./auth";
 import {
   insertStreamSchema,
   insertDeliverableSchema,
   insertActionSchema,
   insertStepSchema,
+  insertUserSchema,
+  UserRole,
 } from "@shared/schema";
+
+declare global {
+  namespace Express {
+    interface Request {
+      userId?: string;
+    }
+  }
+}
+
+async function authMiddleware(req: Request, res: Response, next: NextFunction) {
+  const sessionId = req.headers["x-session-id"] as string;
+  if (!sessionId) {
+    return res.status(401).json({ error: "Not authenticated" });
+  }
+  const session = await authStorage.getSession(sessionId);
+  if (!session) {
+    return res.status(401).json({ error: "Invalid or expired session" });
+  }
+  const user = await authStorage.getUserById(session.userId);
+  if (!user || user.role === UserRole.PENDING) {
+    return res.status(403).json({ error: "Account pending approval" });
+  }
+  req.userId = session.userId;
+  next();
+}
+
+async function adminMiddleware(req: Request, res: Response, next: NextFunction) {
+  const user = await authStorage.getUserById(req.userId!);
+  if (!user || user.role !== UserRole.ADMIN) {
+    return res.status(403).json({ error: "Admin access required" });
+  }
+  next();
+}
 
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  app.post("/api/auth/register", async (req, res) => {
+    try {
+      const parsed = insertUserSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors[0].message });
+      }
+      const existing = await authStorage.getUserByEmail(parsed.data.email);
+      if (existing) {
+        return res.status(400).json({ error: "Email already registered" });
+      }
+      const user = await authStorage.createUser(parsed.data);
+      res.status(201).json({ 
+        message: user.role === UserRole.ADMIN 
+          ? "Admin account created. Check your email for login link." 
+          : "Registration submitted. Awaiting admin approval.",
+        user: { id: user.id, email: user.email, name: user.name, role: user.role }
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Registration failed" });
+    }
+  });
+
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        return res.status(400).json({ error: "Email is required" });
+      }
+      const user = await authStorage.getUserByEmail(email);
+      if (!user) {
+        return res.status(404).json({ error: "No account found with this email" });
+      }
+      if (user.role === UserRole.PENDING) {
+        return res.status(403).json({ error: "Account pending admin approval" });
+      }
+      const token = await authStorage.createMagicToken(email);
+      const baseUrl = `${req.protocol}://${req.get("host")}`;
+      const magicLink = generateMagicLinkUrl(token, baseUrl);
+      console.log(`[Auth] Magic link for ${email}: ${magicLink}`);
+      res.json({ message: "Magic link sent to your email", debug: magicLink });
+    } catch (error) {
+      res.status(500).json({ error: "Login failed" });
+    }
+  });
+
+  app.post("/api/auth/verify", async (req, res) => {
+    try {
+      const { token } = req.body;
+      if (!token) {
+        return res.status(400).json({ error: "Token is required" });
+      }
+      const magicToken = await authStorage.validateMagicToken(token);
+      if (!magicToken) {
+        return res.status(400).json({ error: "Invalid or expired token" });
+      }
+      const user = await authStorage.getUserByEmail(magicToken.email);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      const session = await authStorage.createSession(user.id);
+      res.json({ 
+        sessionId: session.id, 
+        user: { id: user.id, email: user.email, name: user.name, role: user.role, showDescriptions: user.showDescriptions, themePreference: user.themePreference }
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Verification failed" });
+    }
+  });
+
+  app.post("/api/auth/logout", async (req, res) => {
+    const sessionId = req.headers["x-session-id"] as string;
+    if (sessionId) {
+      await authStorage.deleteSession(sessionId);
+    }
+    res.json({ message: "Logged out" });
+  });
+
+  app.get("/api/auth/me", async (req, res) => {
+    const sessionId = req.headers["x-session-id"] as string;
+    if (!sessionId) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+    const session = await authStorage.getSession(sessionId);
+    if (!session) {
+      return res.status(401).json({ error: "Invalid or expired session" });
+    }
+    const user = await authStorage.getUserById(session.userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    res.json({ id: user.id, email: user.email, name: user.name, role: user.role, showDescriptions: user.showDescriptions, themePreference: user.themePreference });
+  });
+
+  app.patch("/api/auth/preferences", async (req, res) => {
+    const sessionId = req.headers["x-session-id"] as string;
+    if (!sessionId) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+    const session = await authStorage.getSession(sessionId);
+    if (!session) {
+      return res.status(401).json({ error: "Invalid or expired session" });
+    }
+    const user = await authStorage.updateUserPreferences(session.userId, req.body);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    res.json({ id: user.id, email: user.email, name: user.name, role: user.role, showDescriptions: user.showDescriptions, themePreference: user.themePreference });
+  });
+
+  app.get("/api/admin/pending-users", authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+      const users = await authStorage.getPendingUsers();
+      res.json(users);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch pending users" });
+    }
+  });
+
+  app.post("/api/admin/approve/:userId", authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+      const user = await authStorage.approveUser(req.params.userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      res.json({ message: "User approved", user });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to approve user" });
+    }
+  });
+
   app.get("/api/streams", async (req, res) => {
     try {
       const streams = await storage.getStreams();
