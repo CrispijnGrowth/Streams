@@ -203,7 +203,7 @@ function AppContent() {
 
   return (
     <div className="flex flex-col h-screen w-full">
-      <header className="flex items-center justify-between gap-4 px-4 py-2 border-b bg-background sticky top-0 z-50">
+      <header className="flex items-center justify-between gap-4 px-4 py-2 border-b bg-muted sticky top-0 z-50">
         <div className="flex items-center gap-4">
           <TopNav />
           {items.length > 0 && (
