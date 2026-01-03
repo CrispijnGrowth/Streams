@@ -14,6 +14,9 @@ class AuthStorage {
   private sessions: Map<string, Session> = new Map();
 
   private dbUserToUser(dbUser: typeof users.$inferSelect): User {
+    const createdAt = dbUser.createdAt instanceof Date 
+      ? dbUser.createdAt.toISOString() 
+      : new Date(dbUser.createdAt).toISOString();
     return {
       id: dbUser.id,
       email: dbUser.email,
@@ -21,7 +24,7 @@ class AuthStorage {
       role: dbUser.role as User["role"],
       showDescriptions: dbUser.showDescriptions,
       themePreference: dbUser.themePreference as User["themePreference"],
-      createdAt: dbUser.createdAt.toISOString(),
+      createdAt,
     };
   }
 
