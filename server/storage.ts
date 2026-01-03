@@ -277,16 +277,7 @@ export class MemStorage implements IStorage {
     const delegatedCount = deliverableActions.filter((a) => a.status === ActionStatus.DELEGATED).length;
     
     if (actionCount === 0) {
-      const deliverable = this.deliverables.get(deliverableId);
-      if (!deliverable) return { progress: 0, actionCount: 0, doingCount: 0, blockedCount: 0, delegatedCount: 0 };
-      switch (deliverable.status) {
-        case ActionStatus.DONE:
-          return { progress: 100, actionCount: 0, doingCount: 0, blockedCount: 0, delegatedCount: 0 };
-        case ActionStatus.EXECUTING:
-          return { progress: 50, actionCount: 0, doingCount: 0, blockedCount: 0, delegatedCount: 0 };
-        default:
-          return { progress: 0, actionCount: 0, doingCount: 0, blockedCount: 0, delegatedCount: 0 };
-      }
+      return { progress: 0, actionCount: 0, doingCount: 0, blockedCount: 0, delegatedCount: 0 };
     }
     
     let totalProgress = 0;
