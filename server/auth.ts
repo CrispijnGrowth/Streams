@@ -1,73 +1,92 @@
 import { randomUUID, randomBytes, createHash } from "crypto";
 import type { User, MagicLinkToken, Session, InsertUser } from "@shared/schema";
 import { UserRole } from "@shared/schema";
+import { db } from "./db";
+import { users } from "./db-schema";
+import { eq, ilike } from "drizzle-orm";
 
 const MAGIC_LINK_TTL_MS = 10 * 60 * 1000;
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const FIRST_ADMIN_EMAIL = "maarten.bal@capgemini.com";
 
 class AuthStorage {
-  private users: Map<string, User> = new Map();
   private magicTokens: Map<string, MagicLinkToken> = new Map();
   private sessions: Map<string, Session> = new Map();
 
+  private dbUserToUser(dbUser: typeof users.$inferSelect): User {
+    return {
+      id: dbUser.id,
+      email: dbUser.email,
+      name: dbUser.name,
+      role: dbUser.role as User["role"],
+      showDescriptions: dbUser.showDescriptions,
+      themePreference: dbUser.themePreference as User["themePreference"],
+      createdAt: dbUser.createdAt.toISOString(),
+    };
+  }
+
   async getUserByEmail(email: string): Promise<User | undefined> {
-    for (const user of this.users.values()) {
-      if (user.email.toLowerCase() === email.toLowerCase()) {
-        return user;
-      }
-    }
-    return undefined;
+    const result = await db.select().from(users).where(ilike(users.email, email)).limit(1);
+    if (result.length === 0) return undefined;
+    return this.dbUserToUser(result[0]);
   }
 
   async getUserById(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+    const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
+    if (result.length === 0) return undefined;
+    return this.dbUserToUser(result[0]);
   }
 
   async getUsers(): Promise<User[]> {
-    return Array.from(this.users.values());
+    const result = await db.select().from(users);
+    return result.map(u => this.dbUserToUser(u));
   }
 
   async getPendingUsers(): Promise<User[]> {
-    return Array.from(this.users.values()).filter(u => u.role === UserRole.PENDING);
+    const result = await db.select().from(users).where(eq(users.role, UserRole.PENDING));
+    return result.map(u => this.dbUserToUser(u));
   }
 
   async createUser(data: InsertUser): Promise<User> {
     const id = randomUUID();
     const isFirstAdmin = data.email.toLowerCase() === FIRST_ADMIN_EMAIL.toLowerCase();
-    const user: User = {
+    const [newUser] = await db.insert(users).values({
       id,
       email: data.email,
       name: data.name,
       role: isFirstAdmin ? UserRole.ADMIN : UserRole.PENDING,
       showDescriptions: true,
       themePreference: "system",
-      createdAt: new Date().toISOString(),
-    };
-    this.users.set(id, user);
-    return user;
+    }).returning();
+    return this.dbUserToUser(newUser);
   }
 
   async approveUser(userId: string): Promise<User | undefined> {
-    const user = this.users.get(userId);
-    if (!user) return undefined;
-    user.role = UserRole.MEMBER;
-    return user;
+    const [updated] = await db.update(users)
+      .set({ role: UserRole.MEMBER })
+      .where(eq(users.id, userId))
+      .returning();
+    if (!updated) return undefined;
+    return this.dbUserToUser(updated);
   }
 
   async updateUserPreferences(
     userId: string,
     prefs: { showDescriptions?: boolean; themePreference?: string }
   ): Promise<User | undefined> {
-    const user = this.users.get(userId);
-    if (!user) return undefined;
+    const updateData: Partial<typeof users.$inferInsert> = {};
     if (prefs.showDescriptions !== undefined) {
-      user.showDescriptions = prefs.showDescriptions;
+      updateData.showDescriptions = prefs.showDescriptions;
     }
     if (prefs.themePreference !== undefined) {
-      user.themePreference = prefs.themePreference as "light" | "dark" | "system";
+      updateData.themePreference = prefs.themePreference;
     }
-    return user;
+    const [updated] = await db.update(users)
+      .set(updateData)
+      .where(eq(users.id, userId))
+      .returning();
+    if (!updated) return undefined;
+    return this.dbUserToUser(updated);
   }
 
   async createMagicToken(email: string): Promise<string> {
