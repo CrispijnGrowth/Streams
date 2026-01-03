@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef, useCallback } from "react";
+import { useMemo, useState, useRef, useCallback, useEffect } from "react";
 import {
   DndContext,
   DragEndEvent,
@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
 import { format, addMonths, startOfMonth, differenceInDays, isWithinInterval, startOfYear, endOfYear, addDays } from "date-fns";
 import type { ActionStatusType, MomentumStatusType } from "@shared/schema";
+import { usePageTransition } from "./page-transition";
 
 type ZoomLevel = "month" | "quarter" | "half-year" | "year";
 
@@ -54,9 +55,13 @@ interface DraggableTimelineBallProps {
   position: number;
   onClick?: () => void;
   isDraggable?: boolean;
+  enterAnimation?: {
+    active: boolean;
+    delayMs: number;
+  };
 }
 
-function DraggableTimelineBall({ item, position, onClick, isDraggable = true }: DraggableTimelineBallProps) {
+function DraggableTimelineBall({ item, position, onClick, isDraggable = true, enterAnimation }: DraggableTimelineBallProps) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: item.id,
     disabled: !isDraggable,
@@ -85,6 +90,7 @@ function DraggableTimelineBall({ item, position, onClick, isDraggable = true }: 
         progress={item.progress}
         counts={item.counts}
         onClick={isDragging ? undefined : onClick}
+        enterAnimation={isDragging ? undefined : enterAnimation}
       />
     </div>
   );
@@ -103,6 +109,31 @@ export function Timeline({
   const today = useMemo(() => new Date(), []);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [dragPreviewDate, setDragPreviewDate] = useState<string | null>(null);
+  const { animationKey } = usePageTransition();
+  const [animateIn, setAnimateIn] = useState(true);
+  const lastAnimationKey = useRef(animationKey);
+  const hasInitialized = useRef(false);
+
+  useEffect(() => {
+    if (!hasInitialized.current) {
+      hasInitialized.current = true;
+      const timer = setTimeout(() => {
+        setAnimateIn(false);
+      }, 600);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (animationKey !== lastAnimationKey.current) {
+      lastAnimationKey.current = animationKey;
+      setAnimateIn(true);
+      const timer = setTimeout(() => {
+        setAnimateIn(false);
+      }, 600);
+      return () => clearTimeout(timer);
+    }
+  }, [animationKey]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -353,18 +384,22 @@ export function Timeline({
             )}
 
             <div className="absolute inset-0 flex items-center">
-              {visibleItems.map((item) => {
-                const position = getPositionForDate(item.date!);
-                return (
+              {visibleItems
+                .map((item) => ({
+                  item,
+                  position: getPositionForDate(item.date!),
+                }))
+                .sort((a, b) => a.position - b.position)
+                .map(({ item, position }, index) => (
                   <DraggableTimelineBall
                     key={item.id}
                     item={item}
                     position={position}
                     onClick={() => onItemClick?.(item.id)}
                     isDraggable={isDraggable}
+                    enterAnimation={animateIn ? { active: true, delayMs: index * 50 } : undefined}
                   />
-                );
-              })}
+                ))}
             </div>
           </div>
 
@@ -374,7 +409,7 @@ export function Timeline({
                 No date
               </span>
               <div className="flex flex-wrap gap-1 justify-center">
-                {undatedItems.slice(0, 4).map((item) => (
+                {undatedItems.slice(0, 4).map((item, index) => (
                   <TimelineBall
                     key={item.id}
                     id={item.id}
@@ -387,6 +422,7 @@ export function Timeline({
                     isNoDate
                     size="sm"
                     onClick={() => onItemClick?.(item.id)}
+                    enterAnimation={animateIn ? { active: true, delayMs: (visibleItems.length + index) * 50 } : undefined}
                   />
                 ))}
                 {undatedItems.length > 4 && (

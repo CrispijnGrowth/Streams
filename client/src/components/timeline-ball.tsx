@@ -22,6 +22,10 @@ interface TimelineBallProps {
     blocked?: number;
     delegated?: number;
   };
+  enterAnimation?: {
+    active: boolean;
+    delayMs: number;
+  };
 }
 
 function generateAcronym(title: string): string {
@@ -61,9 +65,14 @@ export function TimelineBall({
   onClick,
   size = "default",
   counts,
+  enterAnimation,
 }: TimelineBallProps) {
   const [isHovered, setIsHovered] = useState(false);
   const acronym = generateAcronym(title);
+  
+  const animationStyle = enterAnimation?.active 
+    ? { animationDelay: `${enterAnimation.delayMs}ms` }
+    : undefined;
 
   const sizeClasses = {
     sm: "w-6 h-6",
@@ -101,7 +110,9 @@ export function TimelineBall({
             flex items-center justify-center
             ${isHovered ? "scale-110 shadow-lg" : "shadow-sm"}
             ${momentumStatus === "Stalled" || momentumStatus === "Slowing" ? "opacity-70" : ""}
+            ${enterAnimation?.active ? "animate-ball-enter" : ""}
           `}
+          style={animationStyle}
           onClick={onClick}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
