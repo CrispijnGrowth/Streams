@@ -27,18 +27,28 @@ export function StreamCard({ stream, onClick, onEdit, showDescription = true }: 
 
   return (
     <Card
-      className="p-3 space-y-2 cursor-pointer hover-elevate active-elevate-2 transition-shadow group"
+      className="p-4 space-y-3 cursor-pointer hover-elevate active-elevate-2 transition-shadow group shadow-sm"
       onClick={onClick}
       data-testid={`card-stream-${stream.id}`}
     >
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          <span className="text-xs font-mono text-muted-foreground shrink-0">{stream.key}</span>
-          <h3 className="font-medium text-sm truncate" data-testid={`text-stream-name-${stream.id}`}>
+      <div className="space-y-1">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="font-semibold text-base truncate flex-1" data-testid={`text-stream-name-${stream.id}`}>
             {stream.name}
           </h3>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+            onClick={handleEdit}
+            data-testid={`button-edit-stream-${stream.id}`}
+          >
+            <Pencil className="h-3 w-3" />
+          </Button>
         </div>
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs font-mono text-muted-foreground">{stream.key}</span>
+          <MomentumBadge status={stream.momentumStatus} />
           {stream.computedMilestoneDate && (
             <div
               className={`flex items-center gap-1 text-xs ${isOverdue ? "text-status-blocked" : "text-muted-foreground"}`}
@@ -49,16 +59,6 @@ export function StreamCard({ stream, onClick, onEdit, showDescription = true }: 
               </span>
             </div>
           )}
-          <MomentumBadge status={stream.momentumStatus} />
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-            onClick={handleEdit}
-            data-testid={`button-edit-stream-${stream.id}`}
-          >
-            <Pencil className="h-3 w-3" />
-          </Button>
         </div>
       </div>
 
