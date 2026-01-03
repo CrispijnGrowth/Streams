@@ -16,7 +16,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import type { DeliverableWithProgress, ActionWithProgress, Action } from "@shared/schema";
 import { DeliverableStatus } from "@shared/schema";
-import { Pause, Play } from "lucide-react";
 
 interface DeliverableViewProps {
   streamId: string;
@@ -208,9 +207,8 @@ export function DeliverableView({ streamId, deliverableId, showDescriptions }: D
             <div className="flex items-center gap-3">
               <h1 className="text-lg font-semibold" data-testid="text-deliverable-name">{deliverable.name}</h1>
               <Button
-                size="icon"
-                variant="ghost"
-                className="h-7 w-7 text-muted-foreground"
+                size="sm"
+                variant={deliverable.status === DeliverableStatus.ON_HOLD ? "secondary" : "outline"}
                 onClick={() => {
                   const newStatus = deliverable.status === DeliverableStatus.ON_HOLD 
                     ? DeliverableStatus.IN_PROGRESS 
@@ -218,9 +216,8 @@ export function DeliverableView({ streamId, deliverableId, showDescriptions }: D
                   updateDeliverableStatus.mutate(newStatus);
                 }}
                 data-testid="button-toggle-deliverable-status"
-                title={deliverable.status === DeliverableStatus.ON_HOLD ? "Resume" : "Put on hold"}
               >
-                {deliverable.status === DeliverableStatus.ON_HOLD ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
+                {deliverable.status === DeliverableStatus.ON_HOLD ? "On Hold" : "In Progress"}
               </Button>
               <Button
                 size="icon"

@@ -2,16 +2,15 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ProgressBar } from "@/components/progress-bar";
-import { Calendar, Pencil, Pause, Play } from "lucide-react";
+import { Calendar, Pencil } from "lucide-react";
 import { format } from "date-fns";
-import type { DeliverableWithProgress, DeliverableStatusType } from "@shared/schema";
+import type { DeliverableWithProgress } from "@shared/schema";
 import { DeliverableStatus } from "@shared/schema";
 
 interface DeliverableCardProps {
   deliverable: DeliverableWithProgress;
   onClick?: () => void;
   onEdit?: () => void;
-  onStatusToggle?: (newStatus: DeliverableStatusType) => void;
   showDescription?: boolean;
   isDragging?: boolean;
 }
@@ -20,7 +19,6 @@ export function DeliverableCard({
   deliverable,
   onClick,
   onEdit,
-  onStatusToggle,
   showDescription = true,
   isDragging = false,
 }: DeliverableCardProps) {
@@ -33,12 +31,6 @@ export function DeliverableCard({
   const handleEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
     onEdit?.();
-  };
-
-  const handleStatusToggle = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const newStatus = isOnHold ? DeliverableStatus.IN_PROGRESS : DeliverableStatus.ON_HOLD;
-    onStatusToggle?.(newStatus);
   };
 
   return (
@@ -54,21 +46,11 @@ export function DeliverableCard({
           <h4 className="font-medium text-sm truncate" data-testid={`text-deliverable-name-${deliverable.id}`}>
             {deliverable.name}
           </h4>
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-5 w-5 shrink-0 text-muted-foreground"
-            onClick={handleStatusToggle}
-            data-testid={`button-toggle-status-${deliverable.id}`}
-            title={isOnHold ? "Resume" : "Put on hold"}
-          >
-            {isOnHold ? <Play className="h-3 w-3" /> : <Pause className="h-3 w-3" />}
-          </Button>
         </div>
         <div className="flex items-center gap-1 shrink-0">
           {deliverable.milestoneDate && (
             <div
-              className={`flex items-center gap-1 text-xs ${isOverdue ? "text-status-blocked" : "text-muted-foreground"}`}
+              className={`flex items-center gap-1 text-xs ${isOnHold ? "text-muted-foreground" : isOverdue ? "text-status-blocked" : "text-muted-foreground"}`}
             >
               <Calendar className="h-3 w-3" />
               <span className="font-mono">
@@ -96,7 +78,7 @@ export function DeliverableCard({
 
       <div className="flex items-center gap-2">
         <div className="flex-1">
-          <ProgressBar value={deliverable.progress} size="sm" showLabel={false} />
+          <ProgressBar value={deliverable.progress} size="sm" showLabel={false} muted={isOnHold} />
         </div>
         <span className="text-xs font-mono text-muted-foreground">{Math.round(deliverable.progress)}%</span>
         <span className="text-xs text-muted-foreground">{deliverable.actionCount}A</span>
@@ -104,12 +86,18 @@ export function DeliverableCard({
 
       <div className="flex items-center gap-1.5 flex-wrap">
         {deliverable.doingCount > 0 && (
-          <Badge variant="outline" className="text-xs py-0 h-5 bg-status-executing/10 text-status-executing border-status-executing/30">
+          <Badge 
+            variant="outline" 
+            className={`text-xs py-0 h-5 ${isOnHold ? "bg-muted-foreground/10 text-muted-foreground border-muted-foreground/30" : "bg-status-executing/10 text-status-executing border-status-executing/30"}`}
+          >
             {deliverable.doingCount} Doing
           </Badge>
         )}
         {deliverable.blockedCount > 0 && (
-          <Badge variant="outline" className="text-xs py-0 h-5 bg-status-blocked/10 text-status-blocked border-status-blocked/30">
+          <Badge 
+            variant="outline" 
+            className={`text-xs py-0 h-5 ${isOnHold ? "bg-muted-foreground/10 text-muted-foreground border-muted-foreground/30" : "bg-status-blocked/10 text-status-blocked border-status-blocked/30"}`}
+          >
             {deliverable.blockedCount} Blocked
           </Badge>
         )}

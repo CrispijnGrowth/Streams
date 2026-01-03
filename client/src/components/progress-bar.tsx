@@ -2,17 +2,19 @@ interface ProgressBarProps {
   value: number;
   showLabel?: boolean;
   size?: "sm" | "default";
+  muted?: boolean;
 }
 
-export function ProgressBar({ value, showLabel = true, size = "default" }: ProgressBarProps) {
+export function ProgressBar({ value, showLabel = true, size = "default", muted = false }: ProgressBarProps) {
   const clampedValue = Math.min(100, Math.max(0, value));
   const height = size === "sm" ? "h-1" : "h-2";
+  const fillColor = muted ? "bg-muted-foreground/40" : "bg-primary";
 
   return (
     <div className="flex items-center gap-2">
       <div className={`flex-1 ${height} rounded-full bg-muted overflow-hidden`}>
         <div
-          className={`${height} rounded-full bg-primary transition-all duration-500 ease-out`}
+          className={`${height} rounded-full ${fillColor} transition-all duration-500 ease-out`}
           style={{ width: `${clampedValue}%` }}
           role="progressbar"
           aria-valuenow={clampedValue}
