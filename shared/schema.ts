@@ -20,6 +20,13 @@ export const MomentumStatus = {
 
 export type MomentumStatusType = (typeof MomentumStatus)[keyof typeof MomentumStatus];
 
+export const DeliverableStatus = {
+  IN_PROGRESS: "In Progress",
+  ON_HOLD: "On Hold",
+} as const;
+
+export type DeliverableStatusType = (typeof DeliverableStatus)[keyof typeof DeliverableStatus];
+
 export const Phases = {
   STRATEGY: "STRATEGY",
   DESIGN: "DESIGN",
@@ -63,7 +70,7 @@ export interface Deliverable {
   phases: string[];
   owners: string[];
   labels: string[];
-  status: ActionStatusType;
+  status: DeliverableStatusType;
   ordinal: number;
   isDeleted: boolean;
 }
@@ -114,7 +121,7 @@ export const insertDeliverableSchema = z.object({
   phases: z.array(z.string()).default([]),
   owners: z.array(z.string()).default([]),
   labels: z.array(z.string()).default([]),
-  status: z.string().default("Backlog"),
+  status: z.string().default("In Progress"),
 });
 
 export const insertActionSchema = z.object({

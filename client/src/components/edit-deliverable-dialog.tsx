@@ -26,7 +26,7 @@ import { X, Plus, Loader2 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Deliverable } from "@shared/schema";
-import { ActionStatus } from "@shared/schema";
+import { DeliverableStatus } from "@shared/schema";
 
 const editDeliverableSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -57,7 +57,7 @@ export function EditDeliverableDialog({ deliverable, open, onOpenChange, onDelet
       name: "",
       description: "",
       milestoneDate: "",
-      status: ActionStatus.BACKLOG,
+      status: DeliverableStatus.IN_PROGRESS,
       owners: [],
       labels: [],
     },
@@ -198,7 +198,7 @@ export function EditDeliverableDialog({ deliverable, open, onOpenChange, onDelet
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.values(ActionStatus).map((status) => (
+                  {Object.values(DeliverableStatus).map((status) => (
                     <SelectItem key={status} value={status}>
                       {status}
                     </SelectItem>

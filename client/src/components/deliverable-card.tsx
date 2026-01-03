@@ -1,11 +1,12 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { StatusBadge } from "@/components/status-badge";
+import { DeliverableStatusBadge } from "@/components/status-badge";
 import { ProgressBar } from "@/components/progress-bar";
-import { Calendar, Pencil } from "lucide-react";
+import { Calendar, Pencil, Pause } from "lucide-react";
 import { format } from "date-fns";
 import type { DeliverableWithProgress } from "@shared/schema";
+import { DeliverableStatus } from "@shared/schema";
 
 interface DeliverableCardProps {
   deliverable: DeliverableWithProgress;
@@ -22,11 +23,11 @@ export function DeliverableCard({
   showDescription = true,
   isDragging = false,
 }: DeliverableCardProps) {
+  const isOnHold = deliverable.status === DeliverableStatus.ON_HOLD;
   const isOverdue =
     deliverable.milestoneDate &&
     new Date(deliverable.milestoneDate) < new Date() &&
-    deliverable.status !== "Done" &&
-    deliverable.status !== "Archive";
+    !isOnHold;
 
   const handleEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -37,19 +38,19 @@ export function DeliverableCard({
     <Card
       className={`p-2.5 space-y-1.5 cursor-pointer hover-elevate active-elevate-2 transition-all group ${
         isDragging ? "shadow-xl scale-105 opacity-90" : ""
-      }`}
+      } ${isOnHold ? "opacity-50 bg-muted" : ""}`}
       onClick={onClick}
       data-testid={`card-deliverable-${deliverable.id}`}
     >
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 flex-1 min-w-0">
-          <span className="text-xs font-mono text-muted-foreground shrink-0">{deliverable.key}</span>
+          {isOnHold && <Pause className="h-3 w-3 text-muted-foreground shrink-0" />}
           <h4 className="font-medium text-sm truncate" data-testid={`text-deliverable-name-${deliverable.id}`}>
             {deliverable.name}
           </h4>
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          <StatusBadge status={deliverable.status} size="sm" />
+          {isOnHold && <DeliverableStatusBadge status={deliverable.status} size="sm" />}
           {deliverable.milestoneDate && (
             <div
               className={`flex items-center gap-1 text-xs ${isOverdue ? "text-status-blocked" : "text-muted-foreground"}`}

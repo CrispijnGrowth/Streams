@@ -12,6 +12,7 @@ import {
   type ActionWithProgress,
   ActionStatus,
   MomentumStatus,
+  DeliverableStatus,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -102,21 +103,21 @@ export class MemStorage implements IStorage {
     }
 
     const deliverablesData = [
-      { key: "DLV01-01", name: "Deliverable A1", description: "Complete migration of authentication services to new identity platform with enhanced security features.", streamKey: "STRM01", milestoneDate: 46387, phases: ["MODERNIZATION & MIGRATION"], owners: ["Owner D"], labels: ["Priority:Medium"], status: "Done", ordinal: 1 },
-      { key: "DLV01-02", name: "Deliverable A2", description: "Database optimization and migration.", streamKey: "STRM01", milestoneDate: 46240, phases: ["MODERNIZATION & MIGRATION"], owners: ["Owner B"], labels: ["Region:EU", "Risk:At-Risk"], status: "Executing", ordinal: 2 },
-      { key: "DLV01-03", name: "Deliverable A3", description: "Strategic roadmap development for Q3-Q4 initiatives including resource allocation and timeline planning.", streamKey: "STRM01", milestoneDate: 46283, phases: ["STRATEGY"], owners: ["Owner F"], labels: [], status: "Blocked", ordinal: 3 },
-      { key: "DLV02-01", name: "Deliverable B1", description: "Market analysis and competitive positioning strategy.", streamKey: "STRM02", milestoneDate: 46373, phases: ["STRATEGY"], owners: ["Owner L"], labels: [], status: "To Execute", ordinal: 1 },
-      { key: "DLV02-02", name: "Deliverable B2", description: "User interface redesign for improved accessibility and modern aesthetics aligned with brand guidelines.", streamKey: "STRM02", milestoneDate: 46344, phases: ["DESIGN"], owners: ["Owner L"], labels: ["Priority:Medium", "Region:US"], status: "Done", ordinal: 2 },
-      { key: "DLV02-03", name: "Deliverable B3", description: "Legacy system migration.", streamKey: "STRM02", milestoneDate: 46025, phases: ["MODERNIZATION & MIGRATION"], owners: ["Owner H"], labels: [], status: "Backlog", ordinal: 3 },
-      { key: "DLV03-01", name: "Deliverable C1", description: "Design system implementation with reusable components for EU market.", streamKey: "STRM03", milestoneDate: 46257, phases: ["DESIGN"], owners: ["Owner F"], labels: ["Region:EU"], status: "Executing", ordinal: 1 },
-      { key: "DLV03-02", name: "Deliverable C2", description: "Mobile-first responsive design implementation ensuring seamless experience across all device types and screen sizes.", streamKey: "STRM03", milestoneDate: 46142, phases: ["DESIGN"], owners: ["Owner E"], labels: [], status: "Executing", ordinal: 2 },
-      { key: "DLV04-01", name: "Deliverable D1", description: "Cloud infrastructure setup.", streamKey: "STRM04", milestoneDate: 46231, phases: ["MODERNIZATION & MIGRATION"], owners: ["Owner E"], labels: ["Region:US", "Risk:Normal"], status: "Executing", ordinal: 1 },
-      { key: "DLV04-02", name: "Deliverable D2", description: "API gateway implementation with rate limiting, authentication, and comprehensive monitoring capabilities.", streamKey: "STRM04", milestoneDate: 46074, phases: ["MODERNIZATION & MIGRATION"], owners: ["Owner J"], labels: ["Priority:Medium"], status: "Executing", ordinal: 2 },
-      { key: "DLV05-01", name: "Deliverable E1", description: "Customer journey mapping and experience optimization.", streamKey: "STRM05", milestoneDate: 46220, phases: ["MANAGE"], owners: ["Owner A"], labels: ["Priority:Medium", "Risk:At-Risk"], status: "Executing", ordinal: 1 },
-      { key: "DLV06-01", name: "Deliverable F1", description: "Operational process automation using modern workflow tools to reduce manual intervention and improve efficiency.", streamKey: "STRM06", milestoneDate: 46259, phases: ["MODERNIZATION & MIGRATION"], owners: ["Owner G"], labels: ["Region:EU", "Risk:At-Risk"], status: "Backlog", ordinal: 1 },
-      { key: "DLV07-01", name: "Deliverable G1", description: "Localized design for EU compliance.", streamKey: "STRM07", milestoneDate: 46023, phases: ["DESIGN"], owners: ["Owner C"], labels: ["Priority:Low"], status: "Executing", ordinal: 1 },
-      { key: "DLV08-01", name: "Deliverable H1", description: "Strategic planning workshop series.", streamKey: "STRM08", milestoneDate: 46026, phases: ["STRATEGY"], owners: ["Owner E"], labels: [], status: "To Execute", ordinal: 1 },
-      { key: "DLV09-01", name: "Deliverable I1", description: "Operational dashboard design and implementation for real-time monitoring of key performance indicators.", streamKey: "STRM09", milestoneDate: 46072, phases: ["MANAGE"], owners: ["Owner L"], labels: ["Region:EU"], status: "Executing", ordinal: 1 },
+      { key: "DLV01-01", name: "Deliverable A1", description: "Complete migration of authentication services to new identity platform with enhanced security features.", streamKey: "STRM01", milestoneDate: 46387, phases: ["MODERNIZATION & MIGRATION"], owners: ["Owner D"], labels: ["Priority:Medium"], status: "In Progress", ordinal: 1 },
+      { key: "DLV01-02", name: "Deliverable A2", description: "Database optimization and migration.", streamKey: "STRM01", milestoneDate: 46240, phases: ["MODERNIZATION & MIGRATION"], owners: ["Owner B"], labels: ["Region:EU", "Risk:At-Risk"], status: "In Progress", ordinal: 2 },
+      { key: "DLV01-03", name: "Deliverable A3", description: "Strategic roadmap development for Q3-Q4 initiatives including resource allocation and timeline planning.", streamKey: "STRM01", milestoneDate: 46283, phases: ["STRATEGY"], owners: ["Owner F"], labels: [], status: "On Hold", ordinal: 3 },
+      { key: "DLV02-01", name: "Deliverable B1", description: "Market analysis and competitive positioning strategy.", streamKey: "STRM02", milestoneDate: 46373, phases: ["STRATEGY"], owners: ["Owner L"], labels: [], status: "In Progress", ordinal: 1 },
+      { key: "DLV02-02", name: "Deliverable B2", description: "User interface redesign for improved accessibility and modern aesthetics aligned with brand guidelines.", streamKey: "STRM02", milestoneDate: 46344, phases: ["DESIGN"], owners: ["Owner L"], labels: ["Priority:Medium", "Region:US"], status: "In Progress", ordinal: 2 },
+      { key: "DLV02-03", name: "Deliverable B3", description: "Legacy system migration.", streamKey: "STRM02", milestoneDate: 46025, phases: ["MODERNIZATION & MIGRATION"], owners: ["Owner H"], labels: [], status: "On Hold", ordinal: 3 },
+      { key: "DLV03-01", name: "Deliverable C1", description: "Design system implementation with reusable components for EU market.", streamKey: "STRM03", milestoneDate: 46257, phases: ["DESIGN"], owners: ["Owner F"], labels: ["Region:EU"], status: "In Progress", ordinal: 1 },
+      { key: "DLV03-02", name: "Deliverable C2", description: "Mobile-first responsive design implementation ensuring seamless experience across all device types and screen sizes.", streamKey: "STRM03", milestoneDate: 46142, phases: ["DESIGN"], owners: ["Owner E"], labels: [], status: "In Progress", ordinal: 2 },
+      { key: "DLV04-01", name: "Deliverable D1", description: "Cloud infrastructure setup.", streamKey: "STRM04", milestoneDate: 46231, phases: ["MODERNIZATION & MIGRATION"], owners: ["Owner E"], labels: ["Region:US", "Risk:Normal"], status: "In Progress", ordinal: 1 },
+      { key: "DLV04-02", name: "Deliverable D2", description: "API gateway implementation with rate limiting, authentication, and comprehensive monitoring capabilities.", streamKey: "STRM04", milestoneDate: 46074, phases: ["MODERNIZATION & MIGRATION"], owners: ["Owner J"], labels: ["Priority:Medium"], status: "In Progress", ordinal: 2 },
+      { key: "DLV05-01", name: "Deliverable E1", description: "Customer journey mapping and experience optimization.", streamKey: "STRM05", milestoneDate: 46220, phases: ["MANAGE"], owners: ["Owner A"], labels: ["Priority:Medium", "Risk:At-Risk"], status: "In Progress", ordinal: 1 },
+      { key: "DLV06-01", name: "Deliverable F1", description: "Operational process automation using modern workflow tools to reduce manual intervention and improve efficiency.", streamKey: "STRM06", milestoneDate: 46259, phases: ["MODERNIZATION & MIGRATION"], owners: ["Owner G"], labels: ["Region:EU", "Risk:At-Risk"], status: "On Hold", ordinal: 1 },
+      { key: "DLV07-01", name: "Deliverable G1", description: "Localized design for EU compliance.", streamKey: "STRM07", milestoneDate: 46023, phases: ["DESIGN"], owners: ["Owner C"], labels: ["Priority:Low"], status: "In Progress", ordinal: 1 },
+      { key: "DLV08-01", name: "Deliverable H1", description: "Strategic planning workshop series.", streamKey: "STRM08", milestoneDate: 46026, phases: ["STRATEGY"], owners: ["Owner E"], labels: [], status: "In Progress", ordinal: 1 },
+      { key: "DLV09-01", name: "Deliverable I1", description: "Operational dashboard design and implementation for real-time monitoring of key performance indicators.", streamKey: "STRM09", milestoneDate: 46072, phases: ["MANAGE"], owners: ["Owner L"], labels: ["Region:EU"], status: "In Progress", ordinal: 1 },
     ];
 
     const streamIdByKey = new Map<string, string>();
@@ -437,7 +438,7 @@ export class MemStorage implements IStorage {
       phases: data.phases || [],
       owners: data.owners || [],
       labels: data.labels || [],
-      status: (data.status as any) || ActionStatus.BACKLOG,
+      status: (data.status as any) || DeliverableStatus.IN_PROGRESS,
       ordinal,
       isDeleted: false,
     };

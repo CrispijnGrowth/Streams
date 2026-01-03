@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import type { ActionStatusType, MomentumStatusType } from "@shared/schema";
+import type { ActionStatusType, MomentumStatusType, DeliverableStatusType } from "@shared/schema";
 
 interface StatusBadgeProps {
   status: ActionStatusType;
@@ -24,6 +24,28 @@ export function StatusBadge({ status, size = "default" }: StatusBadgeProps) {
       data-testid={`badge-status-${status.toLowerCase().replace(" ", "-")}`}
     >
       {status === "Executing" ? "Doing" : status}
+    </Badge>
+  );
+}
+
+interface DeliverableStatusBadgeProps {
+  status: DeliverableStatusType;
+  size?: "sm" | "default";
+}
+
+const deliverableStatusStyles: Record<DeliverableStatusType, string> = {
+  "In Progress": "bg-status-executing/20 text-status-executing border-status-executing/30",
+  "On Hold": "bg-muted text-muted-foreground border-border",
+};
+
+export function DeliverableStatusBadge({ status, size = "default" }: DeliverableStatusBadgeProps) {
+  return (
+    <Badge
+      variant="outline"
+      className={`${deliverableStatusStyles[status]} ${size === "sm" ? "text-xs px-1.5 py-0" : ""}`}
+      data-testid={`badge-deliverable-status-${status.toLowerCase().replace(" ", "-")}`}
+    >
+      {status}
     </Badge>
   );
 }
