@@ -51,19 +51,19 @@ export function DeliverableCard({
     >
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 flex-1 min-w-0">
+          <h4 className="font-medium text-sm truncate" data-testid={`text-deliverable-name-${deliverable.id}`}>
+            {deliverable.name}
+          </h4>
           <Button
             size="icon"
             variant="ghost"
-            className={`h-5 w-5 shrink-0 ${isOnHold ? "text-muted-foreground" : "text-status-executing"}`}
+            className="h-5 w-5 shrink-0 text-muted-foreground"
             onClick={handleStatusToggle}
             data-testid={`button-toggle-status-${deliverable.id}`}
             title={isOnHold ? "Resume" : "Put on hold"}
           >
-            {isOnHold ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
+            {isOnHold ? <Play className="h-3 w-3" /> : <Pause className="h-3 w-3" />}
           </Button>
-          <h4 className="font-medium text-sm truncate" data-testid={`text-deliverable-name-${deliverable.id}`}>
-            {deliverable.name}
-          </h4>
         </div>
         <div className="flex items-center gap-1 shrink-0">
           {deliverable.milestoneDate && (

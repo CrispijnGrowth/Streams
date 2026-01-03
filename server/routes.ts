@@ -134,8 +134,8 @@ export async function registerRoutes(
 
   app.patch("/api/deliverables/:id", async (req, res) => {
     try {
-      const allowedFields = ["name", "description", "milestoneDate", "phases", "owners", "labels", "status"];
-      const validStatuses = ["Backlog", "To Execute", "Executing", "Blocked", "Delegated", "Done", "Archive"];
+      const allowedFields = ["name", "description", "milestoneDate", "phases", "owners", "labels", "status", "isDeleted"];
+      const validStatuses = ["In Progress", "On Hold"];
       const updateData: Record<string, any> = {};
       for (const field of allowedFields) {
         if (req.body[field] !== undefined) {

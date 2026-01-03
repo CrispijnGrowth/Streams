@@ -206,10 +206,11 @@ export function DeliverableView({ streamId, deliverableId, showDescriptions }: D
         <div className="space-y-6">
           <div className="flex items-center justify-between gap-4 pb-3 border-b flex-wrap">
             <div className="flex items-center gap-3">
+              <h1 className="text-lg font-semibold" data-testid="text-deliverable-name">{deliverable.name}</h1>
               <Button
                 size="icon"
                 variant="ghost"
-                className={`h-7 w-7 ${deliverable.status === DeliverableStatus.ON_HOLD ? "text-muted-foreground" : "text-status-executing"}`}
+                className="h-7 w-7 text-muted-foreground"
                 onClick={() => {
                   const newStatus = deliverable.status === DeliverableStatus.ON_HOLD 
                     ? DeliverableStatus.IN_PROGRESS 
@@ -219,9 +220,8 @@ export function DeliverableView({ streamId, deliverableId, showDescriptions }: D
                 data-testid="button-toggle-deliverable-status"
                 title={deliverable.status === DeliverableStatus.ON_HOLD ? "Resume" : "Put on hold"}
               >
-                {deliverable.status === DeliverableStatus.ON_HOLD ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                {deliverable.status === DeliverableStatus.ON_HOLD ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
               </Button>
-              <h1 className="text-lg font-semibold" data-testid="text-deliverable-name">{deliverable.name}</h1>
               <Button
                 size="icon"
                 variant="ghost"
