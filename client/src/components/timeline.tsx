@@ -119,7 +119,7 @@ export function Timeline({
       hasInitialized.current = true;
       const timer = setTimeout(() => {
         setAnimateIn(false);
-      }, 600);
+      }, 1000);
       return () => clearTimeout(timer);
     }
   }, []);
@@ -130,7 +130,7 @@ export function Timeline({
       setAnimateIn(true);
       const timer = setTimeout(() => {
         setAnimateIn(false);
-      }, 600);
+      }, 1000);
       return () => clearTimeout(timer);
     }
   }, [animationKey]);
