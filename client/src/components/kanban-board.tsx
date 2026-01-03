@@ -106,13 +106,13 @@ function DroppableColumn({
       className="w-72 flex-shrink-0"
       data-testid={`kanban-column-${status.toLowerCase().replace(/\s/g, "-")}`}
     >
-      <div className="sticky top-0 bg-background z-10 pb-2">
-        <div className="flex items-center gap-2 p-2">
-          <div className={`w-2 h-2 rounded-full ${color}`} />
-          <h3 className="font-medium text-sm">{label}</h3>
-          <Badge variant="secondary" className="text-xs px-1.5 py-0 ml-auto">
-            {items.length}
-          </Badge>
+      <div className="sticky top-0 bg-background z-10 pb-3 border-b mb-3">
+        <div className="flex items-center justify-between px-1">
+          <div className="flex items-center gap-2">
+            <div className={`w-3 h-3 rounded-full ${color}`} />
+            <h3 className="font-semibold text-base uppercase tracking-wide">{label}</h3>
+          </div>
+          <span className="text-sm font-medium text-muted-foreground">{items.length}</span>
         </div>
       </div>
       <SortableContext items={items.map((a) => a.id)} strategy={verticalListSortingStrategy}>

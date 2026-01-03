@@ -8,7 +8,6 @@ import { QuickAddForm, QuickAddFormRef } from "@/components/quick-add-form";
 import { EmptyState } from "@/components/empty-state";
 import { KanbanSkeleton, TimelineSkeleton } from "@/components/loading-skeleton";
 import { StatusBadge } from "@/components/status-badge";
-import { ProgressBar } from "@/components/progress-bar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EditDeliverableDialog } from "@/components/edit-deliverable-dialog";
@@ -194,57 +193,36 @@ export function DeliverableView({ streamId, deliverableId, showDescriptions }: D
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-auto p-6">
         <div className="space-y-6">
-          <div className="space-y-3 pb-4 border-b">
-            <div className="flex items-start justify-between gap-4 flex-wrap">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs font-mono text-muted-foreground" data-testid="text-deliverable-key">{deliverable.key}</span>
-                  <StatusBadge status={deliverable.status} />
-                </div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-xl font-semibold" data-testid="text-deliverable-name">{deliverable.name}</h1>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-7 w-7"
-                    onClick={() => setEditingDeliverable(true)}
-                    data-testid="button-edit-deliverable"
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
+          <div className="flex items-center justify-between gap-4 pb-3 border-b flex-wrap">
+            <div className="flex items-center gap-3">
+              <h1 className="text-lg font-semibold" data-testid="text-deliverable-name">{deliverable.name}</h1>
+              <StatusBadge status={deliverable.status} />
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-7 w-7"
+                onClick={() => setEditingDeliverable(true)}
+                data-testid="button-edit-deliverable"
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
               {deliverable.milestoneDate && (
-                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                <div className="flex items-center gap-1.5">
                   <Calendar className="w-4 h-4" />
-                  <span>Due: {new Date(deliverable.milestoneDate).toLocaleDateString()}</span>
+                  <span>{new Date(deliverable.milestoneDate).toLocaleDateString()}</span>
                 </div>
               )}
-            </div>
-
-            {showDescriptions && deliverable.description && (
-              <p className="text-sm text-muted-foreground max-w-3xl" data-testid="text-deliverable-description">
-                {deliverable.description}
-              </p>
-            )}
-
-            <div className="flex items-center gap-4 flex-wrap">
-              <div className="w-32">
-                <ProgressBar value={deliverable.progress || 0} size="sm" showLabel={false} />
-              </div>
-              <span className="text-sm text-muted-foreground">{deliverable.progress || 0}% complete</span>
-            </div>
-
-            <div className="flex items-center gap-4 flex-wrap text-sm">
               {deliverable.owners && deliverable.owners.length > 0 && (
-                <div className="flex items-center gap-1.5 text-muted-foreground">
+                <div className="flex items-center gap-1.5">
                   <Users className="w-4 h-4" />
                   <span>{deliverable.owners.join(", ")}</span>
                 </div>
               )}
               {deliverable.labels && deliverable.labels.length > 0 && (
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <Tag className="w-4 h-4 text-muted-foreground" />
+                  <Tag className="w-4 h-4" />
                   {deliverable.labels.map((label) => (
                     <Badge key={label} variant="secondary" className="text-xs">
                       {label}
@@ -255,13 +233,7 @@ export function DeliverableView({ streamId, deliverableId, showDescriptions }: D
             </div>
           </div>
 
-          <div className="space-y-4">
-            <div className="flex items-center justify-between gap-4">
-              <h2 className="text-lg font-semibold">Actions Kanban</h2>
-              <span className="text-sm text-muted-foreground">
-                {actions.length} action{actions.length !== 1 ? "s" : ""}
-              </span>
-            </div>
+          <div className="space-y-3">
 
             <KanbanBoard
               actions={actions.filter((a) => !a.isDeleted)}
