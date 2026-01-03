@@ -87,7 +87,11 @@ export async function registerRoutes(
       const baseUrl = `${req.protocol}://${req.get("host")}`;
       const magicLink = generateMagicLinkUrl(token, baseUrl);
       console.log(`[Auth] Magic link for ${email}: ${magicLink}`);
-      res.json({ message: "Magic link sent to your email", debug: magicLink });
+      if (process.env.NODE_ENV === "development") {
+        res.json({ message: "Magic link sent to your email", debug: magicLink });
+      } else {
+        res.json({ message: "Magic link sent to your email" });
+      }
     } catch (error) {
       res.status(500).json({ error: "Login failed" });
     }

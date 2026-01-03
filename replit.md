@@ -67,6 +67,17 @@ Progress is computed automatically by rolling up completion percentages from ste
 - **tsx**: TypeScript execution for development server
 - **Tailwind CSS**: Utility-first CSS framework with PostCSS
 
-### Session Management
-- **connect-pg-simple**: PostgreSQL session store (available but session routes not currently implemented)
-- **express-session**: Session middleware support
+### Authentication System
+- **Custom Magic-Link Authentication**: Email-based passwordless login with secure tokens
+- **Admin Approval Flow**: New user registrations require admin approval before access
+- **Session Management**: In-memory session storage with 7-day TTL, using `x-session-id` header
+- **First Admin**: Hardcoded as `maarten.bal@capgemini.com` (auto-approved on registration)
+- **User Roles**: `admin` (full access + user management), `member` (standard access), `pending` (awaiting approval)
+- **Key Files**: 
+  - `server/auth.ts` - AuthStorage class with user, session, and magic token management
+  - `client/src/lib/auth-context.tsx` - React context for authentication state
+  - `client/src/pages/login.tsx` - Login/registration forms
+  - `client/src/pages/settings.tsx` - User preferences and admin approval panel
+
+### Recent Changes
+- 2026-01-03: Implemented custom magic-link authentication system with admin approval workflow
