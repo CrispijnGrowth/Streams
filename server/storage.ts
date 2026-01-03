@@ -494,13 +494,27 @@ export class MemStorage implements IStorage {
     return action.streamId;
   }
 
+  async activateStream(id: string): Promise<StreamWithProgress | undefined> {
+    const stream = this.streams.get(id);
+    if (!stream || stream.isDeleted) return undefined;
+    
+    stream.lastMovementAt = new Date().toISOString();
+    stream.momentumStatus = MomentumStatus.ACTIVE;
+    
+    const stats = this.computeStreamProgress(id);
+    return { ...stream, ...stats };
+  }
+
   async updateDeliverable(id: string, data: Partial<InsertDeliverable>): Promise<Deliverable | undefined> {
     const del = this.deliverables.get(id);
     if (!del || del.isDeleted) return undefined;
+    const statusChanged = data.status !== undefined && data.status !== del.status;
     const updated: Deliverable = { ...del, ...data } as Deliverable;
     this.deliverables.set(id, updated);
     this.updateStreamMilestone(del.streamId);
-    this.updateStreamMomentum(del.streamId);
+    if (statusChanged) {
+      this.updateStreamMomentum(del.streamId);
+    }
     return updated;
   }
 
@@ -580,9 +594,10 @@ export class MemStorage implements IStorage {
   async updateAction(id: string, data: Partial<InsertAction>): Promise<Action | undefined> {
     const action = this.actions.get(id);
     if (!action || action.isDeleted) return undefined;
+    const statusChanged = data.status !== undefined && data.status !== action.status;
     const updated: Action = { ...action, ...data } as Action;
     this.actions.set(id, updated);
-    if (action.streamId) {
+    if (statusChanged && action.streamId) {
       this.updateStreamMomentum(action.streamId);
     }
     return updated;
@@ -644,11 +659,14 @@ export class MemStorage implements IStorage {
   async updateStep(id: string, data: Partial<InsertStep>): Promise<Step | undefined> {
     const step = this.steps.get(id);
     if (!step || step.isDeleted) return undefined;
+    const isDoneChanged = data.isDone !== undefined && data.isDone !== step.isDone;
     const updated = { ...step, ...data };
     this.steps.set(id, updated);
-    const streamId = this.getStreamIdFromAction(step.actionId);
-    if (streamId) {
-      this.updateStreamMomentum(streamId);
+    if (isDoneChanged) {
+      const streamId = this.getStreamIdFromAction(step.actionId);
+      if (streamId) {
+        this.updateStreamMomentum(streamId);
+      }
     }
     return updated;
   }

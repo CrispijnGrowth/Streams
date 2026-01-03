@@ -65,6 +65,18 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/streams/:id/activate", async (req, res) => {
+    try {
+      const stream = await storage.activateStream(req.params.id);
+      if (!stream) {
+        return res.status(404).json({ error: "Stream not found" });
+      }
+      res.json(stream);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to activate stream" });
+    }
+  });
+
   app.delete("/api/streams/:id", async (req, res) => {
     try {
       const deleted = await storage.deleteStream(req.params.id);

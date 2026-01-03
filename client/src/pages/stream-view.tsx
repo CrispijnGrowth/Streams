@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { Package, Users, Tag, Calendar, Activity, Pencil } from "lucide-react";
+import { Package, Users, Tag, Calendar, Activity, Pencil, Zap } from "lucide-react";
 import { Timeline } from "@/components/timeline";
 import { DeliverableCard } from "@/components/deliverable-card";
 import { QuickAddForm, QuickAddFormRef } from "@/components/quick-add-form";
@@ -48,6 +48,20 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
     },
     onError: () => {
       toast({ title: "Failed to delete stream", variant: "destructive" });
+    },
+  });
+
+  const activateStream = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", `/api/streams/${streamId}/activate`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/streams", streamId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
+      toast({ title: "Stream activated" });
+    },
+    onError: () => {
+      toast({ title: "Failed to activate stream", variant: "destructive" });
     },
   });
 
@@ -217,6 +231,18 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
                       <Activity className="w-3 h-3 mr-1" />
                       {stream.momentumStatus}
                     </Badge>
+                  )}
+                  {stream.momentumStatus !== "Active" && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => activateStream.mutate()}
+                      disabled={activateStream.isPending}
+                      data-testid="button-activate-stream"
+                    >
+                      <Zap className="w-3 h-3 mr-1" />
+                      Activate
+                    </Button>
                   )}
                 </div>
                 <div className="flex items-center gap-2">
