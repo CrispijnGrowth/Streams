@@ -242,15 +242,6 @@ export function DeliverableView({ streamId, deliverableId, showDescriptions }: D
                   <span>{deliverable.owners.join(", ")}</span>
                 </div>
               )}
-              {deliverable.phases && deliverable.phases.length > 0 && (
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  {deliverable.phases.map((phase) => (
-                    <Badge key={phase} variant="outline" className="text-xs">
-                      {phase}
-                    </Badge>
-                  ))}
-                </div>
-              )}
               {deliverable.labels && deliverable.labels.length > 0 && (
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <Tag className="w-4 h-4 text-muted-foreground" />

@@ -27,85 +27,81 @@ export function StreamCard({ stream, onClick, onEdit, showDescription = true }: 
 
   return (
     <Card
-      className="p-4 space-y-3 cursor-pointer hover-elevate active-elevate-2 transition-shadow group"
+      className="p-3 space-y-2 cursor-pointer hover-elevate active-elevate-2 transition-shadow group"
       onClick={onClick}
       data-testid={`card-stream-${stream.id}`}
     >
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex-1 min-w-0">
-          <h3 className="font-medium text-base truncate" data-testid={`text-stream-name-${stream.id}`}>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <span className="text-xs font-mono text-muted-foreground shrink-0">{stream.key}</span>
+          <h3 className="font-medium text-sm truncate" data-testid={`text-stream-name-${stream.id}`}>
             {stream.name}
           </h3>
-          {showDescription && stream.description && (
-            <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
-              {stream.description}
-            </p>
-          )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 shrink-0">
+          {stream.computedMilestoneDate && (
+            <div
+              className={`flex items-center gap-1 text-xs ${isOverdue ? "text-status-blocked" : "text-muted-foreground"}`}
+            >
+              <Calendar className="h-3 w-3" />
+              <span className="font-mono">
+                {format(new Date(stream.computedMilestoneDate), "MMM d")}
+              </span>
+            </div>
+          )}
+          <MomentumBadge status={stream.momentumStatus} />
           <Button
             size="icon"
             variant="ghost"
-            className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
             onClick={handleEdit}
             data-testid={`button-edit-stream-${stream.id}`}
           >
-            <Pencil className="h-3.5 w-3.5" />
+            <Pencil className="h-3 w-3" />
           </Button>
-          <MomentumBadge status={stream.momentumStatus} />
         </div>
       </div>
 
-      <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
-        {stream.computedMilestoneDate && (
-          <div
-            className={`flex items-center gap-1 ${isOverdue ? "text-status-blocked" : ""}`}
-          >
-            <Calendar className="h-3 w-3" />
-            <span className="font-mono">
-              {format(new Date(stream.computedMilestoneDate), "MMM d, yyyy")}
-            </span>
-            {isOverdue && <span className="font-medium">Overdue</span>}
-          </div>
-        )}
-        <span>|</span>
-        <span>{stream.deliverableCount} Deliverables</span>
+      {showDescription && stream.description && (
+        <p className="text-xs text-muted-foreground line-clamp-1">
+          {stream.description}
+        </p>
+      )}
+
+      <div className="flex items-center gap-2">
+        <div className="flex-1">
+          <ProgressBar value={stream.progress} size="sm" showLabel={false} />
+        </div>
+        <span className="text-xs font-mono text-muted-foreground shrink-0">{Math.round(stream.progress)}%</span>
+        <span className="text-xs text-muted-foreground shrink-0">{stream.deliverableCount}D</span>
       </div>
 
-      <ProgressBar value={stream.progress} />
-
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex items-center gap-1.5 flex-wrap">
         {stream.doingCount > 0 && (
-          <Badge variant="outline" className="text-xs bg-status-executing/10 text-status-executing border-status-executing/30">
+          <Badge variant="outline" className="text-xs py-0 h-5 bg-status-executing/10 text-status-executing border-status-executing/30">
             {stream.doingCount} Doing
           </Badge>
         )}
         {stream.blockedCount > 0 && (
-          <Badge variant="outline" className="text-xs bg-status-blocked/10 text-status-blocked border-status-blocked/30">
+          <Badge variant="outline" className="text-xs py-0 h-5 bg-status-blocked/10 text-status-blocked border-status-blocked/30">
             {stream.blockedCount} Blocked
           </Badge>
         )}
-        {stream.delegatedCount > 0 && (
-          <Badge variant="outline" className="text-xs bg-status-delegated/10 text-status-delegated border-status-delegated/30">
-            {stream.delegatedCount} Delegated
-          </Badge>
+        {stream.labels.length > 0 && (
+          <>
+            {stream.labels.slice(0, 3).map((label) => (
+              <Badge key={label} variant="secondary" className="text-xs py-0 h-5">
+                {label}
+              </Badge>
+            ))}
+            {stream.labels.length > 3 && (
+              <span className="text-xs text-muted-foreground">
+                +{stream.labels.length - 3}
+              </span>
+            )}
+          </>
         )}
       </div>
-
-      {stream.phases.length > 0 && (
-        <div className="flex items-center gap-1 flex-wrap">
-          {stream.phases.slice(0, 2).map((phase) => (
-            <Badge key={phase} variant="secondary" className="text-xs">
-              {phase}
-            </Badge>
-          ))}
-          {stream.phases.length > 2 && (
-            <span className="text-xs text-muted-foreground">
-              +{stream.phases.length - 2}
-            </span>
-          )}
-        </div>
-      )}
     </Card>
   );
 }

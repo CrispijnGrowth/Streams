@@ -43,7 +43,6 @@ export function StreamsOverview({ showDescriptions }: StreamsOverviewProps) {
   const [sortField, setSortField] = useState<SortField>("ordinal");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [activeFilters, setActiveFilters] = useState<Record<string, string[]>>({
-    phase: [],
     owner: [],
     label: [],
     momentum: [],
@@ -67,24 +66,17 @@ export function StreamsOverview({ showDescriptions }: StreamsOverviewProps) {
   const filterConfigs = useMemo(() => {
     if (!streams) return [];
     
-    const phases = new Set<string>();
     const owners = new Set<string>();
     const labels = new Set<string>();
     const momentums = new Set<string>();
     
     streams.filter((s) => !s.isDeleted).forEach((stream) => {
-      stream.phases?.forEach((p) => phases.add(p));
       stream.owners?.forEach((o) => owners.add(o));
       stream.labels?.forEach((l) => labels.add(l));
       if (stream.momentumStatus) momentums.add(stream.momentumStatus);
     });
 
     return [
-      {
-        key: "phase",
-        label: "Phase",
-        options: Array.from(phases).sort().map((p) => ({ value: p, label: p })),
-      },
       {
         key: "owner",
         label: "Owner",
@@ -109,9 +101,6 @@ export function StreamsOverview({ showDescriptions }: StreamsOverviewProps) {
     const filtered = streams.filter((stream) => {
       if (stream.isDeleted) return false;
       
-      if (activeFilters.phase.length > 0) {
-        if (!stream.phases?.some((p) => activeFilters.phase.includes(p))) return false;
-      }
       if (activeFilters.owner.length > 0) {
         if (!stream.owners?.some((o) => activeFilters.owner.includes(o))) return false;
       }
@@ -157,7 +146,7 @@ export function StreamsOverview({ showDescriptions }: StreamsOverviewProps) {
   };
 
   const handleClearFilters = () => {
-    setActiveFilters({ phase: [], owner: [], label: [], momentum: [] });
+    setActiveFilters({ owner: [], label: [], momentum: [] });
   };
 
   const createStream = useMutation({

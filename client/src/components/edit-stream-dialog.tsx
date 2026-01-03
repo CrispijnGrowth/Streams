@@ -15,19 +15,16 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import { X, Plus, Loader2 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Stream } from "@shared/schema";
-import { Phases } from "@shared/schema";
 
 export type EditStreamFocusField = "owner" | "label" | null;
 
 const editStreamSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
-  phases: z.array(z.string()).default([]),
   owners: z.array(z.string()).default([]),
   labels: z.array(z.string()).default([]),
 });
@@ -66,7 +63,6 @@ export function EditStreamDialog({ stream, open, onOpenChange, onDeleted, initia
     defaultValues: {
       name: "",
       description: "",
-      phases: [],
       owners: [],
       labels: [],
     },
@@ -77,7 +73,6 @@ export function EditStreamDialog({ stream, open, onOpenChange, onDeleted, initia
       form.reset({
         name: stream.name,
         description: stream.description || "",
-        phases: stream.phases || [],
         owners: stream.owners || [],
         labels: stream.labels || [],
       });
@@ -148,16 +143,6 @@ export function EditStreamDialog({ stream, open, onOpenChange, onDeleted, initia
     form.setValue("labels", current.filter((l) => l !== label));
   };
 
-  const togglePhase = (phase: string) => {
-    const current = form.getValues("phases");
-    if (current.includes(phase)) {
-      form.setValue("phases", current.filter((p) => p !== phase));
-    } else {
-      form.setValue("phases", [...current, phase]);
-    }
-  };
-
-  const phases = form.watch("phases");
   const owners = form.watch("owners");
   const labels = form.watch("labels");
 
@@ -191,25 +176,6 @@ export function EditStreamDialog({ stream, open, onOpenChange, onDeleted, initia
               rows={3}
               data-testid="input-stream-description"
             />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Phases</Label>
-            <div className="flex flex-wrap gap-2">
-              {Object.values(Phases).map((phase) => (
-                <div key={phase} className="flex items-center gap-2">
-                  <Checkbox
-                    id={`phase-${phase}`}
-                    checked={phases.includes(phase)}
-                    onCheckedChange={() => togglePhase(phase)}
-                    data-testid={`checkbox-phase-${phase}`}
-                  />
-                  <Label htmlFor={`phase-${phase}`} className="text-sm font-normal cursor-pointer">
-                    {phase}
-                  </Label>
-                </div>
-              ))}
-            </div>
           </div>
 
           <div className="space-y-2">

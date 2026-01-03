@@ -15,7 +15,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -27,14 +26,13 @@ import { X, Plus, Loader2 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Deliverable } from "@shared/schema";
-import { Phases, ActionStatus } from "@shared/schema";
+import { ActionStatus } from "@shared/schema";
 
 const editDeliverableSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
   milestoneDate: z.string().optional(),
   status: z.string(),
-  phases: z.array(z.string()).default([]),
   owners: z.array(z.string()).default([]),
   labels: z.array(z.string()).default([]),
 });
@@ -60,7 +58,6 @@ export function EditDeliverableDialog({ deliverable, open, onOpenChange, onDelet
       description: "",
       milestoneDate: "",
       status: ActionStatus.BACKLOG,
-      phases: [],
       owners: [],
       labels: [],
     },
@@ -73,7 +70,6 @@ export function EditDeliverableDialog({ deliverable, open, onOpenChange, onDelet
         description: deliverable.description || "",
         milestoneDate: deliverable.milestoneDate || "",
         status: deliverable.status,
-        phases: deliverable.phases || [],
         owners: deliverable.owners || [],
         labels: deliverable.labels || [],
       });
@@ -146,16 +142,6 @@ export function EditDeliverableDialog({ deliverable, open, onOpenChange, onDelet
     form.setValue("labels", current.filter((l) => l !== label));
   };
 
-  const togglePhase = (phase: string) => {
-    const current = form.getValues("phases");
-    if (current.includes(phase)) {
-      form.setValue("phases", current.filter((p) => p !== phase));
-    } else {
-      form.setValue("phases", [...current, phase]);
-    }
-  };
-
-  const phases = form.watch("phases");
   const owners = form.watch("owners");
   const labels = form.watch("labels");
 
@@ -219,25 +205,6 @@ export function EditDeliverableDialog({ deliverable, open, onOpenChange, onDelet
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Phases</Label>
-            <div className="flex flex-wrap gap-2">
-              {Object.values(Phases).map((phase) => (
-                <div key={phase} className="flex items-center gap-2">
-                  <Checkbox
-                    id={`phase-${phase}`}
-                    checked={phases.includes(phase)}
-                    onCheckedChange={() => togglePhase(phase)}
-                    data-testid={`checkbox-phase-${phase}`}
-                  />
-                  <Label htmlFor={`phase-${phase}`} className="text-sm font-normal cursor-pointer">
-                    {phase}
-                  </Label>
-                </div>
-              ))}
             </div>
           </div>
 

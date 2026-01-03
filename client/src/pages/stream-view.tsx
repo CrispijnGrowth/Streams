@@ -279,15 +279,6 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
                   <span>{stream.owners.join(", ")}</span>
                 </div>
               )}
-              {stream.phases && stream.phases.length > 0 && (
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  {stream.phases.map((phase) => (
-                    <Badge key={phase} variant="outline" className="text-xs">
-                      {phase}
-                    </Badge>
-                  ))}
-                </div>
-              )}
               {stream.labels && stream.labels.length > 0 && (
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <Tag className="w-4 h-4 text-muted-foreground" />
