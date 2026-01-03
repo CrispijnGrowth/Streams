@@ -15,6 +15,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import type { Stream, DeliverableWithProgress, Deliverable } from "@shared/schema";
+import { DeliverableStatus } from "@shared/schema";
 
 interface StreamViewProps {
   streamId: string;
@@ -136,16 +137,6 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
     },
   });
 
-  const updateDeliverableStatus = useMutation({
-    mutationFn: async ({ deliverableId, status }: { deliverableId: string; status: string }) => {
-      return apiRequest("PATCH", `/api/deliverables/${deliverableId}`, { status });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/streams", streamId, "deliverables"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
-    },
-  });
-
   const timelineItems = deliverables?.map((d) => ({
     id: d.id,
     title: d.name,
@@ -230,49 +221,44 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-auto p-6">
         <div className="space-y-6">
-          <div className="space-y-3 pb-4 border-b">
-            <div className="flex items-start justify-between gap-4 flex-wrap">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs font-mono text-muted-foreground" data-testid="text-stream-key">{stream.key}</span>
-                  {stream.momentumStatus && (
-                    <Badge variant="secondary" className={getMomentumColor(stream.momentumStatus)}>
-                      <Activity className="w-3 h-3 mr-1" />
-                      {stream.momentumStatus}
-                    </Badge>
-                  )}
-                  {stream.momentumStatus !== "Active" && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => activateStream.mutate()}
-                      disabled={activateStream.isPending}
-                      data-testid="button-activate-stream"
-                    >
-                      <Zap className="w-3 h-3 mr-1" />
-                      Activate
-                    </Button>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-xl font-semibold" data-testid="text-stream-name">{stream.name}</h1>
+          <div className="space-y-3 pb-4 border-b pt-2">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-3">
+                <h1 className="text-xl font-semibold" data-testid="text-stream-name">{stream.name}</h1>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7"
+                  onClick={() => setEditingStream(true)}
+                  data-testid="button-edit-stream"
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                {stream.momentumStatus && (
+                  <Badge variant="secondary" className={getMomentumColor(stream.momentumStatus)}>
+                    <Activity className="w-3 h-3 mr-1" />
+                    {stream.momentumStatus}
+                  </Badge>
+                )}
+                {stream.momentumStatus !== "Active" && (
                   <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-7 w-7"
-                    onClick={() => setEditingStream(true)}
-                    data-testid="button-edit-stream"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => activateStream.mutate()}
+                    disabled={activateStream.isPending}
+                    data-testid="button-activate-stream"
                   >
-                    <Pencil className="h-4 w-4" />
+                    <Zap className="w-3 h-3 mr-1" />
+                    Activate
                   </Button>
-                </div>
+                )}
+                {stream.computedMilestoneDate && (
+                  <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                    <Calendar className="w-4 h-4" />
+                    <span>{new Date(stream.computedMilestoneDate).toLocaleDateString()}</span>
+                  </div>
+                )}
               </div>
-              {stream.computedMilestoneDate && (
-                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                  <Calendar className="w-4 h-4" />
-                  <span>Milestone: {new Date(stream.computedMilestoneDate).toLocaleDateString()}</span>
-                </div>
-              )}
             </div>
 
             {showDescriptions && stream.description && (
@@ -312,14 +298,18 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {deliverables
                 .filter((d) => !d.isDeleted)
-                .sort((a, b) => a.ordinal - b.ordinal)
+                .sort((a, b) => {
+                  const aOnHold = a.status === DeliverableStatus.ON_HOLD ? 1 : 0;
+                  const bOnHold = b.status === DeliverableStatus.ON_HOLD ? 1 : 0;
+                  if (aOnHold !== bOnHold) return aOnHold - bOnHold;
+                  return a.ordinal - b.ordinal;
+                })
                 .map((deliverable) => (
                   <DeliverableCard
                     key={deliverable.id}
                     deliverable={deliverable}
                     onClick={() => handleDeliverableClick(deliverable.id)}
                     onEdit={() => setEditingDeliverable(deliverable)}
-                    onStatusToggle={(status) => updateDeliverableStatus.mutate({ deliverableId: deliverable.id, status })}
                     showDescription={showDescriptions}
                   />
                 ))}
