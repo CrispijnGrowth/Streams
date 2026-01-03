@@ -75,26 +75,16 @@ export function StreamCard({ stream, onClick, onEdit, showDescription = true }: 
       </div>
 
       <div className="flex items-center gap-1.5 flex-wrap">
-        {stream.doingCount > 0 && (
-          <Badge variant="outline" className="text-xs py-0 h-5 bg-status-executing/10 text-status-executing border-status-executing/30">
-            {stream.doingCount} Doing
-          </Badge>
-        )}
-        {stream.blockedCount > 0 && (
-          <Badge variant="outline" className="text-xs py-0 h-5 bg-status-blocked/10 text-status-blocked border-status-blocked/30">
-            {stream.blockedCount} Blocked
-          </Badge>
-        )}
-        {stream.labels.length > 0 && (
+        {stream.inProgressDeliverables.length > 0 && (
           <>
-            {stream.labels.slice(0, 3).map((label) => (
-              <Badge key={label} variant="secondary" className="text-xs py-0 h-5">
-                {label}
+            {stream.inProgressDeliverables.slice(0, 3).map((name) => (
+              <Badge key={name} variant="outline" className="text-xs py-0 h-5">
+                {name}
               </Badge>
             ))}
-            {stream.labels.length > 3 && (
+            {stream.inProgressDeliverables.length > 3 && (
               <span className="text-xs text-muted-foreground">
-                +{stream.labels.length - 3}
+                +{stream.inProgressDeliverables.length - 3}
               </span>
             )}
           </>
