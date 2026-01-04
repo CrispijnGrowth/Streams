@@ -2,6 +2,7 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { authStorage, generateMagicLinkUrl } from "./auth";
+import { sendMagicLinkEmail, sendNewUserNotification, sendApprovalEmail } from "./email";
 import {
   insertStreamSchema,
   insertDeliverableSchema,
@@ -59,9 +60,14 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Email already registered" });
       }
       const user = await authStorage.createUser(parsed.data);
+      if (user.role === UserRole.PENDING) {
+        sendNewUserNotification(user.name, user.email).catch(err => 
+          console.error("[Auth] Failed to notify admin:", err)
+        );
+      }
       res.status(201).json({ 
         message: user.role === UserRole.ADMIN 
-          ? "Admin account created. Check your email for login link." 
+          ? "Admin account created. You can now login." 
           : "Registration submitted. Awaiting admin approval.",
         user: { id: user.id, email: user.email, name: user.name, role: user.role }
       });
@@ -86,10 +92,19 @@ export async function registerRoutes(
       const token = await authStorage.createMagicToken(email);
       const baseUrl = `${req.protocol}://${req.get("host")}`;
       const magicLink = generateMagicLinkUrl(token, baseUrl);
-      console.log(`[Auth] Magic link for ${email}: ${magicLink}`);
       if (process.env.NODE_ENV === "development") {
-        res.json({ message: "Magic link sent to your email", debug: magicLink });
+        console.log(`[Auth] Magic link for ${email}: ${magicLink}`);
+      }
+      const emailSent = await sendMagicLinkEmail(user.email, magicLink, user.name);
+      if (process.env.NODE_ENV === "development") {
+        res.json({ 
+          message: emailSent ? "Magic link sent to your email" : "Email service unavailable, use debug link",
+          debug: magicLink 
+        });
       } else {
+        if (!emailSent) {
+          return res.status(500).json({ error: "Failed to send magic link email" });
+        }
         res.json({ message: "Magic link sent to your email" });
       }
     } catch (error) {
@@ -176,6 +191,9 @@ export async function registerRoutes(
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
+      sendApprovalEmail(user.email, user.name).catch(err =>
+        console.error("[Auth] Failed to send approval email:", err)
+      );
       res.json({ message: "User approved", user });
     } catch (error) {
       res.status(500).json({ error: "Failed to approve user" });
