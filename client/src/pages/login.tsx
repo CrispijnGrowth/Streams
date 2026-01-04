@@ -44,7 +44,7 @@ export function LoginPage() {
 
       if (res.ok) {
         login(data.sessionId, data.user);
-        setLocation("/");
+        // Let useEffect handle redirect after user state updates
       } else {
         setMessage({ type: "error", text: data.error });
       }
