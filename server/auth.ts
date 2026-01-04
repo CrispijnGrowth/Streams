@@ -1,9 +1,8 @@
 import { randomUUID, randomBytes, createHash } from "crypto";
 import bcrypt from "bcrypt";
 import type { User, MagicLinkToken, Session, InsertUser } from "@shared/schema";
-import { UserRole } from "@shared/schema";
+import { UserRole, users } from "@shared/schema";
 import { db } from "./db";
-import { users } from "./db-schema";
 import { eq, ilike } from "drizzle-orm";
 
 const MAGIC_LINK_TTL_MS = 10 * 60 * 1000;
