@@ -91,6 +91,7 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 
 export interface Stream {
   id: string;
+  userId: string;
   key: string;
   name: string;
   description?: string;
@@ -106,6 +107,7 @@ export interface Stream {
 
 export interface Deliverable {
   id: string;
+  userId: string;
   key: string;
   name: string;
   description?: string;
@@ -121,6 +123,7 @@ export interface Deliverable {
 
 export interface Action {
   id: string;
+  userId: string;
   key: string;
   name: string;
   description?: string;
@@ -138,6 +141,7 @@ export interface Action {
 
 export interface Step {
   id: string;
+  userId: string;
   key: string;
   name: string;
   note?: string;
