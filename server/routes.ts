@@ -245,18 +245,18 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/streams", async (req, res) => {
+  app.get("/api/streams", authMiddleware, async (req, res) => {
     try {
-      const streams = await storage.getStreams();
+      const streams = await storage.getStreams(req.userId!);
       res.json(streams);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch streams" });
     }
   });
 
-  app.get("/api/streams/:id", async (req, res) => {
+  app.get("/api/streams/:id", authMiddleware, async (req, res) => {
     try {
-      const stream = await storage.getStream(req.params.id);
+      const stream = await storage.getStream(req.userId!, req.params.id);
       if (!stream) {
         return res.status(404).json({ error: "Stream not found" });
       }
@@ -266,20 +266,20 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/streams", async (req, res) => {
+  app.post("/api/streams", authMiddleware, async (req, res) => {
     try {
       const parsed = insertStreamSchema.safeParse(req.body);
       if (!parsed.success) {
         return res.status(400).json({ error: parsed.error.message });
       }
-      const stream = await storage.createStream(parsed.data);
+      const stream = await storage.createStream(req.userId!, parsed.data);
       res.status(201).json(stream);
     } catch (error) {
       res.status(500).json({ error: "Failed to create stream" });
     }
   });
 
-  app.patch("/api/streams/:id", async (req, res) => {
+  app.patch("/api/streams/:id", authMiddleware, async (req, res) => {
     try {
       const allowedFields = ["name", "description", "phases", "owners", "labels", "momentumStatus"];
       const updateData: Record<string, any> = {};
@@ -288,7 +288,7 @@ export async function registerRoutes(
           updateData[field] = req.body[field];
         }
       }
-      const stream = await storage.updateStream(req.params.id, updateData);
+      const stream = await storage.updateStream(req.userId!, req.params.id, updateData);
       if (!stream) {
         return res.status(404).json({ error: "Stream not found" });
       }
@@ -298,21 +298,9 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/streams/:id/activate", async (req, res) => {
+  app.delete("/api/streams/:id", authMiddleware, async (req, res) => {
     try {
-      const stream = await storage.activateStream(req.params.id);
-      if (!stream) {
-        return res.status(404).json({ error: "Stream not found" });
-      }
-      res.json(stream);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to activate stream" });
-    }
-  });
-
-  app.delete("/api/streams/:id", async (req, res) => {
-    try {
-      const deleted = await storage.deleteStream(req.params.id);
+      const deleted = await storage.deleteStream(req.userId!, req.params.id);
       if (!deleted) {
         return res.status(404).json({ error: "Stream not found" });
       }
@@ -322,27 +310,27 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/streams/:id/deliverables", async (req, res) => {
+  app.get("/api/streams/:id/deliverables", authMiddleware, async (req, res) => {
     try {
-      const deliverables = await storage.getDeliverablesByStream(req.params.id);
+      const deliverables = await storage.getDeliverablesByStream(req.userId!, req.params.id);
       res.json(deliverables);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch deliverables" });
     }
   });
 
-  app.get("/api/deliverables", async (req, res) => {
+  app.get("/api/deliverables", authMiddleware, async (req, res) => {
     try {
-      const deliverables = await storage.getDeliverables();
+      const deliverables = await storage.getDeliverables(req.userId!);
       res.json(deliverables);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch deliverables" });
     }
   });
 
-  app.get("/api/deliverables/:id", async (req, res) => {
+  app.get("/api/deliverables/:id", authMiddleware, async (req, res) => {
     try {
-      const deliverable = await storage.getDeliverable(req.params.id);
+      const deliverable = await storage.getDeliverable(req.userId!, req.params.id);
       if (!deliverable) {
         return res.status(404).json({ error: "Deliverable not found" });
       }
@@ -352,20 +340,20 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/deliverables", async (req, res) => {
+  app.post("/api/deliverables", authMiddleware, async (req, res) => {
     try {
       const parsed = insertDeliverableSchema.safeParse(req.body);
       if (!parsed.success) {
         return res.status(400).json({ error: parsed.error.message });
       }
-      const deliverable = await storage.createDeliverable(parsed.data);
+      const deliverable = await storage.createDeliverable(req.userId!, parsed.data);
       res.status(201).json(deliverable);
     } catch (error) {
       res.status(500).json({ error: "Failed to create deliverable" });
     }
   });
 
-  app.patch("/api/deliverables/:id", async (req, res) => {
+  app.patch("/api/deliverables/:id", authMiddleware, async (req, res) => {
     try {
       const allowedFields = ["name", "description", "milestoneDate", "phases", "owners", "labels", "status", "isDeleted"];
       const validStatuses = ["In Progress", "On Hold"];
@@ -378,7 +366,7 @@ export async function registerRoutes(
           updateData[field] = req.body[field];
         }
       }
-      const deliverable = await storage.updateDeliverable(req.params.id, updateData);
+      const deliverable = await storage.updateDeliverable(req.userId!, req.params.id, updateData);
       if (!deliverable) {
         return res.status(404).json({ error: "Deliverable not found" });
       }
@@ -388,9 +376,9 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/deliverables/:id", async (req, res) => {
+  app.delete("/api/deliverables/:id", authMiddleware, async (req, res) => {
     try {
-      const deleted = await storage.deleteDeliverable(req.params.id);
+      const deleted = await storage.deleteDeliverable(req.userId!, req.params.id);
       if (!deleted) {
         return res.status(404).json({ error: "Deliverable not found" });
       }
@@ -400,27 +388,27 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/deliverables/:id/actions", async (req, res) => {
+  app.get("/api/deliverables/:id/actions", authMiddleware, async (req, res) => {
     try {
-      const actions = await storage.getActionsByDeliverable(req.params.id);
+      const actions = await storage.getActionsByDeliverable(req.userId!, req.params.id);
       res.json(actions);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch actions" });
     }
   });
 
-  app.get("/api/actions", async (req, res) => {
+  app.get("/api/actions", authMiddleware, async (req, res) => {
     try {
-      const actions = await storage.getActions();
+      const actions = await storage.getActions(req.userId!);
       res.json(actions);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch actions" });
     }
   });
 
-  app.get("/api/actions/:id", async (req, res) => {
+  app.get("/api/actions/:id", authMiddleware, async (req, res) => {
     try {
-      const action = await storage.getAction(req.params.id);
+      const action = await storage.getAction(req.userId!, req.params.id);
       if (!action) {
         return res.status(404).json({ error: "Action not found" });
       }
@@ -430,20 +418,20 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/actions", async (req, res) => {
+  app.post("/api/actions", authMiddleware, async (req, res) => {
     try {
       const parsed = insertActionSchema.safeParse(req.body);
       if (!parsed.success) {
         return res.status(400).json({ error: parsed.error.message });
       }
-      const action = await storage.createAction(parsed.data);
+      const action = await storage.createAction(req.userId!, parsed.data);
       res.status(201).json(action);
     } catch (error) {
       res.status(500).json({ error: "Failed to create action" });
     }
   });
 
-  app.patch("/api/actions/:id", async (req, res) => {
+  app.patch("/api/actions/:id", authMiddleware, async (req, res) => {
     try {
       const allowedFields = ["name", "description", "status", "dueDate", "effort", "owners", "labels", "kanbanOrder"];
       const validStatuses = ["Backlog", "To Execute", "Executing", "Blocked", "Delegated", "Done", "Archive"];
@@ -456,7 +444,7 @@ export async function registerRoutes(
           updateData[field] = req.body[field];
         }
       }
-      const action = await storage.updateAction(req.params.id, updateData);
+      const action = await storage.updateAction(req.userId!, req.params.id, updateData);
       if (!action) {
         return res.status(404).json({ error: "Action not found" });
       }
@@ -466,9 +454,9 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/actions/:id", async (req, res) => {
+  app.delete("/api/actions/:id", authMiddleware, async (req, res) => {
     try {
-      const deleted = await storage.deleteAction(req.params.id);
+      const deleted = await storage.deleteAction(req.userId!, req.params.id);
       if (!deleted) {
         return res.status(404).json({ error: "Action not found" });
       }
@@ -478,27 +466,27 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/actions/:id/steps", async (req, res) => {
+  app.get("/api/actions/:id/steps", authMiddleware, async (req, res) => {
     try {
-      const steps = await storage.getStepsByAction(req.params.id);
+      const steps = await storage.getStepsByAction(req.userId!, req.params.id);
       res.json(steps);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch steps" });
     }
   });
 
-  app.get("/api/steps", async (req, res) => {
+  app.get("/api/steps", authMiddleware, async (req, res) => {
     try {
-      const steps = await storage.getSteps();
+      const steps = await storage.getSteps(req.userId!);
       res.json(steps);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch steps" });
     }
   });
 
-  app.get("/api/steps/:id", async (req, res) => {
+  app.get("/api/steps/:id", authMiddleware, async (req, res) => {
     try {
-      const step = await storage.getStep(req.params.id);
+      const step = await storage.getStep(req.userId!, req.params.id);
       if (!step) {
         return res.status(404).json({ error: "Step not found" });
       }
@@ -508,20 +496,20 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/steps", async (req, res) => {
+  app.post("/api/steps", authMiddleware, async (req, res) => {
     try {
       const parsed = insertStepSchema.safeParse(req.body);
       if (!parsed.success) {
         return res.status(400).json({ error: parsed.error.message });
       }
-      const step = await storage.createStep(parsed.data);
+      const step = await storage.createStep(req.userId!, parsed.data);
       res.status(201).json(step);
     } catch (error) {
       res.status(500).json({ error: "Failed to create step" });
     }
   });
 
-  app.patch("/api/steps/:id", async (req, res) => {
+  app.patch("/api/steps/:id", authMiddleware, async (req, res) => {
     try {
       const allowedFields = ["name", "note", "isDone", "dueDate", "owner"];
       const updateData: Record<string, any> = {};
@@ -530,7 +518,7 @@ export async function registerRoutes(
           updateData[field] = req.body[field];
         }
       }
-      const step = await storage.updateStep(req.params.id, updateData);
+      const step = await storage.updateStep(req.userId!, req.params.id, updateData);
       if (!step) {
         return res.status(404).json({ error: "Step not found" });
       }
@@ -540,9 +528,9 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/steps/:id", async (req, res) => {
+  app.delete("/api/steps/:id", authMiddleware, async (req, res) => {
     try {
-      const deleted = await storage.deleteStep(req.params.id);
+      const deleted = await storage.deleteStep(req.userId!, req.params.id);
       if (!deleted) {
         return res.status(404).json({ error: "Step not found" });
       }
@@ -552,18 +540,18 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/recycle-bin", async (req, res) => {
+  app.get("/api/recycle-bin", authMiddleware, async (req, res) => {
     try {
-      const deletedItems = await storage.getDeletedItems();
+      const deletedItems = await storage.getDeletedItems(req.userId!);
       res.json(deletedItems);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch deleted items" });
     }
   });
 
-  app.post("/api/recycle-bin/restore/stream/:id", async (req, res) => {
+  app.post("/api/recycle-bin/restore/stream/:id", authMiddleware, async (req, res) => {
     try {
-      const restored = await storage.restoreStream(req.params.id);
+      const restored = await storage.restoreStream(req.userId!, req.params.id);
       if (!restored) {
         return res.status(404).json({ error: "Stream not found in recycle bin" });
       }
@@ -573,9 +561,9 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/recycle-bin/restore/deliverable/:id", async (req, res) => {
+  app.post("/api/recycle-bin/restore/deliverable/:id", authMiddleware, async (req, res) => {
     try {
-      const restored = await storage.restoreDeliverable(req.params.id);
+      const restored = await storage.restoreDeliverable(req.userId!, req.params.id);
       if (!restored) {
         return res.status(404).json({ error: "Deliverable not found in recycle bin" });
       }
@@ -585,9 +573,9 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/recycle-bin/restore/action/:id", async (req, res) => {
+  app.post("/api/recycle-bin/restore/action/:id", authMiddleware, async (req, res) => {
     try {
-      const restored = await storage.restoreAction(req.params.id);
+      const restored = await storage.restoreAction(req.userId!, req.params.id);
       if (!restored) {
         return res.status(404).json({ error: "Action not found in recycle bin" });
       }
@@ -597,9 +585,9 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/recycle-bin/restore/step/:id", async (req, res) => {
+  app.post("/api/recycle-bin/restore/step/:id", authMiddleware, async (req, res) => {
     try {
-      const restored = await storage.restoreStep(req.params.id);
+      const restored = await storage.restoreStep(req.userId!, req.params.id);
       if (!restored) {
         return res.status(404).json({ error: "Step not found in recycle bin" });
       }

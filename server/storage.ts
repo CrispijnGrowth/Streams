@@ -283,6 +283,10 @@ export class MemStorage implements IStorage {
   }
 
   async createDeliverable(userId: string, data: InsertDeliverable): Promise<Deliverable> {
+    const parentStream = this.streams.get(data.streamId);
+    if (!parentStream || parentStream.userId !== userId || parentStream.isDeleted) {
+      throw new Error("Parent stream not found or access denied");
+    }
     const id = randomUUID();
     const streamDeliverables = Array.from(this.deliverables.values()).filter(
       (d) => d.streamId === data.streamId && d.userId === userId
@@ -359,12 +363,23 @@ export class MemStorage implements IStorage {
   async updateDeliverable(userId: string, id: string, data: Partial<InsertDeliverable>): Promise<Deliverable | undefined> {
     const del = this.deliverables.get(id);
     if (!del || del.userId !== userId || del.isDeleted) return undefined;
+    if (data.streamId && data.streamId !== del.streamId) {
+      const newParentStream = this.streams.get(data.streamId);
+      if (!newParentStream || newParentStream.userId !== userId || newParentStream.isDeleted) {
+        return undefined;
+      }
+    }
     const statusChanged = data.status !== undefined && data.status !== del.status;
+    const oldStreamId = del.streamId;
     const updated: Deliverable = { ...del, ...data } as Deliverable;
     this.deliverables.set(id, updated);
-    this.updateStreamMilestone(del.streamId, userId);
+    this.updateStreamMilestone(oldStreamId, userId);
+    if (data.streamId && data.streamId !== oldStreamId) {
+      this.updateStreamMilestone(data.streamId, userId);
+      this.updateStreamMomentum(data.streamId, userId);
+    }
     if (statusChanged) {
-      this.updateStreamMomentum(del.streamId, userId);
+      this.updateStreamMomentum(updated.streamId, userId);
     }
     return updated;
   }
@@ -413,6 +428,14 @@ export class MemStorage implements IStorage {
   }
 
   async createAction(userId: string, data: InsertAction): Promise<Action> {
+    const parentDeliverable = this.deliverables.get(data.deliverableId);
+    if (!parentDeliverable || parentDeliverable.userId !== userId || parentDeliverable.isDeleted) {
+      throw new Error("Parent deliverable not found or access denied");
+    }
+    const parentStream = this.streams.get(data.streamId);
+    if (!parentStream || parentStream.userId !== userId || parentStream.isDeleted) {
+      throw new Error("Parent stream not found or access denied");
+    }
     const id = randomUUID();
     const deliverableActions = Array.from(this.actions.values()).filter(
       (a) => a.deliverableId === data.deliverableId && a.userId === userId
@@ -446,6 +469,18 @@ export class MemStorage implements IStorage {
   async updateAction(userId: string, id: string, data: Partial<InsertAction>): Promise<Action | undefined> {
     const action = this.actions.get(id);
     if (!action || action.userId !== userId || action.isDeleted) return undefined;
+    if (data.deliverableId && data.deliverableId !== action.deliverableId) {
+      const newParentDeliverable = this.deliverables.get(data.deliverableId);
+      if (!newParentDeliverable || newParentDeliverable.userId !== userId || newParentDeliverable.isDeleted) {
+        return undefined;
+      }
+    }
+    if (data.streamId && data.streamId !== action.streamId) {
+      const newParentStream = this.streams.get(data.streamId);
+      if (!newParentStream || newParentStream.userId !== userId || newParentStream.isDeleted) {
+        return undefined;
+      }
+    }
     const statusChanged = data.status !== undefined && data.status !== action.status;
     const updated: Action = { ...action, ...data } as Action;
     this.actions.set(id, updated);
@@ -484,6 +519,10 @@ export class MemStorage implements IStorage {
   }
 
   async createStep(userId: string, data: InsertStep): Promise<Step> {
+    const parentAction = this.actions.get(data.actionId);
+    if (!parentAction || parentAction.userId !== userId || parentAction.isDeleted) {
+      throw new Error("Parent action not found or access denied");
+    }
     const id = randomUUID();
     const actionSteps = Array.from(this.steps.values()).filter(
       (s) => s.actionId === data.actionId && s.userId === userId
@@ -513,6 +552,12 @@ export class MemStorage implements IStorage {
   async updateStep(userId: string, id: string, data: Partial<InsertStep>): Promise<Step | undefined> {
     const step = this.steps.get(id);
     if (!step || step.userId !== userId || step.isDeleted) return undefined;
+    if (data.actionId && data.actionId !== step.actionId) {
+      const newParentAction = this.actions.get(data.actionId);
+      if (!newParentAction || newParentAction.userId !== userId || newParentAction.isDeleted) {
+        return undefined;
+      }
+    }
     const isDoneChanged = data.isDone !== undefined && data.isDone !== step.isDone;
     const updated = { ...step, ...data };
     this.steps.set(id, updated);
