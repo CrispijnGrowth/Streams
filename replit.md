@@ -27,11 +27,13 @@ Preferred communication style: Simple, everyday language.
 - **Static Serving**: Built client assets served from `dist/public` in production
 
 ### Data Model
-The application uses a four-level hierarchy:
+The application uses a four-level hierarchy with per-user data isolation:
 1. **Streams**: Top-level project containers with phases, owners, and labels
 2. **Deliverables**: Major milestones within streams with target dates
 3. **Actions**: Trackable tasks with Kanban status (Backlog, To Execute, Executing, Blocked, Delegated, Done, Archive)
 4. **Steps**: Granular checklist items within actions
+
+**Data Isolation**: Each entity (Stream, Deliverable, Action, Step) includes a `userId` field. All CRUD operations are scoped to the authenticated user, and parent ownership is validated when creating or updating child entities. Users can only see and modify their own data.
 
 Progress is computed automatically by rolling up completion percentages from steps → actions → deliverables → streams.
 
@@ -84,6 +86,7 @@ Progress is computed automatically by rolling up completion percentages from ste
   - `client/src/pages/settings.tsx` - User preferences and admin approval panel
 
 ### Recent Changes
+- 2026-01-04: Implemented user-specific data isolation - each user has private streams, deliverables, actions, and steps
 - 2026-01-04: Changed from magic-link to password-based authentication with password reset via email
 - 2026-01-04: Added Postmark email integration for password reset and admin notifications
 - 2026-01-03: Implemented custom magic-link authentication system with admin approval workflow
