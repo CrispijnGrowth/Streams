@@ -17,13 +17,13 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Badge } from "@/components/ui/badge";
 import { ActionCard } from "@/components/action-card";
-import { ActionStatus, type ActionWithProgress, type ActionStatusType } from "@shared/schema";
+import { ActionStatus, type ActionWithProgress, type ActionStatusType, type Deliverable } from "@shared/schema";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 interface KanbanBoardProps {
   actions: ActionWithProgress[];
+  deliverables?: Deliverable[];
   onActionClick?: (id: string) => void;
   onActionEdit?: (action: ActionWithProgress) => void;
   onStatusChange?: (actionId: string, newStatus: ActionStatusType) => void;
@@ -78,75 +78,127 @@ function SortableActionCard({ action, onClick, onEdit, showDescription }: Sortab
   );
 }
 
-interface DroppableColumnProps {
+interface DroppableCellProps {
   id: string;
   status: ActionStatusType;
-  label: string;
-  color: string;
   items: ActionWithProgress[];
   onActionClick?: (id: string) => void;
   onActionEdit?: (action: ActionWithProgress) => void;
   showDescription?: boolean;
 }
 
-function DroppableColumn({
+function DroppableCell({
   id,
   status,
-  label,
-  color,
   items,
   onActionClick,
   onActionEdit,
   showDescription,
-}: DroppableColumnProps) {
+}: DroppableCellProps) {
   const { setNodeRef, isOver } = useDroppable({ id });
 
   return (
-    <div
-      className="w-72 flex-shrink-0"
-      data-testid={`kanban-column-${status.toLowerCase().replace(/\s/g, "-")}`}
-    >
-      <div className="sticky top-0 bg-background z-10 pb-3 border-b mb-3">
-        <div className="flex items-center justify-between px-1">
-          <div className="flex items-center gap-2">
-            <div className={`w-3 h-3 rounded-full ${color}`} />
-            <h3 className="font-semibold text-base uppercase tracking-wide">{label}</h3>
+    <SortableContext items={items.map((a) => a.id)} strategy={verticalListSortingStrategy}>
+      <div
+        ref={setNodeRef}
+        className={`w-72 flex-shrink-0 space-y-2 min-h-[60px] p-1 rounded-lg transition-colors ${
+          isOver ? "bg-accent/30" : ""
+        }`}
+        data-testid={`kanban-cell-${status.toLowerCase().replace(/\s/g, "-")}`}
+      >
+        {items.length === 0 ? (
+          <div className={`h-16 border border-dashed rounded-lg flex items-center justify-center transition-colors ${
+            isOver ? "border-primary/50 bg-primary/5" : "border-border/30"
+          }`}>
+            <span className="text-xs text-muted-foreground/50">Drop here</span>
           </div>
-          <span className="text-sm font-medium text-muted-foreground">{items.length}</span>
-        </div>
+        ) : (
+          items.map((action) => (
+            <SortableActionCard
+              key={action.id}
+              action={action}
+              onClick={() => onActionClick?.(action.id)}
+              onEdit={() => onActionEdit?.(action)}
+              showDescription={showDescription}
+            />
+          ))
+        )}
       </div>
-      <SortableContext items={items.map((a) => a.id)} strategy={verticalListSortingStrategy}>
-        <div
-          ref={setNodeRef}
-          className={`space-y-3 min-h-[200px] p-1 rounded-lg transition-colors ${
-            isOver ? "bg-accent/30" : ""
-          }`}
-        >
-          {items.length === 0 ? (
-            <div className={`h-32 border-2 border-dashed rounded-lg flex items-center justify-center transition-colors ${
-              isOver ? "border-primary/50 bg-primary/5" : "border-border/50"
-            }`}>
-              <span className="text-xs text-muted-foreground">Drop here</span>
-            </div>
-          ) : (
-            items.map((action) => (
-              <SortableActionCard
-                key={action.id}
-                action={action}
-                onClick={() => onActionClick?.(action.id)}
-                onEdit={() => onActionEdit?.(action)}
-                showDescription={showDescription}
-              />
-            ))
-          )}
-        </div>
-      </SortableContext>
+    </SortableContext>
+  );
+}
+
+interface DeliverableRowProps {
+  deliverable: Deliverable | null;
+  actions: ActionWithProgress[];
+  columnData: { status: ActionStatusType; label: string; color: string; id: string }[];
+  onActionClick?: (id: string) => void;
+  onActionEdit?: (action: ActionWithProgress) => void;
+  showDescription?: boolean;
+}
+
+function DeliverableRow({
+  deliverable,
+  actions,
+  columnData,
+  onActionClick,
+  onActionEdit,
+  showDescription,
+}: DeliverableRowProps) {
+  const rowId = deliverable?.id || "ungrouped";
+  
+  return (
+    <div 
+      className="relative flex gap-4 py-3"
+      data-testid={`deliverable-row-${rowId}`}
+    >
+      <div 
+        className="absolute inset-0 rounded-lg pointer-events-none"
+        style={{
+          border: deliverable ? "2px solid" : "none",
+          borderColor: deliverable ? "hsl(var(--deliverable-border))" : "transparent",
+          boxShadow: deliverable ? "0 0 8px hsl(var(--deliverable-border) / 0.3)" : "none",
+        }}
+      />
+      
+      <div className="w-40 flex-shrink-0 flex items-start pt-2 pl-3 z-10">
+        {deliverable ? (
+          <div className="font-medium text-sm text-foreground truncate" title={deliverable.name}>
+            {deliverable.name}
+          </div>
+        ) : (
+          <div className="font-medium text-sm text-muted-foreground italic">
+            Ungrouped
+          </div>
+        )}
+      </div>
+
+      <div className="flex gap-4 flex-1 pr-3">
+        {columnData.map((column) => {
+          const columnActions = actions
+            .filter((a) => a.status === column.status)
+            .sort((a, b) => a.kanbanOrder - b.kanbanOrder);
+          
+          return (
+            <DroppableCell
+              key={`${rowId}__${column.status}`}
+              id={`cell__${rowId}__${column.status}`}
+              status={column.status}
+              items={columnActions}
+              onActionClick={onActionClick}
+              onActionEdit={onActionEdit}
+              showDescription={showDescription}
+            />
+          );
+        })}
+      </div>
     </div>
   );
 }
 
 export function KanbanBoard({
   actions,
+  deliverables = [],
   onActionClick,
   onActionEdit,
   onStatusChange,
@@ -167,11 +219,30 @@ export function KanbanBoard({
     return kanbanColumns.map((col) => ({
       ...col,
       id: `column-${col.status}`,
-      items: actions
-        .filter((a) => a.status === col.status)
-        .sort((a, b) => a.kanbanOrder - b.kanbanOrder),
     }));
-  }, [actions]);
+  }, []);
+
+  const groupedActions = useMemo(() => {
+    const groups: { deliverable: Deliverable | null; actions: ActionWithProgress[] }[] = [];
+    
+    for (const del of deliverables) {
+      const delActions = actions.filter((a) => a.deliverableId === del.id);
+      if (delActions.length > 0) {
+        groups.push({ deliverable: del, actions: delActions });
+      }
+    }
+    
+    const ungroupedActions = actions.filter((a) => !a.deliverableId);
+    if (ungroupedActions.length > 0) {
+      groups.push({ deliverable: null, actions: ungroupedActions });
+    }
+    
+    if (groups.length === 0 && actions.length > 0) {
+      groups.push({ deliverable: null, actions: actions });
+    }
+    
+    return groups;
+  }, [actions, deliverables]);
 
   const activeAction = useMemo(() => {
     if (!activeId) return null;
@@ -193,9 +264,11 @@ export function KanbanBoard({
 
     const overId = over.id as string;
 
-    if (overId.startsWith("column-")) {
-      const newStatus = overId.replace("column-", "") as ActionStatusType;
-      if (draggedAction.status !== newStatus) {
+    if (overId.startsWith("cell__")) {
+      const parts = overId.split("__");
+      const newStatus = parts[2] as ActionStatusType;
+      
+      if (newStatus && draggedAction.status !== newStatus) {
         onStatusChange?.(draggedAction.id, newStatus);
       }
       return;
@@ -207,14 +280,20 @@ export function KanbanBoard({
     if (draggedAction.status !== overAction.status) {
       onStatusChange?.(draggedAction.id, overAction.status);
     } else if (draggedAction.id !== overAction.id) {
-      const column = columnData.find((c) => c.status === draggedAction.status);
-      if (!column) return;
+      const group = groupedActions.find((g) => 
+        g.actions.some((a) => a.id === draggedAction.id)
+      );
+      if (!group) return;
 
-      const oldIndex = column.items.findIndex((a) => a.id === draggedAction.id);
-      const newIndex = column.items.findIndex((a) => a.id === overAction.id);
+      const columnItems = group.actions
+        .filter((a) => a.status === draggedAction.status)
+        .sort((a, b) => a.kanbanOrder - b.kanbanOrder);
+
+      const oldIndex = columnItems.findIndex((a) => a.id === draggedAction.id);
+      const newIndex = columnItems.findIndex((a) => a.id === overAction.id);
 
       if (oldIndex !== newIndex && onReorder) {
-        const reordered = arrayMove(column.items, oldIndex, newIndex);
+        const reordered = arrayMove(columnItems, oldIndex, newIndex);
         reordered.forEach((item, index) => {
           if (item.kanbanOrder !== index + 1) {
             onReorder(item.id, index + 1);
@@ -224,6 +303,67 @@ export function KanbanBoard({
     }
   };
 
+  const hasDeliverables = deliverables.length > 0 && actions.some((a) => a.deliverableId);
+
+  if (!hasDeliverables) {
+    return (
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        <ScrollArea className="w-full">
+          <div className="flex gap-4 pb-4 min-w-max">
+            {columnData.map((column) => {
+              const columnActions = actions
+                .filter((a) => a.status === column.status)
+                .sort((a, b) => a.kanbanOrder - b.kanbanOrder);
+              
+              return (
+                <div
+                  key={column.status}
+                  className="w-72 flex-shrink-0"
+                  data-testid={`kanban-column-${column.status.toLowerCase().replace(/\s/g, "-")}`}
+                >
+                  <div className="sticky top-0 bg-background z-10 pb-3 border-b mb-3">
+                    <div className="flex items-center justify-between px-1">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-3 h-3 rounded-full ${column.color}`} />
+                        <h3 className="font-semibold text-base uppercase tracking-wide">{column.label}</h3>
+                      </div>
+                      <span className="text-sm font-medium text-muted-foreground">{columnActions.length}</span>
+                    </div>
+                  </div>
+                  <DroppableCell
+                    id={`cell__ungrouped__${column.status}`}
+                    status={column.status}
+                    items={columnActions}
+                    onActionClick={onActionClick}
+                    onActionEdit={onActionEdit}
+                    showDescription={showDescription}
+                  />
+                </div>
+              );
+            })}
+          </div>
+          <ScrollBar orientation="horizontal" />
+        </ScrollArea>
+
+        <DragOverlay>
+          {activeAction && (
+            <ActionCard
+              action={activeAction}
+              showDescription={showDescription}
+              isDragging
+              showDragHandle
+            />
+          )}
+        </DragOverlay>
+      </DndContext>
+    );
+  }
+
   return (
     <DndContext
       sensors={sensors}
@@ -232,20 +372,37 @@ export function KanbanBoard({
       onDragEnd={handleDragEnd}
     >
       <ScrollArea className="w-full">
-        <div className="flex gap-4 pb-4 min-w-max">
-          {columnData.map((column) => (
-            <DroppableColumn
-              key={column.status}
-              id={column.id}
-              status={column.status}
-              label={column.label}
-              color={column.color}
-              items={column.items}
-              onActionClick={onActionClick}
-              onActionEdit={onActionEdit}
-              showDescription={showDescription}
-            />
-          ))}
+        <div className="min-w-max">
+          <div className="flex gap-4 pb-3 border-b mb-3 pl-44">
+            {columnData.map((column) => {
+              const columnCount = actions.filter((a) => a.status === column.status).length;
+              return (
+                <div key={column.status} className="w-72 flex-shrink-0">
+                  <div className="flex items-center justify-between px-1">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-3 h-3 rounded-full ${column.color}`} />
+                      <h3 className="font-semibold text-base uppercase tracking-wide">{column.label}</h3>
+                    </div>
+                    <span className="text-sm font-medium text-muted-foreground">{columnCount}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="space-y-4">
+            {groupedActions.map((group, index) => (
+              <DeliverableRow
+                key={group.deliverable?.id || `ungrouped-${index}`}
+                deliverable={group.deliverable}
+                actions={group.actions}
+                columnData={columnData}
+                onActionClick={onActionClick}
+                onActionEdit={onActionEdit}
+                showDescription={showDescription}
+              />
+            ))}
+          </div>
         </div>
         <ScrollBar orientation="horizontal" />
       </ScrollArea>

@@ -4,28 +4,28 @@ import { Button } from "@/components/ui/button";
 import { ProgressBar } from "@/components/progress-bar";
 import { Calendar, Pencil } from "lucide-react";
 import { format } from "date-fns";
-import type { DeliverableWithProgress } from "@shared/schema";
-import { DeliverableStatus } from "@shared/schema";
+import type { SolutionWithProgress } from "@shared/schema";
+import { SolutionStatus } from "@shared/schema";
 
-interface DeliverableCardProps {
-  deliverable: DeliverableWithProgress;
+interface SolutionCardProps {
+  solution: SolutionWithProgress;
   onClick?: () => void;
   onEdit?: () => void;
   showDescription?: boolean;
   isDragging?: boolean;
 }
 
-export function DeliverableCard({
-  deliverable,
+export function SolutionCard({
+  solution,
   onClick,
   onEdit,
   showDescription = true,
   isDragging = false,
-}: DeliverableCardProps) {
-  const isOnHold = deliverable.status === DeliverableStatus.ON_HOLD;
+}: SolutionCardProps) {
+  const isOnHold = solution.status === SolutionStatus.ON_HOLD;
   const isOverdue =
-    deliverable.milestoneDate &&
-    new Date(deliverable.milestoneDate) < new Date() &&
+    solution.milestoneDate &&
+    new Date(solution.milestoneDate) < new Date() &&
     !isOnHold;
 
   const handleEdit = (e: React.MouseEvent) => {
@@ -39,22 +39,22 @@ export function DeliverableCard({
         isDragging ? "shadow-xl scale-105 opacity-90" : ""
       } ${isOnHold ? "opacity-50 bg-muted" : ""}`}
       onClick={onClick}
-      data-testid={`card-deliverable-${deliverable.id}`}
+      data-testid={`card-solution-${solution.id}`}
     >
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 flex-1 min-w-0">
-          <h4 className="font-medium text-sm truncate" data-testid={`text-deliverable-name-${deliverable.id}`}>
-            {deliverable.name}
+          <h4 className="font-medium text-sm truncate" data-testid={`text-solution-name-${solution.id}`}>
+            {solution.name}
           </h4>
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          {deliverable.milestoneDate && (
+          {solution.milestoneDate && (
             <div
               className={`flex items-center gap-1 text-xs ${isOnHold ? "text-muted-foreground" : isOverdue ? "text-status-blocked" : "text-muted-foreground"}`}
             >
               <Calendar className="h-3 w-3" />
               <span className="font-mono">
-                {format(new Date(deliverable.milestoneDate), "MMM d")}
+                {format(new Date(solution.milestoneDate), "MMM d")}
               </span>
             </div>
           )}
@@ -63,53 +63,56 @@ export function DeliverableCard({
             variant="ghost"
             className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
             onClick={handleEdit}
-            data-testid={`button-edit-deliverable-${deliverable.id}`}
+            data-testid={`button-edit-solution-${solution.id}`}
           >
             <Pencil className="h-3 w-3" />
           </Button>
         </div>
       </div>
 
-      {showDescription && deliverable.description && (
+      {showDescription && solution.description && (
         <p className="text-xs text-muted-foreground line-clamp-1">
-          {deliverable.description}
+          {solution.description}
         </p>
       )}
 
       <div className="flex items-center gap-2">
         <div className="flex-1">
-          <ProgressBar value={deliverable.progress} size="sm" showLabel={false} muted={isOnHold} />
+          <ProgressBar value={solution.progress} size="sm" showLabel={false} muted={isOnHold} />
         </div>
-        <span className="text-xs font-mono text-muted-foreground">{Math.round(deliverable.progress)}%</span>
-        <span className="text-xs text-muted-foreground">{deliverable.actionCount}A</span>
+        <span className="text-xs font-mono text-muted-foreground">{Math.round(solution.progress)}%</span>
+        {solution.deliverableCount > 0 && (
+          <span className="text-xs text-muted-foreground">{solution.deliverableCount}D</span>
+        )}
+        <span className="text-xs text-muted-foreground">{solution.actionCount}A</span>
       </div>
 
       <div className="flex items-center gap-1.5 flex-wrap">
-        {deliverable.doingCount > 0 && (
+        {solution.doingCount > 0 && (
           <Badge 
             variant="outline" 
             className={`text-xs py-0 h-5 ${isOnHold ? "bg-muted-foreground/10 text-muted-foreground border-muted-foreground/30" : "bg-status-executing/10 text-status-executing border-status-executing/30"}`}
           >
-            {deliverable.doingCount} Doing
+            {solution.doingCount} Doing
           </Badge>
         )}
-        {deliverable.blockedCount > 0 && (
+        {solution.blockedCount > 0 && (
           <Badge 
             variant="outline" 
             className={`text-xs py-0 h-5 ${isOnHold ? "bg-muted-foreground/10 text-muted-foreground border-muted-foreground/30" : "bg-status-blocked/10 text-status-blocked border-status-blocked/30"}`}
           >
-            {deliverable.blockedCount} Blocked
+            {solution.blockedCount} Blocked
           </Badge>
         )}
-        {deliverable.labels.length > 0 && (
+        {solution.labels.length > 0 && (
           <>
-            {deliverable.labels.slice(0, 2).map((label) => (
+            {solution.labels.slice(0, 2).map((label) => (
               <Badge key={label} variant="secondary" className="text-xs py-0 h-5">
                 {label}
               </Badge>
             ))}
-            {deliverable.labels.length > 2 && (
-              <span className="text-xs text-muted-foreground">+{deliverable.labels.length - 2}</span>
+            {solution.labels.length > 2 && (
+              <span className="text-xs text-muted-foreground">+{solution.labels.length - 2}</span>
             )}
           </>
         )}

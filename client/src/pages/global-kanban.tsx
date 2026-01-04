@@ -24,7 +24,7 @@ export function GlobalKanban({ showDescriptions }: GlobalKanbanProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/deliverables"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/solutions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
     },
   });
@@ -41,7 +41,7 @@ export function GlobalKanban({ showDescriptions }: GlobalKanbanProps) {
   const handleActionClick = (actionId: string) => {
     const action = actions?.find((a) => a.id === actionId);
     if (action) {
-      setLocation(`/stream/${action.streamId}/deliverable/${action.deliverableId}/action/${actionId}`);
+      setLocation(`/stream/${action.streamId}/solution/${action.solutionId}/action/${actionId}`);
     }
   };
 
@@ -71,7 +71,7 @@ export function GlobalKanban({ showDescriptions }: GlobalKanbanProps) {
         <EmptyState
           icon={LayoutGrid}
           title="No actions yet"
-          description="Create actions in your deliverables to see them here."
+          description="Create actions in your solutions to see them here."
         />
       </div>
     );

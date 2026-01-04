@@ -17,7 +17,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Layers, LayoutGrid, Trash2, Search, LogOut, Settings, Loader2 } from "lucide-react";
 import { StreamsOverview } from "@/pages/streams-overview";
 import { StreamView } from "@/pages/stream-view";
-import { DeliverableView } from "@/pages/deliverable-view";
+import { SolutionView } from "@/pages/solution-view";
 import { ActionView } from "@/pages/action-view";
 import { GlobalKanban } from "@/pages/global-kanban";
 import { RecycleBin } from "@/pages/recycle-bin";
@@ -26,16 +26,16 @@ import { LoginPage } from "@/pages/login";
 import { AuthVerifyPage } from "@/pages/auth-verify";
 import { ResetPasswordPage } from "@/pages/reset-password";
 import NotFound from "@/pages/not-found";
-import type { Stream, Deliverable, Action } from "@shared/schema";
+import type { Stream, Solution, Action } from "@shared/schema";
 
 function useBreadcrumbs() {
   const [location, setLocation] = useLocation();
   const [, streamParams] = useRoute("/stream/:streamId");
-  const [, deliverableParams] = useRoute("/stream/:streamId/deliverable/:deliverableId");
-  const [, actionParams] = useRoute("/stream/:streamId/deliverable/:deliverableId/action/:actionId");
+  const [, solutionParams] = useRoute("/stream/:streamId/solution/:solutionId");
+  const [, actionParams] = useRoute("/stream/:streamId/solution/:solutionId/action/:actionId");
 
-  const streamId = streamParams?.streamId || deliverableParams?.streamId || actionParams?.streamId;
-  const deliverableId = deliverableParams?.deliverableId || actionParams?.deliverableId;
+  const streamId = streamParams?.streamId || solutionParams?.streamId || actionParams?.streamId;
+  const solutionId = solutionParams?.solutionId || actionParams?.solutionId;
   const actionId = actionParams?.actionId;
 
   const { data: stream } = useQuery<Stream>({
@@ -43,9 +43,9 @@ function useBreadcrumbs() {
     enabled: !!streamId,
   });
 
-  const { data: deliverable } = useQuery<Deliverable>({
-    queryKey: ["/api/deliverables", deliverableId],
-    enabled: !!deliverableId,
+  const { data: solution } = useQuery<Solution>({
+    queryKey: ["/api/solutions", solutionId],
+    enabled: !!solutionId,
   });
 
   const { data: action } = useQuery<Action>({
@@ -58,14 +58,14 @@ function useBreadcrumbs() {
   if (stream) {
     items.push({
       label: stream.name,
-      href: actionId || deliverableId ? `/stream/${streamId}` : undefined,
+      href: actionId || solutionId ? `/stream/${streamId}` : undefined,
     });
   }
 
-  if (deliverable) {
+  if (solution) {
     items.push({
-      label: deliverable.name,
-      href: actionId ? `/stream/${streamId}/deliverable/${deliverableId}` : undefined,
+      label: solution.name,
+      href: actionId ? `/stream/${streamId}/solution/${solutionId}` : undefined,
     });
   }
 
@@ -74,14 +74,14 @@ function useBreadcrumbs() {
   }
 
   const handleUpLevel = useCallback(() => {
-    if (actionId && deliverableId && streamId) {
-      setLocation(`/stream/${streamId}/deliverable/${deliverableId}`);
-    } else if (deliverableId && streamId) {
+    if (actionId && solutionId && streamId) {
+      setLocation(`/stream/${streamId}/solution/${solutionId}`);
+    } else if (solutionId && streamId) {
       setLocation(`/stream/${streamId}`);
     } else if (streamId) {
       setLocation("/");
     }
-  }, [actionId, deliverableId, streamId, setLocation]);
+  }, [actionId, solutionId, streamId, setLocation]);
 
   return { items, onUpLevel: items.length > 1 ? handleUpLevel : undefined };
 }
@@ -106,20 +106,20 @@ function Router({ showDescriptions }: { showDescriptions: boolean }) {
           <StreamView streamId={params.streamId} showDescriptions={showDescriptions} />
         )}
       </Route>
-      <Route path="/stream/:streamId/deliverable/:deliverableId">
+      <Route path="/stream/:streamId/solution/:solutionId">
         {(params) => (
-          <DeliverableView
+          <SolutionView
             streamId={params.streamId}
-            deliverableId={params.deliverableId}
+            solutionId={params.solutionId}
             showDescriptions={showDescriptions}
           />
         )}
       </Route>
-      <Route path="/stream/:streamId/deliverable/:deliverableId/action/:actionId">
+      <Route path="/stream/:streamId/solution/:solutionId/action/:actionId">
         {(params) => (
           <ActionView
             streamId={params.streamId}
-            deliverableId={params.deliverableId}
+            solutionId={params.solutionId}
             actionId={params.actionId}
           />
         )}

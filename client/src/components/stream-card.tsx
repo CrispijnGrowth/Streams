@@ -68,28 +68,28 @@ export function StreamCard({ stream, onClick, onEdit, showDescription = true }: 
       )}
 
       <div className="space-y-2">
-        {stream.inProgressDeliverables.slice(0, 3).map((del) => (
-          <div key={del.name} className="space-y-0.5">
-            <span className={`text-xs line-clamp-1 ${del.isEarliest ? "font-medium" : "text-muted-foreground"}`}>
-              {del.name}
+        {stream.inProgressSolutions.slice(0, 3).map((sol) => (
+          <div key={sol.name} className="space-y-0.5">
+            <span className={`text-xs line-clamp-1 ${sol.isEarliest ? "font-medium" : "text-muted-foreground"}`}>
+              {sol.name}
             </span>
             <div className="flex items-center gap-2">
               <div className="flex-1">
-                <ProgressBar value={del.progress} size="sm" showLabel={false} />
+                <ProgressBar value={sol.progress} size="sm" showLabel={false} />
               </div>
               <span className="text-xs font-mono text-muted-foreground shrink-0">
-                {Math.round(del.progress)}%
+                {Math.round(sol.progress)}%
               </span>
             </div>
           </div>
         ))}
-        {stream.inProgressDeliverables.length > 3 && (
+        {stream.inProgressSolutions.length > 3 && (
           <span className="text-xs text-muted-foreground">
-            +{stream.inProgressDeliverables.length - 3} more
+            +{stream.inProgressSolutions.length - 3} more
           </span>
         )}
-        {stream.inProgressDeliverables.length === 0 && (
-          <p className="text-xs text-muted-foreground italic">No active deliverables</p>
+        {stream.inProgressSolutions.length === 0 && (
+          <p className="text-xs text-muted-foreground italic">No active solutions</p>
         )}
       </div>
     </Card>

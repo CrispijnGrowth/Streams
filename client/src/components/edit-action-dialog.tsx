@@ -103,7 +103,7 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted, initia
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/actions", action?.id] });
-      queryClient.invalidateQueries({ queryKey: ["/api/deliverables"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/solutions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
       toast({ title: "Action updated successfully" });
       onOpenChange(false);
@@ -119,7 +119,7 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted, initia
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/deliverables"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/solutions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
       toast({ title: "Action deleted" });
       onOpenChange(false);

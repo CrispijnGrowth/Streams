@@ -3,19 +3,19 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Package, Users, Tag, Calendar, Activity, Pencil, Zap } from "lucide-react";
 import { Timeline } from "@/components/timeline";
-import { DeliverableCard } from "@/components/deliverable-card";
+import { SolutionCard } from "@/components/solution-card";
 import { QuickAddForm, QuickAddFormRef } from "@/components/quick-add-form";
 import { EmptyState } from "@/components/empty-state";
-import { DeliverableCardSkeleton, TimelineSkeleton } from "@/components/loading-skeleton";
+import { SolutionCardSkeleton, TimelineSkeleton } from "@/components/loading-skeleton";
 import { EditStreamDialog, EditStreamFocusField } from "@/components/edit-stream-dialog";
-import { EditDeliverableDialog } from "@/components/edit-deliverable-dialog";
+import { EditSolutionDialog } from "@/components/edit-solution-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
-import type { Stream, DeliverableWithProgress, Deliverable } from "@shared/schema";
-import { DeliverableStatus } from "@shared/schema";
+import type { Stream, SolutionWithProgress, Solution } from "@shared/schema";
+import { SolutionStatus } from "@shared/schema";
 
 interface StreamViewProps {
   streamId: string;
@@ -27,15 +27,15 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
   const { toast } = useToast();
   const [editingStream, setEditingStream] = useState(false);
   const [editFocusField, setEditFocusField] = useState<EditStreamFocusField>(null);
-  const [editingDeliverable, setEditingDeliverable] = useState<Deliverable | null>(null);
+  const [editingSolution, setEditingSolution] = useState<Solution | null>(null);
   const quickAddRef = useRef<QuickAddFormRef>(null);
 
   const { data: stream, isLoading: streamLoading } = useQuery<Stream>({
     queryKey: ["/api/streams", streamId],
   });
 
-  const { data: deliverables, isLoading: deliverablesLoading } = useQuery<DeliverableWithProgress[]>({
-    queryKey: ["/api/streams", streamId, "deliverables"],
+  const { data: solutions, isLoading: solutionsLoading } = useQuery<SolutionWithProgress[]>({
+    queryKey: ["/api/streams", streamId, "solutions"],
   });
 
   const deleteStream = useMutation({
@@ -113,48 +113,48 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
     },
   ]);
 
-  const createDeliverable = useMutation({
+  const createSolution = useMutation({
     mutationFn: async (name: string) => {
-      return apiRequest("POST", "/api/deliverables", { name, streamId });
+      return apiRequest("POST", "/api/solutions", { name, streamId });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/streams", streamId, "deliverables"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/streams", streamId, "solutions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
-      toast({ title: "Deliverable created" });
+      toast({ title: "Solution created" });
     },
     onError: () => {
-      toast({ title: "Failed to create deliverable", variant: "destructive" });
+      toast({ title: "Failed to create solution", variant: "destructive" });
     },
   });
 
-  const updateDeliverableDate = useMutation({
-    mutationFn: async ({ deliverableId, milestoneDate }: { deliverableId: string; milestoneDate: string }) => {
-      return apiRequest("PATCH", `/api/deliverables/${deliverableId}`, { milestoneDate });
+  const updateSolutionDate = useMutation({
+    mutationFn: async ({ solutionId, milestoneDate }: { solutionId: string; milestoneDate: string }) => {
+      return apiRequest("PATCH", `/api/solutions/${solutionId}`, { milestoneDate });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/streams", streamId, "deliverables"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/streams", streamId, "solutions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
     },
   });
 
-  const timelineItems = deliverables?.map((d) => ({
-    id: d.id,
-    title: d.name,
-    description: d.description,
-    date: d.milestoneDate,
-    progress: d.progress,
+  const timelineItems = solutions?.map((s) => ({
+    id: s.id,
+    title: s.name,
+    description: s.description,
+    date: s.milestoneDate,
+    progress: s.progress,
     counts: {
-      doing: d.doingCount,
-      blocked: d.blockedCount,
-      delegated: d.delegatedCount,
+      doing: s.doingCount,
+      blocked: s.blockedCount,
+      delegated: s.delegatedCount,
     },
   })) || [];
 
-  const handleDeliverableClick = (deliverableId: string) => {
-    setLocation(`/stream/${streamId}/deliverable/${deliverableId}`);
+  const handleSolutionClick = (solutionId: string) => {
+    setLocation(`/stream/${streamId}/solution/${solutionId}`);
   };
 
-  const isLoading = streamLoading || deliverablesLoading;
+  const isLoading = streamLoading || solutionsLoading;
 
   if (isLoading) {
     return (
@@ -162,7 +162,7 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
         <div className="flex-1 overflow-auto p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {[1, 2, 3, 4, 5, 6].map((i) => (
-              <DeliverableCardSkeleton key={i} />
+              <SolutionCardSkeleton key={i} />
             ))}
           </div>
         </div>
@@ -185,23 +185,23 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
     );
   }
 
-  if (!deliverables || deliverables.length === 0) {
+  if (!solutions || solutions.length === 0) {
     return (
       <div className="flex flex-col h-full">
         <div className="flex-1 overflow-auto p-6">
           <EmptyState
             icon={Package}
-            title="No deliverables yet"
-            description="Create your first deliverable to start tracking progress in this stream."
-            actionLabel="Create Deliverable"
-            onAction={() => createDeliverable.mutate("New Deliverable")}
+            title="No solutions yet"
+            description="Create your first solution to start tracking progress in this stream."
+            actionLabel="Create Solution"
+            onAction={() => createSolution.mutate("New Solution")}
           />
         </div>
         <div className="shrink-0 border-t p-4 bg-background">
           <Timeline
             items={[]}
-            onItemClick={handleDeliverableClick}
-            level="deliverable"
+            onItemClick={handleSolutionClick}
+            level="solution"
           />
         </div>
       </div>
@@ -289,27 +289,27 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
 
           <div className="space-y-4">
             <div className="flex items-center justify-between gap-4">
-              <h2 className="text-lg font-semibold">Deliverables</h2>
+              <h2 className="text-lg font-semibold">Solutions</h2>
               <span className="text-sm text-muted-foreground">
-                {deliverables.length} deliverable{deliverables.length !== 1 ? "s" : ""}
+                {solutions.length} solution{solutions.length !== 1 ? "s" : ""}
               </span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {deliverables
-                .filter((d) => !d.isDeleted)
+              {solutions
+                .filter((s) => !s.isDeleted)
                 .sort((a, b) => {
-                  const aOnHold = a.status === DeliverableStatus.ON_HOLD ? 1 : 0;
-                  const bOnHold = b.status === DeliverableStatus.ON_HOLD ? 1 : 0;
+                  const aOnHold = a.status === SolutionStatus.ON_HOLD ? 1 : 0;
+                  const bOnHold = b.status === SolutionStatus.ON_HOLD ? 1 : 0;
                   if (aOnHold !== bOnHold) return aOnHold - bOnHold;
                   return a.ordinal - b.ordinal;
                 })
-                .map((deliverable) => (
-                  <DeliverableCard
-                    key={deliverable.id}
-                    deliverable={deliverable}
-                    onClick={() => handleDeliverableClick(deliverable.id)}
-                    onEdit={() => setEditingDeliverable(deliverable)}
+                .map((solution) => (
+                  <SolutionCard
+                    key={solution.id}
+                    solution={solution}
+                    onClick={() => handleSolutionClick(solution.id)}
+                    onEdit={() => setEditingSolution(solution)}
                     showDescription={showDescriptions}
                   />
                 ))}
@@ -318,9 +318,9 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
             <div className="max-w-sm">
               <QuickAddForm
                 ref={quickAddRef}
-                placeholder="Add new deliverable..."
-                onAdd={(name) => createDeliverable.mutate(name)}
-                isLoading={createDeliverable.isPending}
+                placeholder="Add new solution..."
+                onAdd={(name) => createSolution.mutate(name)}
+                isLoading={createSolution.isPending}
               />
             </div>
           </div>
@@ -330,9 +330,9 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
       <div className="shrink-0 border-t p-4 bg-background">
         <Timeline
           items={timelineItems}
-          onItemClick={handleDeliverableClick}
-          onDateChange={(id, newDate) => updateDeliverableDate.mutate({ deliverableId: id, milestoneDate: newDate })}
-          level="deliverable"
+          onItemClick={handleSolutionClick}
+          onDateChange={(id, newDate) => updateSolutionDate.mutate({ solutionId: id, milestoneDate: newDate })}
+          level="solution"
           defaultWindowMonths={12}
         />
       </div>
@@ -348,10 +348,10 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
         initialFocus={editFocusField}
       />
 
-      <EditDeliverableDialog
-        deliverable={editingDeliverable}
-        open={editingDeliverable !== null}
-        onOpenChange={(open) => !open && setEditingDeliverable(null)}
+      <EditSolutionDialog
+        solution={editingSolution}
+        open={editingSolution !== null}
+        onOpenChange={(open) => !open && setEditingSolution(null)}
       />
     </div>
   );

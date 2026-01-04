@@ -22,11 +22,11 @@ import { ActionStatus } from "@shared/schema";
 
 interface ActionViewProps {
   streamId: string;
-  deliverableId: string;
+  solutionId: string;
   actionId: string;
 }
 
-export function ActionView({ streamId, deliverableId, actionId }: ActionViewProps) {
+export function ActionView({ streamId, solutionId, actionId }: ActionViewProps) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [editingAction, setEditingAction] = useState(false);
@@ -48,7 +48,7 @@ export function ActionView({ streamId, deliverableId, actionId }: ActionViewProp
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/actions", actionId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/deliverables", deliverableId, "actions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/solutions", solutionId, "actions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
     },
     onError: () => {
@@ -94,9 +94,9 @@ export function ActionView({ streamId, deliverableId, actionId }: ActionViewProp
         if (action && !action.isDeleted) {
           updateAction.mutate({ isDeleted: true });
           toast({ title: "Action moved to recycle bin" });
-          setLocation(`/stream/${streamId}/deliverable/${deliverableId}`);
+          setLocation(`/stream/${streamId}/solution/${solutionId}`);
         }
-      }, [action, streamId, deliverableId]),
+      }, [action, streamId, solutionId]),
       description: "Delete current action",
     },
     {
@@ -145,7 +145,7 @@ export function ActionView({ streamId, deliverableId, actionId }: ActionViewProp
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/actions", actionId, "steps"] });
       queryClient.invalidateQueries({ queryKey: ["/api/actions", actionId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/deliverables", deliverableId, "actions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/solutions", solutionId, "actions"] });
       toast({ title: "Step created" });
     },
     onError: () => {
@@ -160,7 +160,7 @@ export function ActionView({ streamId, deliverableId, actionId }: ActionViewProp
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/actions", actionId, "steps"] });
       queryClient.invalidateQueries({ queryKey: ["/api/actions", actionId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/deliverables", deliverableId, "actions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/solutions", solutionId, "actions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
     },
   });
@@ -316,7 +316,7 @@ export function ActionView({ streamId, deliverableId, actionId }: ActionViewProp
           setEditingAction(open);
           if (!open) setEditFocusField(null);
         }}
-        onDeleted={() => setLocation(`/stream/${streamId}/deliverable/${deliverableId}`)}
+        onDeleted={() => setLocation(`/stream/${streamId}/solution/${solutionId}`)}
         initialFocus={editFocusField}
       />
 

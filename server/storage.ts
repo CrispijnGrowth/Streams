@@ -1,18 +1,21 @@
 import {
   type Stream,
+  type Solution,
   type Deliverable,
   type Action,
   type Step,
   type InsertStream,
+  type InsertSolution,
   type InsertDeliverable,
   type InsertAction,
   type InsertStep,
   type StreamWithProgress,
-  type DeliverableWithProgress,
+  type SolutionWithProgress,
+  type DeliverableWithActions,
   type ActionWithProgress,
   ActionStatus,
   MomentumStatus,
-  DeliverableStatus,
+  SolutionStatus,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -23,15 +26,22 @@ export interface IStorage {
   updateStream(userId: string, id: string, data: Partial<InsertStream>): Promise<Stream | undefined>;
   deleteStream(userId: string, id: string): Promise<boolean>;
 
-  getDeliverables(userId: string): Promise<DeliverableWithProgress[]>;
-  getDeliverablesByStream(userId: string, streamId: string): Promise<DeliverableWithProgress[]>;
+  getSolutions(userId: string): Promise<SolutionWithProgress[]>;
+  getSolutionsByStream(userId: string, streamId: string): Promise<SolutionWithProgress[]>;
+  getSolution(userId: string, id: string): Promise<Solution | undefined>;
+  createSolution(userId: string, data: InsertSolution): Promise<Solution>;
+  updateSolution(userId: string, id: string, data: Partial<InsertSolution>): Promise<Solution | undefined>;
+  deleteSolution(userId: string, id: string): Promise<boolean>;
+
+  getDeliverables(userId: string): Promise<Deliverable[]>;
+  getDeliverablesBySolution(userId: string, solutionId: string): Promise<DeliverableWithActions[]>;
   getDeliverable(userId: string, id: string): Promise<Deliverable | undefined>;
   createDeliverable(userId: string, data: InsertDeliverable): Promise<Deliverable>;
   updateDeliverable(userId: string, id: string, data: Partial<InsertDeliverable>): Promise<Deliverable | undefined>;
   deleteDeliverable(userId: string, id: string): Promise<boolean>;
 
   getActions(userId: string): Promise<ActionWithProgress[]>;
-  getActionsByDeliverable(userId: string, deliverableId: string): Promise<ActionWithProgress[]>;
+  getActionsBySolution(userId: string, solutionId: string): Promise<ActionWithProgress[]>;
   getAction(userId: string, id: string): Promise<ActionWithProgress | undefined>;
   createAction(userId: string, data: InsertAction): Promise<Action>;
   updateAction(userId: string, id: string, data: Partial<InsertAction>): Promise<Action | undefined>;
@@ -46,11 +56,13 @@ export interface IStorage {
 
   getDeletedItems(userId: string): Promise<{
     streams: Stream[];
+    solutions: Solution[];
     deliverables: Deliverable[];
     actions: Action[];
     steps: Step[];
   }>;
   restoreStream(userId: string, id: string): Promise<boolean>;
+  restoreSolution(userId: string, id: string): Promise<boolean>;
   restoreDeliverable(userId: string, id: string): Promise<boolean>;
   restoreAction(userId: string, id: string): Promise<boolean>;
   restoreStep(userId: string, id: string): Promise<boolean>;
@@ -58,6 +70,7 @@ export interface IStorage {
 
 export class MemStorage implements IStorage {
   private streams: Map<string, Stream> = new Map();
+  private solutions: Map<string, Solution> = new Map();
   private deliverables: Map<string, Deliverable> = new Map();
   private actions: Map<string, Action> = new Map();
   private steps: Map<string, Step> = new Map();
@@ -92,33 +105,39 @@ export class MemStorage implements IStorage {
     };
   }
 
-  private computeDeliverableProgress(deliverableId: string, userId: string): {
+  private computeSolutionProgress(solutionId: string, userId: string): {
     progress: number;
     actionCount: number;
+    deliverableCount: number;
     doingCount: number;
     blockedCount: number;
     delegatedCount: number;
   } {
-    const deliverableActions = Array.from(this.actions.values()).filter(
-      (a) => a.deliverableId === deliverableId && a.userId === userId && !a.isDeleted
+    const solutionActions = Array.from(this.actions.values()).filter(
+      (a) => a.solutionId === solutionId && a.userId === userId && !a.isDeleted
     );
-    const actionCount = deliverableActions.length;
-    const doingCount = deliverableActions.filter((a) => a.status === ActionStatus.EXECUTING).length;
-    const blockedCount = deliverableActions.filter((a) => a.status === ActionStatus.BLOCKED).length;
-    const delegatedCount = deliverableActions.filter((a) => a.status === ActionStatus.DELEGATED).length;
+    const solutionDeliverables = Array.from(this.deliverables.values()).filter(
+      (d) => d.solutionId === solutionId && d.userId === userId && !d.isDeleted
+    );
+    const actionCount = solutionActions.length;
+    const deliverableCount = solutionDeliverables.length;
+    const doingCount = solutionActions.filter((a) => a.status === ActionStatus.EXECUTING).length;
+    const blockedCount = solutionActions.filter((a) => a.status === ActionStatus.BLOCKED).length;
+    const delegatedCount = solutionActions.filter((a) => a.status === ActionStatus.DELEGATED).length;
     
     if (actionCount === 0) {
-      return { progress: 0, actionCount: 0, doingCount: 0, blockedCount: 0, delegatedCount: 0 };
+      return { progress: 0, actionCount: 0, deliverableCount, doingCount: 0, blockedCount: 0, delegatedCount: 0 };
     }
     
     let totalProgress = 0;
-    for (const action of deliverableActions) {
+    for (const action of solutionActions) {
       totalProgress += this.computeActionProgress(action.id, userId).progress;
     }
     
     return {
       progress: Math.round(totalProgress / actionCount),
       actionCount,
+      deliverableCount,
       doingCount,
       blockedCount,
       delegatedCount,
@@ -127,69 +146,69 @@ export class MemStorage implements IStorage {
 
   private computeStreamProgress(streamId: string, userId: string): {
     progress: number;
-    deliverableCount: number;
+    solutionCount: number;
     doingCount: number;
     blockedCount: number;
     delegatedCount: number;
-    inProgressDeliverables: { name: string; progress: number; isEarliest: boolean }[];
+    inProgressSolutions: { name: string; progress: number; isEarliest: boolean }[];
   } {
-    const streamDeliverables = Array.from(this.deliverables.values()).filter(
-      (d) => d.streamId === streamId && d.userId === userId && !d.isDeleted
+    const streamSolutions = Array.from(this.solutions.values()).filter(
+      (s) => s.streamId === streamId && s.userId === userId && !s.isDeleted
     );
-    const deliverableCount = streamDeliverables.length;
+    const solutionCount = streamSolutions.length;
     
     let totalProgress = 0;
     let doingCount = 0;
     let blockedCount = 0;
     let delegatedCount = 0;
-    const inProgressDeliverables: { name: string; progress: number; milestoneDate: string | null }[] = [];
+    const inProgressSolutions: { name: string; progress: number; milestoneDate: string | null }[] = [];
     
-    for (const del of streamDeliverables) {
-      const delStats = this.computeDeliverableProgress(del.id, userId);
-      totalProgress += delStats.progress;
-      doingCount += delStats.doingCount;
-      blockedCount += delStats.blockedCount;
-      delegatedCount += delStats.delegatedCount;
-      if (del.status === DeliverableStatus.IN_PROGRESS) {
-        inProgressDeliverables.push({
-          name: del.name,
-          progress: delStats.progress,
-          milestoneDate: del.milestoneDate || null,
+    for (const sol of streamSolutions) {
+      const solStats = this.computeSolutionProgress(sol.id, userId);
+      totalProgress += solStats.progress;
+      doingCount += solStats.doingCount;
+      blockedCount += solStats.blockedCount;
+      delegatedCount += solStats.delegatedCount;
+      if (sol.status === SolutionStatus.IN_PROGRESS) {
+        inProgressSolutions.push({
+          name: sol.name,
+          progress: solStats.progress,
+          milestoneDate: sol.milestoneDate || null,
         });
       }
     }
     
     let earliestName: string | null = null;
     let earliestDate: Date | null = null;
-    for (const d of inProgressDeliverables) {
-      if (d.milestoneDate) {
-        const date = new Date(d.milestoneDate);
+    for (const s of inProgressSolutions) {
+      if (s.milestoneDate) {
+        const date = new Date(s.milestoneDate);
         if (!earliestDate || date < earliestDate) {
           earliestDate = date;
-          earliestName = d.name;
+          earliestName = s.name;
         }
       }
     }
     
-    const result = inProgressDeliverables
+    const result = inProgressSolutions
       .sort((a, b) => {
         if (a.name === earliestName) return -1;
         if (b.name === earliestName) return 1;
         return 0;
       })
-      .map((d) => ({
-        name: d.name,
-        progress: d.progress,
-        isEarliest: d.name === earliestName,
+      .map((s) => ({
+        name: s.name,
+        progress: s.progress,
+        isEarliest: s.name === earliestName,
       }));
     
     return {
-      progress: deliverableCount > 0 ? Math.round(totalProgress / deliverableCount) : 0,
-      deliverableCount,
+      progress: solutionCount > 0 ? Math.round(totalProgress / solutionCount) : 0,
+      solutionCount,
       doingCount,
       blockedCount,
       delegatedCount,
-      inProgressDeliverables: result,
+      inProgressSolutions: result,
     };
   }
 
@@ -240,11 +259,11 @@ export class MemStorage implements IStorage {
     const stream = this.streams.get(id);
     if (!stream || stream.userId !== userId) return false;
     stream.isDeleted = true;
-    for (const del of this.deliverables.values()) {
-      if (del.streamId === id && del.userId === userId) {
-        del.isDeleted = true;
+    for (const sol of this.solutions.values()) {
+      if (sol.streamId === id && sol.userId === userId) {
+        sol.isDeleted = true;
         for (const action of this.actions.values()) {
-          if (action.deliverableId === del.id && action.userId === userId) {
+          if (action.solutionId === sol.id && action.userId === userId) {
             action.isDeleted = true;
             for (const step of this.steps.values()) {
               if (step.actionId === action.id && step.userId === userId) {
@@ -258,44 +277,44 @@ export class MemStorage implements IStorage {
     return true;
   }
 
-  async getDeliverables(userId: string): Promise<DeliverableWithProgress[]> {
-    const deliverables = Array.from(this.deliverables.values()).filter((d) => d.userId === userId && !d.isDeleted);
-    return deliverables.map((del) => {
-      const stats = this.computeDeliverableProgress(del.id, userId);
-      return { ...del, ...stats };
+  async getSolutions(userId: string): Promise<SolutionWithProgress[]> {
+    const solutions = Array.from(this.solutions.values()).filter((s) => s.userId === userId && !s.isDeleted);
+    return solutions.map((sol) => {
+      const stats = this.computeSolutionProgress(sol.id, userId);
+      return { ...sol, ...stats };
     });
   }
 
-  async getDeliverablesByStream(userId: string, streamId: string): Promise<DeliverableWithProgress[]> {
-    const deliverables = Array.from(this.deliverables.values()).filter(
-      (d) => d.streamId === streamId && d.userId === userId && !d.isDeleted
+  async getSolutionsByStream(userId: string, streamId: string): Promise<SolutionWithProgress[]> {
+    const solutions = Array.from(this.solutions.values()).filter(
+      (s) => s.streamId === streamId && s.userId === userId && !s.isDeleted
     );
-    return deliverables.map((del) => {
-      const stats = this.computeDeliverableProgress(del.id, userId);
-      return { ...del, ...stats };
+    return solutions.map((sol) => {
+      const stats = this.computeSolutionProgress(sol.id, userId);
+      return { ...sol, ...stats };
     });
   }
 
-  async getDeliverable(userId: string, id: string): Promise<Deliverable | undefined> {
-    const del = this.deliverables.get(id);
-    if (!del || del.userId !== userId || del.isDeleted) return undefined;
-    return del;
+  async getSolution(userId: string, id: string): Promise<Solution | undefined> {
+    const sol = this.solutions.get(id);
+    if (!sol || sol.userId !== userId || sol.isDeleted) return undefined;
+    return sol;
   }
 
-  async createDeliverable(userId: string, data: InsertDeliverable): Promise<Deliverable> {
+  async createSolution(userId: string, data: InsertSolution): Promise<Solution> {
     const parentStream = this.streams.get(data.streamId);
     if (!parentStream || parentStream.userId !== userId || parentStream.isDeleted) {
       throw new Error("Parent stream not found or access denied");
     }
     const id = randomUUID();
-    const streamDeliverables = Array.from(this.deliverables.values()).filter(
-      (d) => d.streamId === data.streamId && d.userId === userId
+    const streamSolutions = Array.from(this.solutions.values()).filter(
+      (s) => s.streamId === data.streamId && s.userId === userId
     );
-    const ordinal = streamDeliverables.length + 1;
-    const deliverable: Deliverable = {
+    const ordinal = streamSolutions.length + 1;
+    const solution: Solution = {
       id,
       userId,
-      key: `DLV${String(ordinal).padStart(2, "0")}`,
+      key: `SOL${String(ordinal).padStart(2, "0")}`,
       name: data.name,
       description: data.description,
       streamId: data.streamId,
@@ -303,31 +322,31 @@ export class MemStorage implements IStorage {
       phases: data.phases || [],
       owners: data.owners || [],
       labels: data.labels || [],
-      status: (data.status as any) || DeliverableStatus.IN_PROGRESS,
+      status: (data.status as any) || SolutionStatus.IN_PROGRESS,
       ordinal,
       isDeleted: false,
     };
-    this.deliverables.set(id, deliverable);
+    this.solutions.set(id, solution);
     this.updateStreamMilestone(data.streamId, userId);
     this.updateStreamMomentum(data.streamId, userId);
-    return deliverable;
+    return solution;
   }
 
   private updateStreamMilestone(streamId: string, userId: string) {
     const stream = this.streams.get(streamId);
     if (!stream || stream.userId !== userId) return;
-    const deliverables = Array.from(this.deliverables.values()).filter(
-      (d) => d.streamId === streamId && d.userId === userId && !d.isDeleted && d.milestoneDate
+    const solutions = Array.from(this.solutions.values()).filter(
+      (s) => s.streamId === streamId && s.userId === userId && !s.isDeleted && s.milestoneDate
     );
-    if (deliverables.length === 0) {
+    if (solutions.length === 0) {
       stream.computedMilestoneDate = undefined;
       return;
     }
-    const earliest = deliverables.reduce((min, d) => {
-      if (!d.milestoneDate) return min;
-      if (!min) return d.milestoneDate;
-      return d.milestoneDate < min ? d.milestoneDate : min;
-    }, deliverables[0].milestoneDate);
+    const earliest = solutions.reduce((min, s) => {
+      if (!s.milestoneDate) return min;
+      if (!min) return s.milestoneDate;
+      return s.milestoneDate < min ? s.milestoneDate : min;
+    }, solutions[0].milestoneDate);
     stream.computedMilestoneDate = earliest;
   }
 
@@ -349,9 +368,9 @@ export class MemStorage implements IStorage {
     }
   }
 
-  private getStreamIdFromDeliverable(deliverableId: string): string | undefined {
-    const deliverable = this.deliverables.get(deliverableId);
-    return deliverable?.streamId;
+  private getStreamIdFromSolution(solutionId: string): string | undefined {
+    const solution = this.solutions.get(solutionId);
+    return solution?.streamId;
   }
 
   private getStreamIdFromAction(actionId: string): string | undefined {
@@ -360,19 +379,19 @@ export class MemStorage implements IStorage {
     return action.streamId;
   }
 
-  async updateDeliverable(userId: string, id: string, data: Partial<InsertDeliverable>): Promise<Deliverable | undefined> {
-    const del = this.deliverables.get(id);
-    if (!del || del.userId !== userId || del.isDeleted) return undefined;
-    if (data.streamId && data.streamId !== del.streamId) {
+  async updateSolution(userId: string, id: string, data: Partial<InsertSolution>): Promise<Solution | undefined> {
+    const sol = this.solutions.get(id);
+    if (!sol || sol.userId !== userId || sol.isDeleted) return undefined;
+    if (data.streamId && data.streamId !== sol.streamId) {
       const newParentStream = this.streams.get(data.streamId);
       if (!newParentStream || newParentStream.userId !== userId || newParentStream.isDeleted) {
         return undefined;
       }
     }
-    const statusChanged = data.status !== undefined && data.status !== del.status;
-    const oldStreamId = del.streamId;
-    const updated: Deliverable = { ...del, ...data } as Deliverable;
-    this.deliverables.set(id, updated);
+    const statusChanged = data.status !== undefined && data.status !== sol.status;
+    const oldStreamId = sol.streamId;
+    const updated: Solution = { ...sol, ...data } as Solution;
+    this.solutions.set(id, updated);
     this.updateStreamMilestone(oldStreamId, userId);
     if (data.streamId && data.streamId !== oldStreamId) {
       this.updateStreamMilestone(data.streamId, userId);
@@ -384,12 +403,17 @@ export class MemStorage implements IStorage {
     return updated;
   }
 
-  async deleteDeliverable(userId: string, id: string): Promise<boolean> {
-    const del = this.deliverables.get(id);
-    if (!del || del.userId !== userId) return false;
-    del.isDeleted = true;
+  async deleteSolution(userId: string, id: string): Promise<boolean> {
+    const sol = this.solutions.get(id);
+    if (!sol || sol.userId !== userId) return false;
+    sol.isDeleted = true;
+    for (const deliverable of this.deliverables.values()) {
+      if (deliverable.solutionId === id && deliverable.userId === userId) {
+        deliverable.isDeleted = true;
+      }
+    }
     for (const action of this.actions.values()) {
-      if (action.deliverableId === id && action.userId === userId) {
+      if (action.solutionId === id && action.userId === userId) {
         action.isDeleted = true;
         for (const step of this.steps.values()) {
           if (step.actionId === action.id && step.userId === userId) {
@@ -398,7 +422,83 @@ export class MemStorage implements IStorage {
         }
       }
     }
-    this.updateStreamMilestone(del.streamId, userId);
+    this.updateStreamMilestone(sol.streamId, userId);
+    return true;
+  }
+
+  async getDeliverables(userId: string): Promise<Deliverable[]> {
+    return Array.from(this.deliverables.values()).filter((d) => d.userId === userId && !d.isDeleted);
+  }
+
+  async getDeliverablesBySolution(userId: string, solutionId: string): Promise<DeliverableWithActions[]> {
+    const deliverables = Array.from(this.deliverables.values()).filter(
+      (d) => d.solutionId === solutionId && d.userId === userId && !d.isDeleted
+    );
+    return deliverables.map((deliverable) => {
+      const actions = Array.from(this.actions.values())
+        .filter((a) => a.deliverableId === deliverable.id && a.userId === userId && !a.isDeleted)
+        .map((action) => {
+          const stats = this.computeActionProgress(action.id, userId);
+          return { ...action, ...stats };
+        });
+      return { ...deliverable, actions };
+    });
+  }
+
+  async getDeliverable(userId: string, id: string): Promise<Deliverable | undefined> {
+    const deliverable = this.deliverables.get(id);
+    if (!deliverable || deliverable.userId !== userId || deliverable.isDeleted) return undefined;
+    return deliverable;
+  }
+
+  async createDeliverable(userId: string, data: InsertDeliverable): Promise<Deliverable> {
+    const parentSolution = this.solutions.get(data.solutionId);
+    if (!parentSolution || parentSolution.userId !== userId || parentSolution.isDeleted) {
+      throw new Error("Parent solution not found or access denied");
+    }
+    const id = randomUUID();
+    const solutionDeliverables = Array.from(this.deliverables.values()).filter(
+      (d) => d.solutionId === data.solutionId && d.userId === userId
+    );
+    const ordinal = solutionDeliverables.length + 1;
+    const deliverable: Deliverable = {
+      id,
+      userId,
+      key: `DLV${String(ordinal).padStart(2, "0")}`,
+      name: data.name,
+      description: data.description,
+      solutionId: data.solutionId,
+      streamId: data.streamId,
+      ordinal,
+      isDeleted: false,
+    };
+    this.deliverables.set(id, deliverable);
+    return deliverable;
+  }
+
+  async updateDeliverable(userId: string, id: string, data: Partial<InsertDeliverable>): Promise<Deliverable | undefined> {
+    const deliverable = this.deliverables.get(id);
+    if (!deliverable || deliverable.userId !== userId || deliverable.isDeleted) return undefined;
+    if (data.solutionId && data.solutionId !== deliverable.solutionId) {
+      const newParentSolution = this.solutions.get(data.solutionId);
+      if (!newParentSolution || newParentSolution.userId !== userId || newParentSolution.isDeleted) {
+        return undefined;
+      }
+    }
+    const updated: Deliverable = { ...deliverable, ...data } as Deliverable;
+    this.deliverables.set(id, updated);
+    return updated;
+  }
+
+  async deleteDeliverable(userId: string, id: string): Promise<boolean> {
+    const deliverable = this.deliverables.get(id);
+    if (!deliverable || deliverable.userId !== userId) return false;
+    deliverable.isDeleted = true;
+    for (const action of this.actions.values()) {
+      if (action.deliverableId === id && action.userId === userId) {
+        action.deliverableId = undefined;
+      }
+    }
     return true;
   }
 
@@ -410,9 +510,9 @@ export class MemStorage implements IStorage {
     });
   }
 
-  async getActionsByDeliverable(userId: string, deliverableId: string): Promise<ActionWithProgress[]> {
+  async getActionsBySolution(userId: string, solutionId: string): Promise<ActionWithProgress[]> {
     const actions = Array.from(this.actions.values()).filter(
-      (a) => a.deliverableId === deliverableId && a.userId === userId && !a.isDeleted
+      (a) => a.solutionId === solutionId && a.userId === userId && !a.isDeleted
     );
     return actions.map((action) => {
       const stats = this.computeActionProgress(action.id, userId);
@@ -428,26 +528,33 @@ export class MemStorage implements IStorage {
   }
 
   async createAction(userId: string, data: InsertAction): Promise<Action> {
-    const parentDeliverable = this.deliverables.get(data.deliverableId);
-    if (!parentDeliverable || parentDeliverable.userId !== userId || parentDeliverable.isDeleted) {
-      throw new Error("Parent deliverable not found or access denied");
+    const parentSolution = this.solutions.get(data.solutionId);
+    if (!parentSolution || parentSolution.userId !== userId || parentSolution.isDeleted) {
+      throw new Error("Parent solution not found or access denied");
     }
     const parentStream = this.streams.get(data.streamId);
     if (!parentStream || parentStream.userId !== userId || parentStream.isDeleted) {
       throw new Error("Parent stream not found or access denied");
     }
+    if (data.deliverableId) {
+      const parentDeliverable = this.deliverables.get(data.deliverableId);
+      if (!parentDeliverable || parentDeliverable.userId !== userId || parentDeliverable.isDeleted) {
+        throw new Error("Parent deliverable not found or access denied");
+      }
+    }
     const id = randomUUID();
-    const deliverableActions = Array.from(this.actions.values()).filter(
-      (a) => a.deliverableId === data.deliverableId && a.userId === userId
+    const solutionActions = Array.from(this.actions.values()).filter(
+      (a) => a.solutionId === data.solutionId && a.userId === userId
     );
-    const ordinal = deliverableActions.length + 1;
-    const kanbanOrder = deliverableActions.filter((a) => a.status === data.status).length + 1;
+    const ordinal = solutionActions.length + 1;
+    const kanbanOrder = solutionActions.filter((a) => a.status === data.status).length + 1;
     const action: Action = {
       id,
       userId,
       key: `ACT${String(ordinal).padStart(2, "0")}`,
       name: data.name,
       description: data.description,
+      solutionId: data.solutionId,
       deliverableId: data.deliverableId,
       streamId: data.streamId,
       status: (data.status as any) || ActionStatus.BACKLOG,
@@ -469,6 +576,12 @@ export class MemStorage implements IStorage {
   async updateAction(userId: string, id: string, data: Partial<InsertAction>): Promise<Action | undefined> {
     const action = this.actions.get(id);
     if (!action || action.userId !== userId || action.isDeleted) return undefined;
+    if (data.solutionId && data.solutionId !== action.solutionId) {
+      const newParentSolution = this.solutions.get(data.solutionId);
+      if (!newParentSolution || newParentSolution.userId !== userId || newParentSolution.isDeleted) {
+        return undefined;
+      }
+    }
     if (data.deliverableId && data.deliverableId !== action.deliverableId) {
       const newParentDeliverable = this.deliverables.get(data.deliverableId);
       if (!newParentDeliverable || newParentDeliverable.userId !== userId || newParentDeliverable.isDeleted) {
@@ -579,12 +692,14 @@ export class MemStorage implements IStorage {
 
   async getDeletedItems(userId: string): Promise<{
     streams: Stream[];
+    solutions: Solution[];
     deliverables: Deliverable[];
     actions: Action[];
     steps: Step[];
   }> {
     return {
       streams: Array.from(this.streams.values()).filter((s) => s.userId === userId && s.isDeleted),
+      solutions: Array.from(this.solutions.values()).filter((s) => s.userId === userId && s.isDeleted),
       deliverables: Array.from(this.deliverables.values()).filter((d) => d.userId === userId && d.isDeleted),
       actions: Array.from(this.actions.values()).filter((a) => a.userId === userId && a.isDeleted),
       steps: Array.from(this.steps.values()).filter((s) => s.userId === userId && s.isDeleted),
@@ -598,10 +713,17 @@ export class MemStorage implements IStorage {
     return true;
   }
 
+  async restoreSolution(userId: string, id: string): Promise<boolean> {
+    const sol = this.solutions.get(id);
+    if (!sol || sol.userId !== userId || !sol.isDeleted) return false;
+    sol.isDeleted = false;
+    return true;
+  }
+
   async restoreDeliverable(userId: string, id: string): Promise<boolean> {
-    const del = this.deliverables.get(id);
-    if (!del || del.userId !== userId || !del.isDeleted) return false;
-    del.isDeleted = false;
+    const deliverable = this.deliverables.get(id);
+    if (!deliverable || deliverable.userId !== userId || !deliverable.isDeleted) return false;
+    deliverable.isDeleted = false;
     return true;
   }
 

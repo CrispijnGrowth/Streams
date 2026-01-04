@@ -25,10 +25,10 @@ import {
 import { X, Plus, Loader2 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { Deliverable } from "@shared/schema";
-import { DeliverableStatus } from "@shared/schema";
+import type { Solution } from "@shared/schema";
+import { SolutionStatus } from "@shared/schema";
 
-const editDeliverableSchema = z.object({
+const editSolutionSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
   milestoneDate: z.string().optional(),
@@ -37,79 +37,79 @@ const editDeliverableSchema = z.object({
   labels: z.array(z.string()).default([]),
 });
 
-type EditDeliverableForm = z.infer<typeof editDeliverableSchema>;
+type EditSolutionForm = z.infer<typeof editSolutionSchema>;
 
-interface EditDeliverableDialogProps {
-  deliverable: Deliverable | null;
+interface EditSolutionDialogProps {
+  solution: Solution | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onDeleted?: () => void;
 }
 
-export function EditDeliverableDialog({ deliverable, open, onOpenChange, onDeleted }: EditDeliverableDialogProps) {
+export function EditSolutionDialog({ solution, open, onOpenChange, onDeleted }: EditSolutionDialogProps) {
   const { toast } = useToast();
   const [newOwner, setNewOwner] = useState("");
   const [newLabel, setNewLabel] = useState("");
 
-  const form = useForm<EditDeliverableForm>({
-    resolver: zodResolver(editDeliverableSchema),
+  const form = useForm<EditSolutionForm>({
+    resolver: zodResolver(editSolutionSchema),
     defaultValues: {
       name: "",
       description: "",
       milestoneDate: "",
-      status: DeliverableStatus.IN_PROGRESS,
+      status: SolutionStatus.IN_PROGRESS,
       owners: [],
       labels: [],
     },
   });
 
   useEffect(() => {
-    if (deliverable && open) {
+    if (solution && open) {
       form.reset({
-        name: deliverable.name,
-        description: deliverable.description || "",
-        milestoneDate: deliverable.milestoneDate || "",
-        status: deliverable.status,
-        owners: deliverable.owners || [],
-        labels: deliverable.labels || [],
+        name: solution.name,
+        description: solution.description || "",
+        milestoneDate: solution.milestoneDate || "",
+        status: solution.status,
+        owners: solution.owners || [],
+        labels: solution.labels || [],
       });
     }
-  }, [deliverable, open, form]);
+  }, [solution, open, form]);
 
-  const updateDeliverable = useMutation({
-    mutationFn: async (data: EditDeliverableForm) => {
-      return apiRequest("PATCH", `/api/deliverables/${deliverable?.id}`, data);
+  const updateSolution = useMutation({
+    mutationFn: async (data: EditSolutionForm) => {
+      return apiRequest("PATCH", `/api/solutions/${solution?.id}`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/deliverables"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/deliverables", deliverable?.id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/solutions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/solutions", solution?.id] });
       queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
-      toast({ title: "Deliverable updated successfully" });
+      toast({ title: "Solution updated successfully" });
       onOpenChange(false);
     },
     onError: () => {
-      toast({ title: "Failed to update deliverable", variant: "destructive" });
+      toast({ title: "Failed to update solution", variant: "destructive" });
     },
   });
 
-  const deleteDeliverable = useMutation({
+  const deleteSolution = useMutation({
     mutationFn: async () => {
-      return apiRequest("DELETE", `/api/deliverables/${deliverable?.id}`);
+      return apiRequest("DELETE", `/api/solutions/${solution?.id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/deliverables"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/solutions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
-      toast({ title: "Deliverable deleted" });
+      toast({ title: "Solution deleted" });
       onOpenChange(false);
       onDeleted?.();
     },
     onError: () => {
-      toast({ title: "Failed to delete deliverable", variant: "destructive" });
+      toast({ title: "Failed to delete solution", variant: "destructive" });
     },
   });
 
-  const onSubmit = (data: EditDeliverableForm) => {
-    updateDeliverable.mutate(data);
+  const onSubmit = (data: EditSolutionForm) => {
+    updateSolution.mutate(data);
   };
 
   const addOwner = () => {
@@ -145,13 +145,13 @@ export function EditDeliverableDialog({ deliverable, open, onOpenChange, onDelet
   const owners = form.watch("owners");
   const labels = form.watch("labels");
 
-  if (!deliverable) return null;
+  if (!solution) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Edit Deliverable</DialogTitle>
+          <DialogTitle>Edit Solution</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -160,7 +160,7 @@ export function EditDeliverableDialog({ deliverable, open, onOpenChange, onDelet
             <Input
               id="name"
               {...form.register("name")}
-              data-testid="input-deliverable-name"
+              data-testid="input-solution-name"
             />
             {form.formState.errors.name && (
               <p className="text-sm text-destructive">{form.formState.errors.name.message}</p>
@@ -173,7 +173,7 @@ export function EditDeliverableDialog({ deliverable, open, onOpenChange, onDelet
               id="description"
               {...form.register("description")}
               rows={3}
-              data-testid="input-deliverable-description"
+              data-testid="input-solution-description"
             />
           </div>
 
@@ -184,7 +184,7 @@ export function EditDeliverableDialog({ deliverable, open, onOpenChange, onDelet
                 id="milestoneDate"
                 type="date"
                 {...form.register("milestoneDate")}
-                data-testid="input-deliverable-milestone-date"
+                data-testid="input-solution-milestone-date"
               />
             </div>
 
@@ -194,11 +194,11 @@ export function EditDeliverableDialog({ deliverable, open, onOpenChange, onDelet
                 value={form.watch("status")}
                 onValueChange={(value) => form.setValue("status", value)}
               >
-                <SelectTrigger data-testid="select-deliverable-status">
+                <SelectTrigger data-testid="select-solution-status">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.values(DeliverableStatus).map((status) => (
+                  {Object.values(SolutionStatus).map((status) => (
                     <SelectItem key={status} value={status}>
                       {status}
                     </SelectItem>
@@ -282,18 +282,18 @@ export function EditDeliverableDialog({ deliverable, open, onOpenChange, onDelet
             <Button
               type="button"
               variant="destructive"
-              onClick={() => deleteDeliverable.mutate()}
-              disabled={deleteDeliverable.isPending}
-              data-testid="button-delete-deliverable"
+              onClick={() => deleteSolution.mutate()}
+              disabled={deleteSolution.isPending}
+              data-testid="button-delete-solution"
             >
-              {deleteDeliverable.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Delete"}
+              {deleteSolution.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Delete"}
             </Button>
             <div className="flex gap-2">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={updateDeliverable.isPending} data-testid="button-save-deliverable">
-                {updateDeliverable.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
+              <Button type="submit" disabled={updateSolution.isPending} data-testid="button-save-solution">
+                {updateSolution.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
               </Button>
             </div>
           </DialogFooter>

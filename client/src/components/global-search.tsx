@@ -13,7 +13,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Search, Layers, Package, CheckSquare, ListChecks } from "lucide-react";
 import type {
   StreamWithProgress,
-  DeliverableWithProgress,
+  SolutionWithProgress,
   ActionWithProgress,
   Step,
 } from "@shared/schema";
@@ -24,7 +24,7 @@ interface GlobalSearchProps {
 }
 
 type SearchResult = {
-  type: "stream" | "deliverable" | "action" | "step";
+  type: "stream" | "solution" | "action" | "step";
   id: string;
   name: string;
   description?: string;
@@ -83,7 +83,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
           id: action.id,
           name: action.name,
           description: action.description,
-          path: `/stream/${action.streamId}/deliverable/${action.deliverableId}/action/${action.id}`,
+          path: `/stream/${action.streamId}/solution/${action.solutionId}/action/${action.id}`,
           parentInfo: action.status,
         });
       }
@@ -101,7 +101,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
           name: step.name,
           description: step.note,
           path: action
-            ? `/stream/${action.streamId}/deliverable/${action.deliverableId}/action/${action.id}`
+            ? `/stream/${action.streamId}/solution/${action.solutionId}/action/${action.id}`
             : "#",
           parentInfo: step.isDone ? "Done" : "Pending",
         });
@@ -130,7 +130,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
     switch (type) {
       case "stream":
         return <Layers className="h-4 w-4 text-muted-foreground" />;
-      case "deliverable":
+      case "solution":
         return <Package className="h-4 w-4 text-muted-foreground" />;
       case "action":
         return <CheckSquare className="h-4 w-4 text-muted-foreground" />;
@@ -143,8 +143,8 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
     switch (type) {
       case "stream":
         return "Stream";
-      case "deliverable":
-        return "Deliverable";
+      case "solution":
+        return "Solution";
       case "action":
         return "Action";
       case "step":

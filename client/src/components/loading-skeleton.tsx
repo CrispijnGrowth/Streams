@@ -24,7 +24,7 @@ export function StreamCardSkeleton() {
   );
 }
 
-export function DeliverableCardSkeleton() {
+export function SolutionCardSkeleton() {
   return (
     <Card className="p-3 space-y-2">
       <Skeleton className="h-4 w-3/4" />

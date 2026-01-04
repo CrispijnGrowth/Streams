@@ -71,7 +71,7 @@ export function EditStepDialog({ step, open, onOpenChange, onDeleted }: EditStep
       queryClient.invalidateQueries({ queryKey: ["/api/steps"] });
       queryClient.invalidateQueries({ queryKey: ["/api/steps", step?.id] });
       queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/deliverables"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/solutions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
       toast({ title: "Step updated successfully" });
       onOpenChange(false);
@@ -88,7 +88,7 @@ export function EditStepDialog({ step, open, onOpenChange, onDeleted }: EditStep
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/steps"] });
       queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/deliverables"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/solutions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
       toast({ title: "Step deleted" });
       onOpenChange(false);

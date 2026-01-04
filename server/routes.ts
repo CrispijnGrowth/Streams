@@ -5,6 +5,7 @@ import { authStorage, generateMagicLinkUrl } from "./auth";
 import { sendMagicLinkEmail, sendNewUserNotification, sendApprovalEmail } from "./email";
 import {
   insertStreamSchema,
+  insertSolutionSchema,
   insertDeliverableSchema,
   insertActionSchema,
   insertStepSchema,
@@ -310,9 +311,96 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/streams/:id/deliverables", authMiddleware, async (req, res) => {
+  app.get("/api/streams/:id/solutions", authMiddleware, async (req, res) => {
     try {
-      const deliverables = await storage.getDeliverablesByStream(req.userId!, req.params.id);
+      const solutions = await storage.getSolutionsByStream(req.userId!, req.params.id);
+      res.json(solutions);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch solutions" });
+    }
+  });
+
+  app.get("/api/solutions", authMiddleware, async (req, res) => {
+    try {
+      const solutions = await storage.getSolutions(req.userId!);
+      res.json(solutions);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch solutions" });
+    }
+  });
+
+  app.get("/api/solutions/:id", authMiddleware, async (req, res) => {
+    try {
+      const solution = await storage.getSolution(req.userId!, req.params.id);
+      if (!solution) {
+        return res.status(404).json({ error: "Solution not found" });
+      }
+      res.json(solution);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch solution" });
+    }
+  });
+
+  app.post("/api/solutions", authMiddleware, async (req, res) => {
+    try {
+      const parsed = insertSolutionSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.message });
+      }
+      const solution = await storage.createSolution(req.userId!, parsed.data);
+      res.status(201).json(solution);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create solution" });
+    }
+  });
+
+  app.patch("/api/solutions/:id", authMiddleware, async (req, res) => {
+    try {
+      const allowedFields = ["name", "description", "milestoneDate", "phases", "owners", "labels", "status", "isDeleted"];
+      const validStatuses = ["In Progress", "On Hold"];
+      const updateData: Record<string, any> = {};
+      for (const field of allowedFields) {
+        if (req.body[field] !== undefined) {
+          if (field === "status" && !validStatuses.includes(req.body[field])) {
+            return res.status(400).json({ error: "Invalid status value" });
+          }
+          updateData[field] = req.body[field];
+        }
+      }
+      const solution = await storage.updateSolution(req.userId!, req.params.id, updateData);
+      if (!solution) {
+        return res.status(404).json({ error: "Solution not found" });
+      }
+      res.json(solution);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update solution" });
+    }
+  });
+
+  app.delete("/api/solutions/:id", authMiddleware, async (req, res) => {
+    try {
+      const deleted = await storage.deleteSolution(req.userId!, req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ error: "Solution not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete solution" });
+    }
+  });
+
+  app.get("/api/solutions/:id/actions", authMiddleware, async (req, res) => {
+    try {
+      const actions = await storage.getActionsBySolution(req.userId!, req.params.id);
+      res.json(actions);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch actions" });
+    }
+  });
+
+  app.get("/api/solutions/:id/deliverables", authMiddleware, async (req, res) => {
+    try {
+      const deliverables = await storage.getDeliverablesBySolution(req.userId!, req.params.id);
       res.json(deliverables);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch deliverables" });
@@ -355,14 +443,10 @@ export async function registerRoutes(
 
   app.patch("/api/deliverables/:id", authMiddleware, async (req, res) => {
     try {
-      const allowedFields = ["name", "description", "milestoneDate", "phases", "owners", "labels", "status", "isDeleted"];
-      const validStatuses = ["In Progress", "On Hold"];
+      const allowedFields = ["name", "description"];
       const updateData: Record<string, any> = {};
       for (const field of allowedFields) {
         if (req.body[field] !== undefined) {
-          if (field === "status" && !validStatuses.includes(req.body[field])) {
-            return res.status(400).json({ error: "Invalid status value" });
-          }
           updateData[field] = req.body[field];
         }
       }
@@ -385,15 +469,6 @@ export async function registerRoutes(
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete deliverable" });
-    }
-  });
-
-  app.get("/api/deliverables/:id/actions", authMiddleware, async (req, res) => {
-    try {
-      const actions = await storage.getActionsByDeliverable(req.userId!, req.params.id);
-      res.json(actions);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to fetch actions" });
     }
   });
 
@@ -433,7 +508,7 @@ export async function registerRoutes(
 
   app.patch("/api/actions/:id", authMiddleware, async (req, res) => {
     try {
-      const allowedFields = ["name", "description", "status", "dueDate", "effort", "owners", "labels", "kanbanOrder"];
+      const allowedFields = ["name", "description", "status", "dueDate", "effort", "owners", "labels", "kanbanOrder", "deliverableId"];
       const validStatuses = ["Backlog", "To Execute", "Executing", "Blocked", "Delegated", "Done", "Archive"];
       const updateData: Record<string, any> = {};
       for (const field of allowedFields) {
@@ -558,6 +633,18 @@ export async function registerRoutes(
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: "Failed to restore stream" });
+    }
+  });
+
+  app.post("/api/recycle-bin/restore/solution/:id", authMiddleware, async (req, res) => {
+    try {
+      const restored = await storage.restoreSolution(req.userId!, req.params.id);
+      if (!restored) {
+        return res.status(404).json({ error: "Solution not found in recycle bin" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to restore solution" });
     }
   });
 

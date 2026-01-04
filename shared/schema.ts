@@ -32,12 +32,12 @@ export const MomentumStatus = {
 
 export type MomentumStatusType = (typeof MomentumStatus)[keyof typeof MomentumStatus];
 
-export const DeliverableStatus = {
+export const SolutionStatus = {
   IN_PROGRESS: "In Progress",
   ON_HOLD: "On Hold",
 } as const;
 
-export type DeliverableStatusType = (typeof DeliverableStatus)[keyof typeof DeliverableStatus];
+export type SolutionStatusType = (typeof SolutionStatus)[keyof typeof SolutionStatus];
 
 export const Phases = {
   STRATEGY: "STRATEGY",
@@ -105,7 +105,7 @@ export interface Stream {
   isDeleted: boolean;
 }
 
-export interface Deliverable {
+export interface Solution {
   id: string;
   userId: string;
   key: string;
@@ -116,7 +116,19 @@ export interface Deliverable {
   phases: string[];
   owners: string[];
   labels: string[];
-  status: DeliverableStatusType;
+  status: SolutionStatusType;
+  ordinal: number;
+  isDeleted: boolean;
+}
+
+export interface Deliverable {
+  id: string;
+  userId: string;
+  key: string;
+  name: string;
+  description?: string;
+  solutionId: string;
+  streamId: string;
   ordinal: number;
   isDeleted: boolean;
 }
@@ -127,7 +139,8 @@ export interface Action {
   key: string;
   name: string;
   description?: string;
-  deliverableId: string;
+  solutionId: string;
+  deliverableId?: string;
   streamId: string;
   status: ActionStatusType;
   dueDate?: string;
@@ -161,7 +174,7 @@ export const insertStreamSchema = z.object({
   labels: z.array(z.string()).default([]),
 });
 
-export const insertDeliverableSchema = z.object({
+export const insertSolutionSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
   streamId: z.string().min(1, "Stream is required"),
@@ -172,10 +185,18 @@ export const insertDeliverableSchema = z.object({
   status: z.string().default("In Progress"),
 });
 
+export const insertDeliverableSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  description: z.string().optional(),
+  solutionId: z.string().min(1, "Solution is required"),
+  streamId: z.string().min(1, "Stream is required"),
+});
+
 export const insertActionSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
-  deliverableId: z.string().min(1, "Deliverable is required"),
+  solutionId: z.string().min(1, "Solution is required"),
+  deliverableId: z.string().optional(),
   streamId: z.string().min(1, "Stream is required"),
   status: z.string().default("Backlog"),
   dueDate: z.string().optional(),
@@ -194,11 +215,12 @@ export const insertStepSchema = z.object({
 });
 
 export type InsertStream = z.infer<typeof insertStreamSchema>;
+export type InsertSolution = z.infer<typeof insertSolutionSchema>;
 export type InsertDeliverable = z.infer<typeof insertDeliverableSchema>;
 export type InsertAction = z.infer<typeof insertActionSchema>;
 export type InsertStep = z.infer<typeof insertStepSchema>;
 
-export interface InProgressDeliverableInfo {
+export interface InProgressSolutionInfo {
   name: string;
   progress: number;
   isEarliest: boolean;
@@ -206,19 +228,24 @@ export interface InProgressDeliverableInfo {
 
 export interface StreamWithProgress extends Stream {
   progress: number;
+  solutionCount: number;
+  doingCount: number;
+  blockedCount: number;
+  delegatedCount: number;
+  inProgressSolutions: InProgressSolutionInfo[];
+}
+
+export interface SolutionWithProgress extends Solution {
+  progress: number;
+  actionCount: number;
   deliverableCount: number;
   doingCount: number;
   blockedCount: number;
   delegatedCount: number;
-  inProgressDeliverables: InProgressDeliverableInfo[];
 }
 
-export interface DeliverableWithProgress extends Deliverable {
-  progress: number;
-  actionCount: number;
-  doingCount: number;
-  blockedCount: number;
-  delegatedCount: number;
+export interface DeliverableWithActions extends Deliverable {
+  actions: ActionWithProgress[];
 }
 
 export interface ActionWithProgress extends Action {

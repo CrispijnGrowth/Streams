@@ -9,47 +9,51 @@ import { EmptyState } from "@/components/empty-state";
 import { KanbanSkeleton, TimelineSkeleton } from "@/components/loading-skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { EditDeliverableDialog } from "@/components/edit-deliverable-dialog";
+import { EditSolutionDialog } from "@/components/edit-solution-dialog";
 import { EditActionDialog } from "@/components/edit-action-dialog";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
-import type { DeliverableWithProgress, ActionWithProgress, Action } from "@shared/schema";
-import { DeliverableStatus } from "@shared/schema";
+import type { SolutionWithProgress, ActionWithProgress, Action, Deliverable } from "@shared/schema";
+import { SolutionStatus } from "@shared/schema";
 
-interface DeliverableViewProps {
+interface SolutionViewProps {
   streamId: string;
-  deliverableId: string;
+  solutionId: string;
   showDescriptions: boolean;
 }
 
-export function DeliverableView({ streamId, deliverableId, showDescriptions }: DeliverableViewProps) {
+export function SolutionView({ streamId, solutionId, showDescriptions }: SolutionViewProps) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [editingDeliverable, setEditingDeliverable] = useState(false);
+  const [editingSolution, setEditingSolution] = useState(false);
   const [editingAction, setEditingAction] = useState<Action | null>(null);
   const quickAddRef = useRef<QuickAddFormRef>(null);
 
-  const { data: deliverable, isLoading: deliverableLoading } = useQuery<DeliverableWithProgress>({
-    queryKey: ["/api/deliverables", deliverableId],
+  const { data: solution, isLoading: solutionLoading } = useQuery<SolutionWithProgress>({
+    queryKey: ["/api/solutions", solutionId],
   });
 
   const { data: actions, isLoading: actionsLoading } = useQuery<ActionWithProgress[]>({
-    queryKey: ["/api/deliverables", deliverableId, "actions"],
+    queryKey: ["/api/solutions", solutionId, "actions"],
   });
 
-  const deleteDeliverable = useMutation({
+  const { data: deliverables, isLoading: deliverablesLoading } = useQuery<Deliverable[]>({
+    queryKey: ["/api/solutions", solutionId, "deliverables"],
+  });
+
+  const deleteSolution = useMutation({
     mutationFn: async () => {
-      return apiRequest("PATCH", `/api/deliverables/${deliverableId}`, { isDeleted: true });
+      return apiRequest("PATCH", `/api/solutions/${solutionId}`, { isDeleted: true });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/deliverables"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/solutions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
-      toast({ title: "Deliverable moved to recycle bin" });
+      toast({ title: "Solution moved to recycle bin" });
       setLocation(`/stream/${streamId}`);
     },
     onError: () => {
-      toast({ title: "Failed to delete deliverable", variant: "destructive" });
+      toast({ title: "Failed to delete solution", variant: "destructive" });
     },
   });
 
@@ -64,30 +68,30 @@ export function DeliverableView({ streamId, deliverableId, showDescriptions }: D
     {
       key: "e",
       handler: useCallback(() => {
-        if (deliverable) {
-          setEditingDeliverable(true);
+        if (solution) {
+          setEditingSolution(true);
         }
-      }, [deliverable]),
-      description: "Edit current deliverable",
+      }, [solution]),
+      description: "Edit current solution",
     },
     {
       key: "Delete",
       handler: useCallback(() => {
-        if (deliverable && !deliverable.isDeleted) {
-          deleteDeliverable.mutate();
+        if (solution && !solution.isDeleted) {
+          deleteSolution.mutate();
         }
-      }, [deliverable]),
-      description: "Delete current deliverable",
+      }, [solution]),
+      description: "Delete current solution",
     },
   ]);
 
   const createAction = useMutation({
     mutationFn: async (name: string) => {
-      return apiRequest("POST", "/api/actions", { name, deliverableId, streamId });
+      return apiRequest("POST", "/api/actions", { name, solutionId, streamId });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/deliverables", deliverableId, "actions"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/deliverables"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/solutions", solutionId, "actions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/solutions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
       toast({ title: "Action created" });
     },
@@ -101,18 +105,18 @@ export function DeliverableView({ streamId, deliverableId, showDescriptions }: D
       return apiRequest("PATCH", `/api/actions/${actionId}`, { status });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/deliverables", deliverableId, "actions"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/deliverables"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/solutions", solutionId, "actions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/solutions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
     },
   });
 
-  const updateDeliverableStatus = useMutation({
+  const updateSolutionStatus = useMutation({
     mutationFn: async (status: string) => {
-      return apiRequest("PATCH", `/api/deliverables/${deliverableId}`, { status });
+      return apiRequest("PATCH", `/api/solutions/${solutionId}`, { status });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/deliverables", deliverableId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/solutions", solutionId] });
       queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
     },
   });
@@ -122,7 +126,7 @@ export function DeliverableView({ streamId, deliverableId, showDescriptions }: D
       return apiRequest("PATCH", `/api/actions/${actionId}`, { kanbanOrder });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/deliverables", deliverableId, "actions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/solutions", solutionId, "actions"] });
     },
   });
 
@@ -131,8 +135,8 @@ export function DeliverableView({ streamId, deliverableId, showDescriptions }: D
       return apiRequest("PATCH", `/api/actions/${actionId}`, { dueDate });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/deliverables", deliverableId, "actions"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/deliverables"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/solutions", solutionId, "actions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/solutions"] });
     },
   });
 
@@ -146,10 +150,10 @@ export function DeliverableView({ streamId, deliverableId, showDescriptions }: D
   })) || [];
 
   const handleActionClick = (actionId: string) => {
-    setLocation(`/stream/${streamId}/deliverable/${deliverableId}/action/${actionId}`);
+    setLocation(`/stream/${streamId}/solution/${solutionId}/action/${actionId}`);
   };
 
-  const isLoading = deliverableLoading || actionsLoading;
+  const isLoading = solutionLoading || actionsLoading || deliverablesLoading;
 
   if (isLoading) {
     return (
@@ -164,13 +168,13 @@ export function DeliverableView({ streamId, deliverableId, showDescriptions }: D
     );
   }
 
-  if (!deliverable) {
+  if (!solution) {
     return (
       <div className="p-6">
         <EmptyState
           icon={CheckSquare}
-          title="Deliverable not found"
-          description="The deliverable you're looking for doesn't exist or has been deleted."
+          title="Solution not found"
+          description="The solution you're looking for doesn't exist or has been deleted."
         />
       </div>
     );
@@ -183,7 +187,7 @@ export function DeliverableView({ streamId, deliverableId, showDescriptions }: D
           <EmptyState
             icon={CheckSquare}
             title="No actions yet"
-            description="Create your first action to start tracking work in this deliverable."
+            description="Create your first action to start tracking work in this solution."
             actionLabel="Create Action"
             onAction={() => createAction.mutate("New Action")}
           />
@@ -205,47 +209,47 @@ export function DeliverableView({ streamId, deliverableId, showDescriptions }: D
         <div className="space-y-6">
           <div className="flex items-center justify-between gap-4 pb-3 border-b flex-wrap">
             <div className="flex items-center gap-3">
-              <h1 className="text-lg font-semibold" data-testid="text-deliverable-name">{deliverable.name}</h1>
+              <h1 className="text-lg font-semibold" data-testid="text-solution-name">{solution.name}</h1>
               <Button
                 size="sm"
-                variant={deliverable.status === DeliverableStatus.ON_HOLD ? "secondary" : "outline"}
+                variant={solution.status === SolutionStatus.ON_HOLD ? "secondary" : "outline"}
                 onClick={() => {
-                  const newStatus = deliverable.status === DeliverableStatus.ON_HOLD 
-                    ? DeliverableStatus.IN_PROGRESS 
-                    : DeliverableStatus.ON_HOLD;
-                  updateDeliverableStatus.mutate(newStatus);
+                  const newStatus = solution.status === SolutionStatus.ON_HOLD 
+                    ? SolutionStatus.IN_PROGRESS 
+                    : SolutionStatus.ON_HOLD;
+                  updateSolutionStatus.mutate(newStatus);
                 }}
-                data-testid="button-toggle-deliverable-status"
+                data-testid="button-toggle-solution-status"
               >
-                {deliverable.status === DeliverableStatus.ON_HOLD ? "On Hold" : "In Progress"}
+                {solution.status === SolutionStatus.ON_HOLD ? "On Hold" : "In Progress"}
               </Button>
               <Button
                 size="icon"
                 variant="ghost"
                 className="h-7 w-7"
-                onClick={() => setEditingDeliverable(true)}
-                data-testid="button-edit-deliverable"
+                onClick={() => setEditingSolution(true)}
+                data-testid="button-edit-solution"
               >
                 <Pencil className="h-4 w-4" />
               </Button>
             </div>
             <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
-              {deliverable.milestoneDate && (
+              {solution.milestoneDate && (
                 <div className="flex items-center gap-1.5">
                   <Calendar className="w-4 h-4" />
-                  <span>{new Date(deliverable.milestoneDate).toLocaleDateString()}</span>
+                  <span>{new Date(solution.milestoneDate).toLocaleDateString()}</span>
                 </div>
               )}
-              {deliverable.owners && deliverable.owners.length > 0 && (
+              {solution.owners && solution.owners.length > 0 && (
                 <div className="flex items-center gap-1.5">
                   <Users className="w-4 h-4" />
-                  <span>{deliverable.owners.join(", ")}</span>
+                  <span>{solution.owners.join(", ")}</span>
                 </div>
               )}
-              {deliverable.labels && deliverable.labels.length > 0 && (
+              {solution.labels && solution.labels.length > 0 && (
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <Tag className="w-4 h-4" />
-                  {deliverable.labels.map((label) => (
+                  {solution.labels.map((label) => (
                     <Badge key={label} variant="secondary" className="text-xs">
                       {label}
                     </Badge>
@@ -259,6 +263,7 @@ export function DeliverableView({ streamId, deliverableId, showDescriptions }: D
 
             <KanbanBoard
               actions={actions.filter((a) => !a.isDeleted)}
+              deliverables={deliverables?.filter((d) => !d.isDeleted) || []}
               onActionClick={handleActionClick}
               onActionEdit={(action) => setEditingAction(action)}
               onStatusChange={(actionId, status) => updateActionStatus.mutate({ actionId, status })}
@@ -288,10 +293,10 @@ export function DeliverableView({ streamId, deliverableId, showDescriptions }: D
         />
       </div>
 
-      <EditDeliverableDialog
-        deliverable={deliverable}
-        open={editingDeliverable}
-        onOpenChange={setEditingDeliverable}
+      <EditSolutionDialog
+        solution={solution}
+        open={editingSolution}
+        onOpenChange={setEditingSolution}
         onDeleted={() => setLocation(`/stream/${streamId}`)}
       />
 

@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import type { ActionStatusType, MomentumStatusType, DeliverableStatusType } from "@shared/schema";
+import type { ActionStatusType, MomentumStatusType, SolutionStatusType } from "@shared/schema";
 
 interface StatusBadgeProps {
   status: ActionStatusType;
@@ -28,22 +28,22 @@ export function StatusBadge({ status, size = "default" }: StatusBadgeProps) {
   );
 }
 
-interface DeliverableStatusBadgeProps {
-  status: DeliverableStatusType;
+interface SolutionStatusBadgeProps {
+  status: SolutionStatusType;
   size?: "sm" | "default";
 }
 
-const deliverableStatusStyles: Record<DeliverableStatusType, string> = {
+const solutionStatusStyles: Record<SolutionStatusType, string> = {
   "In Progress": "bg-status-executing/20 text-status-executing border-status-executing/30",
   "On Hold": "bg-muted text-muted-foreground border-border",
 };
 
-export function DeliverableStatusBadge({ status, size = "default" }: DeliverableStatusBadgeProps) {
+export function SolutionStatusBadge({ status, size = "default" }: SolutionStatusBadgeProps) {
   return (
     <Badge
       variant="outline"
-      className={`${deliverableStatusStyles[status]} ${size === "sm" ? "text-xs px-1.5 py-0" : ""}`}
-      data-testid={`badge-deliverable-status-${status.toLowerCase().replace(" ", "-")}`}
+      className={`${solutionStatusStyles[status]} ${size === "sm" ? "text-xs px-1.5 py-0" : ""}`}
+      data-testid={`badge-solution-status-${status.toLowerCase().replace(" ", "-")}`}
     >
       {status}
     </Badge>

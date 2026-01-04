@@ -7,11 +7,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/empty-state";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { Stream, Deliverable, Action, Step } from "@shared/schema";
+import type { Stream, Solution, Action, Step } from "@shared/schema";
 
 interface DeletedItems {
   streams: Stream[];
-  deliverables: Deliverable[];
+  solutions: Solution[];
   actions: Action[];
   steps: Step[];
 }
@@ -37,18 +37,18 @@ export function RecycleBin() {
     },
   });
 
-  const restoreDeliverable = useMutation({
+  const restoreSolution = useMutation({
     mutationFn: async (id: string) => {
-      return apiRequest("POST", `/api/recycle-bin/restore/deliverable/${id}`);
+      return apiRequest("POST", `/api/recycle-bin/restore/solution/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/recycle-bin"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/deliverables"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/solutions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
-      toast({ title: "Deliverable restored" });
+      toast({ title: "Solution restored" });
     },
     onError: () => {
-      toast({ title: "Failed to restore deliverable", variant: "destructive" });
+      toast({ title: "Failed to restore solution", variant: "destructive" });
     },
   });
 
@@ -59,7 +59,7 @@ export function RecycleBin() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/recycle-bin"] });
       queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/deliverables"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/solutions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
       toast({ title: "Action restored" });
     },
@@ -76,7 +76,7 @@ export function RecycleBin() {
       queryClient.invalidateQueries({ queryKey: ["/api/recycle-bin"] });
       queryClient.invalidateQueries({ queryKey: ["/api/steps"] });
       queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/deliverables"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/solutions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
       toast({ title: "Step restored" });
     },
@@ -104,7 +104,7 @@ export function RecycleBin() {
   const hasDeletedItems =
     deletedItems &&
     (deletedItems.streams.length > 0 ||
-      deletedItems.deliverables.length > 0 ||
+      deletedItems.solutions.length > 0 ||
       deletedItems.actions.length > 0 ||
       deletedItems.steps.length > 0);
 
@@ -159,30 +159,30 @@ export function RecycleBin() {
             </div>
           )}
 
-          {deletedItems.deliverables.length > 0 && (
+          {deletedItems.solutions.length > 0 && (
             <div className="space-y-3">
               <h2 className="text-lg font-medium flex items-center gap-2">
                 <Target className="h-5 w-5" />
-                Deliverables ({deletedItems.deliverables.length})
+                Solutions ({deletedItems.solutions.length})
               </h2>
               <div className="space-y-2">
-                {deletedItems.deliverables.map((deliverable) => (
-                  <Card key={deliverable.id} className="p-4 flex items-center justify-between gap-4" data-testid={`deleted-deliverable-${deliverable.id}`}>
+                {deletedItems.solutions.map((solution) => (
+                  <Card key={solution.id} className="p-4 flex items-center justify-between gap-4" data-testid={`deleted-solution-${solution.id}`}>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-xs font-mono">{deliverable.key}</Badge>
-                        <span className="font-medium truncate">{deliverable.name}</span>
+                        <Badge variant="outline" className="text-xs font-mono">{solution.key}</Badge>
+                        <span className="font-medium truncate">{solution.name}</span>
                       </div>
-                      {deliverable.description && (
-                        <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{deliverable.description}</p>
+                      {solution.description && (
+                        <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{solution.description}</p>
                       )}
                     </div>
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => restoreDeliverable.mutate(deliverable.id)}
-                      disabled={restoreDeliverable.isPending}
-                      data-testid={`button-restore-deliverable-${deliverable.id}`}
+                      onClick={() => restoreSolution.mutate(solution.id)}
+                      disabled={restoreSolution.isPending}
+                      data-testid={`button-restore-solution-${solution.id}`}
                     >
                       <RotateCcw className="h-4 w-4 mr-2" />
                       Restore

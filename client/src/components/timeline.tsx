@@ -40,7 +40,7 @@ interface TimelineProps {
   onItemClick?: (id: string) => void;
   onDateChange?: (id: string, newDate: string) => void;
   showNoDateShelf?: boolean;
-  level?: "stream" | "deliverable" | "action";
+  level?: "stream" | "solution" | "action";
 }
 
 const zoomLevelMonths: Record<ZoomLevel, number> = {
