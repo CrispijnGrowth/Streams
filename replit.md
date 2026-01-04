@@ -73,11 +73,14 @@ Progress is computed automatically by rolling up completion percentages from ste
 - **Session Management**: In-memory session storage with 7-day TTL, using `x-session-id` header
 - **First Admin**: Hardcoded as `maarten.bal@capgemini.com` (auto-approved on registration)
 - **User Roles**: `admin` (full access + user management), `member` (standard access), `pending` (awaiting approval)
+- **Email Service**: Postmark integration for sending magic links, admin notifications, and approval emails
 - **Key Files**: 
   - `server/auth.ts` - AuthStorage class with user, session, and magic token management
+  - `server/email.ts` - Postmark email service for transactional emails
   - `client/src/lib/auth-context.tsx` - React context for authentication state
   - `client/src/pages/login.tsx` - Login/registration forms
   - `client/src/pages/settings.tsx` - User preferences and admin approval panel
 
 ### Recent Changes
+- 2026-01-04: Added Postmark email integration for magic links and admin notifications
 - 2026-01-03: Implemented custom magic-link authentication system with admin approval workflow
