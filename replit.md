@@ -88,7 +88,15 @@ Progress is computed automatically by rolling up completion percentages from ste
   - `client/src/pages/reset-password.tsx` - Password reset page
   - `client/src/pages/settings.tsx` - User preferences and admin approval panel
 
+### Example Data Seeding
+- **Automatic Seeding**: New users receive example data when approved or on first login
+- **Three Example Streams**: "[Example] Marketing Campaign Launch", "[Example] Build a Sailboat", "[Example] Company Christmas Party"
+- **Full Hierarchy**: Each stream contains solutions, deliverables, actions (with varied statuses), and steps
+- **Methods**: `storage.seedExampleData(userId)` and `storage.hasExampleData(userId)` for one-time seeding
+- **Trigger Points**: Called in `/api/admin/approve/:userId` and `/api/auth/login` routes
+
 ### Recent Changes
+- 2026-01-04: Added example data seeding system with three pre-populated streams for new users
 - 2026-01-04: Added new Deliverable entity between Solution and Action - actions can now be grouped by deliverable in Kanban view with fluorescent row borders
 - 2026-01-04: Renamed "Deliverable" to "Solution" throughout the application - Solutions are now milestones within Streams
 - 2026-01-04: Implemented user-specific data isolation - each user has private streams, solutions, deliverables, actions, and steps

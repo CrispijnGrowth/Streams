@@ -94,6 +94,7 @@ export async function registerRoutes(
         return res.status(403).json({ error: "Account pending admin approval" });
       }
       const session = await authStorage.createSession(user.id);
+      await storage.seedExampleData(user.id);
       res.json({ 
         sessionId: session.id, 
         user: { id: user.id, email: user.email, name: user.name, role: user.role, showDescriptions: user.showDescriptions, themePreference: user.themePreference }
@@ -237,6 +238,7 @@ export async function registerRoutes(
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
+      await storage.seedExampleData(user.id);
       sendApprovalEmail(user.email, user.name).catch(err =>
         console.error("[Auth] Failed to send approval email:", err)
       );

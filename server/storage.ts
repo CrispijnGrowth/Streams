@@ -66,6 +66,9 @@ export interface IStorage {
   restoreDeliverable(userId: string, id: string): Promise<boolean>;
   restoreAction(userId: string, id: string): Promise<boolean>;
   restoreStep(userId: string, id: string): Promise<boolean>;
+
+  seedExampleData(userId: string): Promise<void>;
+  hasExampleData(userId: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -74,6 +77,7 @@ export class MemStorage implements IStorage {
   private deliverables: Map<string, Deliverable> = new Map();
   private actions: Map<string, Action> = new Map();
   private steps: Map<string, Step> = new Map();
+  private seededUsers: Set<string> = new Set();
 
   constructor() {
   }
@@ -739,6 +743,211 @@ export class MemStorage implements IStorage {
     if (!step || step.userId !== userId || !step.isDeleted) return false;
     step.isDeleted = false;
     return true;
+  }
+
+  async hasExampleData(userId: string): Promise<boolean> {
+    return this.seededUsers.has(userId);
+  }
+
+  async seedExampleData(userId: string): Promise<void> {
+    if (this.seededUsers.has(userId)) return;
+    this.seededUsers.add(userId);
+
+    const exampleStreams = [
+      {
+        name: "[Example] Marketing Campaign Launch",
+        description: "A product launch marketing campaign with digital and print strategies",
+        phases: ["Execution"],
+        owners: ["Marketing Lead"],
+        labels: ["marketing", "launch"],
+        solutions: [
+          {
+            name: "Digital Marketing",
+            description: "Online advertising and social media campaigns",
+            deliverables: [
+              {
+                name: "Social Media",
+                actions: [
+                  { name: "Create content calendar", status: ActionStatus.DONE, steps: ["Define themes", "Schedule posts", "Create assets"] },
+                  { name: "Design social media graphics", status: ActionStatus.EXECUTING, steps: ["Brand guidelines", "Template designs", "Review cycle"] },
+                  { name: "Set up ad campaigns", status: ActionStatus.TO_EXECUTE, steps: ["Define audiences", "Set budgets", "Create ads"] },
+                ],
+              },
+              {
+                name: "Email Marketing",
+                actions: [
+                  { name: "Build email list segments", status: ActionStatus.DONE, steps: ["Export contacts", "Clean data", "Create segments"] },
+                  { name: "Design email templates", status: ActionStatus.EXECUTING, steps: ["Header design", "Body layout", "Mobile responsive"] },
+                ],
+              },
+            ],
+          },
+          {
+            name: "Print Materials",
+            description: "Brochures and promotional materials for events",
+            deliverables: [
+              {
+                name: "Brochures",
+                actions: [
+                  { name: "Write copy for brochures", status: ActionStatus.BACKLOG, steps: ["Draft content", "Review messaging", "Final approval"] },
+                  { name: "Design brochure layout", status: ActionStatus.BACKLOG, steps: ["Concept sketches", "Digital mockup", "Print proof"] },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      {
+        name: "[Example] Build a Sailboat",
+        description: "Construct a small wooden sailboat for recreational use",
+        phases: ["Planning"],
+        owners: ["Project Manager"],
+        labels: ["construction", "hobby"],
+        solutions: [
+          {
+            name: "Hull Construction",
+            description: "Build the main body of the boat",
+            deliverables: [
+              {
+                name: "Frame Assembly",
+                actions: [
+                  { name: "Source lumber materials", status: ActionStatus.DONE, steps: ["Research suppliers", "Compare prices", "Place order"] },
+                  { name: "Cut frame pieces", status: ActionStatus.EXECUTING, steps: ["Mark measurements", "Cut to size", "Sand edges"] },
+                  { name: "Assemble keel and ribs", status: ActionStatus.TO_EXECUTE, steps: ["Prepare joints", "Apply glue", "Secure with clamps"] },
+                ],
+              },
+              {
+                name: "Planking",
+                actions: [
+                  { name: "Steam bend planks", status: ActionStatus.BACKLOG, steps: ["Set up steam box", "Heat planks", "Bend to shape"] },
+                  { name: "Attach planking to frame", status: ActionStatus.BACKLOG, steps: ["Dry fit", "Apply sealant", "Fasten permanently"] },
+                ],
+              },
+            ],
+          },
+          {
+            name: "Rigging and Sails",
+            description: "Install mast, boom, and sails",
+            deliverables: [
+              {
+                name: "Mast and Boom",
+                actions: [
+                  { name: "Shape mast from spar", status: ActionStatus.BACKLOG, steps: ["Select wood", "Plane to shape", "Apply finish"] },
+                  { name: "Install mast step and partners", status: ActionStatus.BACKLOG, steps: ["Mark position", "Cut openings", "Reinforce structure"] },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      {
+        name: "[Example] Company Christmas Party",
+        description: "Organize the annual company holiday celebration",
+        phases: ["Planning"],
+        owners: ["HR Team"],
+        labels: ["event", "company-wide"],
+        solutions: [
+          {
+            name: "Venue and Catering",
+            description: "Secure location and food arrangements",
+            deliverables: [
+              {
+                name: "Venue Selection",
+                actions: [
+                  { name: "Research venue options", status: ActionStatus.DONE, steps: ["List potential venues", "Check availability", "Compare pricing"] },
+                  { name: "Visit and book venue", status: ActionStatus.EXECUTING, steps: ["Schedule tours", "Negotiate contract", "Pay deposit"] },
+                ],
+              },
+              {
+                name: "Catering",
+                actions: [
+                  { name: "Select catering company", status: ActionStatus.TO_EXECUTE, steps: ["Request quotes", "Review menus", "Check references"] },
+                  { name: "Plan menu with dietary options", status: ActionStatus.BACKLOG, steps: ["Survey preferences", "Design menu", "Confirm with caterer"] },
+                ],
+              },
+            ],
+          },
+          {
+            name: "Entertainment and Activities",
+            description: "Plan fun activities for the party",
+            deliverables: [
+              {
+                name: "Entertainment",
+                actions: [
+                  { name: "Book DJ or band", status: ActionStatus.BACKLOG, steps: ["Research options", "Listen to demos", "Sign contract"] },
+                  { name: "Plan party games", status: ActionStatus.BACKLOG, steps: ["Brainstorm ideas", "Prepare materials", "Assign hosts"] },
+                  { name: "Organize Secret Santa", status: ActionStatus.EXECUTING, steps: ["Send signup form", "Draw names", "Set budget"] },
+                ],
+              },
+            ],
+          },
+          {
+            name: "Invitations and RSVPs",
+            description: "Handle guest communications",
+            deliverables: [
+              {
+                name: "Communications",
+                actions: [
+                  { name: "Design invitation", status: ActionStatus.DONE, steps: ["Create design", "Write copy", "Get approval"] },
+                  { name: "Send invitations", status: ActionStatus.DONE, steps: ["Compile email list", "Schedule send", "Track opens"] },
+                  { name: "Track RSVPs", status: ActionStatus.EXECUTING, steps: ["Set up form", "Send reminders", "Finalize headcount"] },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ];
+
+    for (const streamData of exampleStreams) {
+      const stream = await this.createStream(userId, {
+        name: streamData.name,
+        description: streamData.description,
+        phases: streamData.phases,
+        owners: streamData.owners,
+        labels: streamData.labels,
+      });
+
+      for (const solutionData of streamData.solutions) {
+        const solution = await this.createSolution(userId, {
+          name: solutionData.name,
+          description: solutionData.description,
+          streamId: stream.id,
+          status: SolutionStatus.IN_PROGRESS,
+          phases: [],
+          owners: [],
+          labels: [],
+        });
+
+        for (const deliverableData of solutionData.deliverables) {
+          const deliverable = await this.createDeliverable(userId, {
+            name: deliverableData.name,
+            solutionId: solution.id,
+            streamId: stream.id,
+          });
+
+          for (const actionData of deliverableData.actions) {
+            const action = await this.createAction(userId, {
+              name: actionData.name,
+              status: actionData.status,
+              solutionId: solution.id,
+              streamId: stream.id,
+              deliverableId: deliverable.id,
+              owners: [],
+              labels: [],
+            });
+
+            for (const stepName of actionData.steps) {
+              await this.createStep(userId, {
+                name: stepName,
+                actionId: action.id,
+                isDone: actionData.status === ActionStatus.DONE,
+              });
+            }
+          }
+        }
+      }
+    }
   }
 }
 
