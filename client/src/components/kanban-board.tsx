@@ -27,6 +27,7 @@ interface KanbanBoardProps {
   onActionClick?: (id: string) => void;
   onActionEdit?: (action: ActionWithProgress) => void;
   onStatusChange?: (actionId: string, newStatus: ActionStatusType) => void;
+  onDeliverableChange?: (actionId: string, newDeliverableId: string | null) => void;
   onReorder?: (actionId: string, newKanbanOrder: number) => void;
   showDescription?: boolean;
 }
@@ -202,6 +203,7 @@ export function KanbanBoard({
   onActionClick,
   onActionEdit,
   onStatusChange,
+  onDeliverableChange,
   onReorder,
   showDescription = true,
 }: KanbanBoardProps) {
@@ -266,10 +268,16 @@ export function KanbanBoard({
 
     if (overId.startsWith("cell__")) {
       const parts = overId.split("__");
+      const rowId = parts[1];
       const newStatus = parts[2] as ActionStatusType;
       
       if (newStatus && draggedAction.status !== newStatus) {
         onStatusChange?.(draggedAction.id, newStatus);
+      }
+      
+      const newDeliverableId = rowId === "ungrouped" ? null : rowId;
+      if (draggedAction.deliverableId !== newDeliverableId) {
+        onDeliverableChange?.(draggedAction.id, newDeliverableId);
       }
       return;
     }

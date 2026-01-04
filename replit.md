@@ -2,7 +2,7 @@
 
 ## Overview
 
-Streams App is a personal project orchestration tool designed for managing "Sovereign Cloud Streams" with visual timelines and Kanban boards. The application follows a hierarchical data model: Streams → Deliverables → Actions → Steps, allowing users to track progress at multiple levels of granularity.
+Streams App is a personal project orchestration tool designed for managing "Sovereign Cloud Streams" with visual timelines and Kanban boards. The application follows a hierarchical data model: Streams → Solutions → Deliverables → Actions → Steps, allowing users to track progress at multiple levels of granularity.
 
 The app is built as a full-stack TypeScript application with a React frontend and Express backend, using PostgreSQL for data persistence. It emphasizes a utility-first design approach with Linear-inspired aesthetics focused on clarity, efficiency, and data visibility.
 
@@ -27,15 +27,18 @@ Preferred communication style: Simple, everyday language.
 - **Static Serving**: Built client assets served from `dist/public` in production
 
 ### Data Model
-The application uses a four-level hierarchy with per-user data isolation:
+The application uses a five-level hierarchy with per-user data isolation:
 1. **Streams**: Top-level project containers with phases, owners, and labels
-2. **Deliverables**: Major milestones within streams with target dates
-3. **Actions**: Trackable tasks with Kanban status (Backlog, To Execute, Executing, Blocked, Delegated, Done, Archive)
-4. **Steps**: Granular checklist items within actions
+2. **Solutions**: Major milestones within streams with target dates (renamed from original "Deliverables")
+3. **Deliverables**: Work packages within solutions, grouping related actions
+4. **Actions**: Trackable tasks with Kanban status (Backlog, To Execute, Executing, Blocked, Delegated, Done, Archive)
+5. **Steps**: Granular checklist items within actions
 
-**Data Isolation**: Each entity (Stream, Deliverable, Action, Step) includes a `userId` field. All CRUD operations are scoped to the authenticated user, and parent ownership is validated when creating or updating child entities. Users can only see and modify their own data.
+**Kanban Board**: Actions are displayed in a grouped Kanban layout when deliverables exist - each deliverable row has a fluorescent border and contains its actions across status columns. Drag-and-drop supports both status changes and moving actions between deliverables.
 
-Progress is computed automatically by rolling up completion percentages from steps → actions → deliverables → streams.
+**Data Isolation**: Each entity (Stream, Solution, Deliverable, Action, Step) includes a `userId` field. All CRUD operations are scoped to the authenticated user, and parent ownership is validated when creating or updating child entities. Users can only see and modify their own data.
+
+Progress is computed automatically by rolling up completion percentages from steps → actions → solutions → streams.
 
 ### Key Design Patterns
 - **Shared Schema**: Types and validation schemas defined in `shared/schema.ts` using Zod, shared between frontend and backend
@@ -86,7 +89,9 @@ Progress is computed automatically by rolling up completion percentages from ste
   - `client/src/pages/settings.tsx` - User preferences and admin approval panel
 
 ### Recent Changes
-- 2026-01-04: Implemented user-specific data isolation - each user has private streams, deliverables, actions, and steps
+- 2026-01-04: Added new Deliverable entity between Solution and Action - actions can now be grouped by deliverable in Kanban view with fluorescent row borders
+- 2026-01-04: Renamed "Deliverable" to "Solution" throughout the application - Solutions are now milestones within Streams
+- 2026-01-04: Implemented user-specific data isolation - each user has private streams, solutions, deliverables, actions, and steps
 - 2026-01-04: Changed from magic-link to password-based authentication with password reset via email
 - 2026-01-04: Added Postmark email integration for password reset and admin notifications
 - 2026-01-03: Implemented custom magic-link authentication system with admin approval workflow

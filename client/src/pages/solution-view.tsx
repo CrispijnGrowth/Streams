@@ -130,6 +130,16 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
     },
   });
 
+  const updateActionDeliverable = useMutation({
+    mutationFn: async ({ actionId, deliverableId }: { actionId: string; deliverableId: string | null }) => {
+      return apiRequest("PATCH", `/api/actions/${actionId}`, { deliverableId });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/solutions", solutionId, "actions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/solutions", solutionId, "deliverables"] });
+    },
+  });
+
   const updateActionDate = useMutation({
     mutationFn: async ({ actionId, dueDate }: { actionId: string; dueDate: string }) => {
       return apiRequest("PATCH", `/api/actions/${actionId}`, { dueDate });
@@ -267,6 +277,7 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
               onActionClick={handleActionClick}
               onActionEdit={(action) => setEditingAction(action)}
               onStatusChange={(actionId, status) => updateActionStatus.mutate({ actionId, status })}
+              onDeliverableChange={(actionId, deliverableId) => updateActionDeliverable.mutate({ actionId, deliverableId })}
               onReorder={(actionId, kanbanOrder) => updateActionOrder.mutate({ actionId, kanbanOrder })}
               showDescription={showDescriptions}
             />
