@@ -1,4 +1,5 @@
 import { randomUUID, randomBytes, createHash } from "crypto";
+import bcrypt from "bcrypt";
 import type { User, MagicLinkToken, Session, InsertUser } from "@shared/schema";
 import { UserRole } from "@shared/schema";
 import { db } from "./db";
@@ -8,6 +9,7 @@ import { eq, ilike } from "drizzle-orm";
 const MAGIC_LINK_TTL_MS = 10 * 60 * 1000;
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const FIRST_ADMIN_EMAIL = "maarten.bal@capgemini.com";
+const BCRYPT_ROUNDS = 12;
 
 class AuthStorage {
   private magicTokens: Map<string, MagicLinkToken> = new Map();
@@ -50,18 +52,39 @@ class AuthStorage {
     return result.map(u => this.dbUserToUser(u));
   }
 
-  async createUser(data: InsertUser): Promise<User> {
+  async createUser(data: InsertUser, password: string): Promise<User> {
     const id = randomUUID();
     const isFirstAdmin = data.email.toLowerCase() === FIRST_ADMIN_EMAIL.toLowerCase();
+    const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
     const [newUser] = await db.insert(users).values({
       id,
       email: data.email,
       name: data.name,
+      passwordHash,
       role: isFirstAdmin ? UserRole.ADMIN : UserRole.PENDING,
       showDescriptions: true,
       themePreference: "system",
     }).returning();
     return this.dbUserToUser(newUser);
+  }
+
+  async verifyPassword(email: string, password: string): Promise<User | null> {
+    const result = await db.select().from(users).where(ilike(users.email, email)).limit(1);
+    if (result.length === 0) return null;
+    const dbUser = result[0];
+    if (!dbUser.passwordHash) return null;
+    const isValid = await bcrypt.compare(password, dbUser.passwordHash);
+    if (!isValid) return null;
+    return this.dbUserToUser(dbUser);
+  }
+
+  async updatePassword(userId: string, password: string): Promise<boolean> {
+    const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+    const [updated] = await db.update(users)
+      .set({ passwordHash })
+      .where(eq(users.id, userId))
+      .returning();
+    return !!updated;
   }
 
   async approveUser(userId: string): Promise<User | undefined> {

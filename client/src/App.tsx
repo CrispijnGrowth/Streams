@@ -24,6 +24,7 @@ import { RecycleBin } from "@/pages/recycle-bin";
 import { SettingsPage } from "@/pages/settings";
 import { LoginPage } from "@/pages/login";
 import { AuthVerifyPage } from "@/pages/auth-verify";
+import { ResetPasswordPage } from "@/pages/reset-password";
 import NotFound from "@/pages/not-found";
 import type { Stream, Deliverable, Action } from "@shared/schema";
 
@@ -271,6 +272,7 @@ function AppContent() {
       <Switch>
         <Route path="/login" component={LoginPage} />
         <Route path="/auth/verify" component={AuthVerifyPage} />
+        <Route path="/auth/reset-password" component={ResetPasswordPage} />
         <Route>
           <Redirect to="/login" />
         </Route>

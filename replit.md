@@ -68,19 +68,22 @@ Progress is computed automatically by rolling up completion percentages from ste
 - **Tailwind CSS**: Utility-first CSS framework with PostCSS
 
 ### Authentication System
-- **Custom Magic-Link Authentication**: Email-based passwordless login with secure tokens
+- **Password-Based Authentication**: Email and password login with bcrypt hashing (12 rounds)
 - **Admin Approval Flow**: New user registrations require admin approval before access
+- **Password Reset**: Magic links sent via email for password recovery (Postmark integration)
 - **Session Management**: In-memory session storage with 7-day TTL, using `x-session-id` header
 - **First Admin**: Hardcoded as `maarten.bal@capgemini.com` (auto-approved on registration)
 - **User Roles**: `admin` (full access + user management), `member` (standard access), `pending` (awaiting approval)
-- **Email Service**: Postmark integration for sending magic links, admin notifications, and approval emails
+- **Email Service**: Postmark integration for password reset links, admin notifications, and approval emails
 - **Key Files**: 
-  - `server/auth.ts` - AuthStorage class with user, session, and magic token management
+  - `server/auth.ts` - AuthStorage class with user, session, password hashing, and token management
   - `server/email.ts` - Postmark email service for transactional emails
   - `client/src/lib/auth-context.tsx` - React context for authentication state
-  - `client/src/pages/login.tsx` - Login/registration forms
+  - `client/src/pages/login.tsx` - Login/registration forms with password fields
+  - `client/src/pages/reset-password.tsx` - Password reset page
   - `client/src/pages/settings.tsx` - User preferences and admin approval panel
 
 ### Recent Changes
-- 2026-01-04: Added Postmark email integration for magic links and admin notifications
+- 2026-01-04: Changed from magic-link to password-based authentication with password reset via email
+- 2026-01-04: Added Postmark email integration for password reset and admin notifications
 - 2026-01-03: Implemented custom magic-link authentication system with admin approval workflow
