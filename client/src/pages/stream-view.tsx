@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
+import { useMode } from "@/lib/mode-context";
 import type { Stream, SolutionWithProgress, Solution } from "@shared/schema";
 import { SolutionStatus } from "@shared/schema";
 
@@ -25,6 +26,7 @@ interface StreamViewProps {
 export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { isEditMode } = useMode();
   const [editingStream, setEditingStream] = useState(false);
   const [editFocusField, setEditFocusField] = useState<EditStreamFocusField>(null);
   const [editingSolution, setEditingSolution] = useState<Solution | null>(null);
@@ -225,15 +227,17 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
             <div className="flex items-center justify-between gap-4 flex-wrap">
               <div className="flex items-center gap-3">
                 <h1 className="text-xl font-semibold" data-testid="text-stream-name">{stream.name}</h1>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-7 w-7"
-                  onClick={() => setEditingStream(true)}
-                  data-testid="button-edit-stream"
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
+                {isEditMode && (
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-7 w-7"
+                    onClick={() => setEditingStream(true)}
+                    data-testid="button-edit-stream"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                )}
                 {stream.momentumStatus && (
                   <Badge variant="secondary" className={getMomentumColor(stream.momentumStatus)}>
                     <Activity className="w-3 h-3 mr-1" />
@@ -309,20 +313,22 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
                     key={solution.id}
                     solution={solution}
                     onClick={() => handleSolutionClick(solution.id)}
-                    onEdit={() => setEditingSolution(solution)}
+                    onEdit={isEditMode ? () => setEditingSolution(solution) : undefined}
                     showDescription={showDescriptions}
                   />
                 ))}
             </div>
 
-            <div className="max-w-sm">
-              <QuickAddForm
-                ref={quickAddRef}
-                placeholder="Add new solution..."
-                onAdd={(name) => createSolution.mutate(name)}
-                isLoading={createSolution.isPending}
-              />
-            </div>
+            {isEditMode && (
+              <div className="max-w-sm">
+                <QuickAddForm
+                  ref={quickAddRef}
+                  placeholder="Add new solution..."
+                  onAdd={(name) => createSolution.mutate(name)}
+                  isLoading={createSolution.isPending}
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>

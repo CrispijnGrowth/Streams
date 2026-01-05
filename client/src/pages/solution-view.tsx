@@ -358,14 +358,16 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
               showDescription={showDescriptions}
             />
 
-            <div className="max-w-sm">
-              <QuickAddForm
-                ref={quickAddRef}
-                placeholder="Add new action..."
-                onAdd={(name) => createAction.mutate(name)}
-                isLoading={createAction.isPending}
-              />
-            </div>
+            {isEditMode && (
+              <div className="max-w-sm">
+                <QuickAddForm
+                  ref={quickAddRef}
+                  placeholder="Add new action..."
+                  onAdd={(name) => createAction.mutate(name)}
+                  isLoading={createAction.isPending}
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>
