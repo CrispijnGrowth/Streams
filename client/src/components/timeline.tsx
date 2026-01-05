@@ -13,7 +13,7 @@ import {
 import { TimelineBall } from "./timeline-ball";
 import { Button } from "@/components/ui/button";
 import { ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
-import { format, addMonths, startOfMonth, differenceInDays, isWithinInterval, startOfYear, endOfYear, addDays } from "date-fns";
+import { format, addMonths, startOfMonth, differenceInDays, isWithinInterval, addDays } from "date-fns";
 import type { ActionStatusType, MomentumStatusType } from "@shared/schema";
 import { usePageTransition } from "./page-transition";
 
@@ -105,7 +105,7 @@ export function Timeline({
   level = "stream",
 }: TimelineProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [zoom, setZoom] = useState<ZoomLevel>("year");
+  const [zoom, setZoom] = useState<ZoomLevel>("half-year");
   const today = useMemo(() => new Date(), []);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [dragPreviewDate, setDragPreviewDate] = useState<string | null>(null);
@@ -144,18 +144,12 @@ export function Timeline({
   );
 
   const defaultStart = useMemo(() => {
-    if (level === "action") {
-      return addMonths(today, -3);
-    }
-    return startOfYear(today);
-  }, [today, level]);
+    return addDays(today, -7);
+  }, [today]);
 
   const defaultEnd = useMemo(() => {
-    if (level === "action") {
-      return addMonths(today, 3);
-    }
-    return endOfYear(today);
-  }, [today, level]);
+    return addMonths(defaultStart, 6);
+  }, [defaultStart]);
 
   const [viewStart, setViewStart] = useState(defaultStart);
   const [viewEnd, setViewEnd] = useState(defaultEnd);
@@ -187,7 +181,7 @@ export function Timeline({
   };
 
   const handleReset = () => {
-    setZoom("year");
+    setZoom("half-year");
     setViewStart(defaultStart);
     setViewEnd(defaultEnd);
   };
