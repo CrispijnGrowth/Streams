@@ -232,6 +232,8 @@ export class DatabaseStorage implements IStorage {
       let delegatedCount = 0;
       const inProgressSolutions: { name: string; progress: number; isEarliest: boolean }[] = [];
 
+      const inProgressWithDates: { name: string; progress: number; milestoneDate?: string }[] = [];
+
       for (const sol of streamSolutions) {
         const stats = await this.computeSolutionProgress(sol.id, userId);
         totalProgress += stats.progress;
@@ -240,12 +242,29 @@ export class DatabaseStorage implements IStorage {
         delegatedCount += stats.delegatedCount;
         
         if (sol.status === SolutionStatus.IN_PROGRESS) {
-          inProgressSolutions.push({
+          inProgressWithDates.push({
             name: sol.name,
             progress: stats.progress,
-            isEarliest: false,
+            milestoneDate: sol.milestoneDate || undefined,
           });
         }
+      }
+
+      let earliestDate: string | undefined = undefined;
+      for (const sol of inProgressWithDates) {
+        if (sol.milestoneDate) {
+          if (!earliestDate || sol.milestoneDate < earliestDate) {
+            earliestDate = sol.milestoneDate;
+          }
+        }
+      }
+      
+      for (const sol of inProgressWithDates) {
+        inProgressSolutions.push({
+          name: sol.name,
+          progress: sol.progress,
+          isEarliest: sol.milestoneDate === earliestDate && earliestDate !== undefined,
+        });
       }
 
       result.push({
@@ -508,6 +527,7 @@ export class DatabaseStorage implements IStorage {
       const delActions = await db.select().from(actions).where(
         and(eq(actions.deliverableId, del.id), eq(actions.userId, userId), eq(actions.isDeleted, false))
       );
+      delActions.sort((a, b) => a.kanbanOrder - b.kanbanOrder);
       
       const actionsWithProgress: ActionWithProgress[] = [];
       for (const action of delActions) {
@@ -597,6 +617,7 @@ export class DatabaseStorage implements IStorage {
     const rows = await db.select().from(actions).where(
       and(eq(actions.userId, userId), eq(actions.isDeleted, false))
     );
+    rows.sort((a, b) => a.kanbanOrder - b.kanbanOrder);
     
     const result: ActionWithProgress[] = [];
     for (const row of rows) {
@@ -611,6 +632,7 @@ export class DatabaseStorage implements IStorage {
     const rows = await db.select().from(actions).where(
       and(eq(actions.solutionId, solutionId), eq(actions.userId, userId), eq(actions.isDeleted, false))
     );
+    rows.sort((a, b) => a.kanbanOrder - b.kanbanOrder);
     
     const result: ActionWithProgress[] = [];
     for (const row of rows) {
@@ -646,6 +668,10 @@ export class DatabaseStorage implements IStorage {
     );
     const ordinal = existingActions.length + 1;
     
+    const status = data.status || ActionStatus.BACKLOG;
+    const sameStatusActions = existingActions.filter(a => a.status === status && !a.isDeleted);
+    const maxKanbanOrder = sameStatusActions.reduce((max, a) => Math.max(max, a.kanbanOrder), 0);
+    
     const newAction = {
       id,
       userId,
@@ -655,12 +681,12 @@ export class DatabaseStorage implements IStorage {
       solutionId: data.solutionId,
       deliverableId: data.deliverableId || null,
       streamId: data.streamId,
-      status: data.status || ActionStatus.BACKLOG,
+      status,
       dueDate: data.dueDate || null,
       effort: data.effort || null,
       owners: data.owners || [],
       labels: data.labels || [],
-      kanbanOrder: 1,
+      kanbanOrder: maxKanbanOrder + 1,
       ordinal,
       isDeleted: false,
     };
