@@ -26,8 +26,9 @@ import { Plus, Loader2, X } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useOwnerSuggestions, useLabelSuggestions } from "@/hooks/use-suggestions";
-import type { Action, Deliverable } from "@shared/schema";
-import { ActionStatus } from "@shared/schema";
+import type { Action, Deliverable, DeliverableBorderColorType } from "@shared/schema";
+import { ActionStatus, DeliverableBorderColor } from "@shared/schema";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export type EditActionFocusField = "owner" | "label" | null;
 
@@ -55,6 +56,10 @@ interface EditActionDialogProps {
 export function EditActionDialog({ action, open, onOpenChange, onDeleted, initialFocus }: EditActionDialogProps) {
   const { toast } = useToast();
   const [newDeliverableName, setNewDeliverableName] = useState("");
+  const [newDeliverableDescription, setNewDeliverableDescription] = useState("");
+  const [newDeliverableBorderColor, setNewDeliverableBorderColor] = useState<DeliverableBorderColorType>("cyan");
+  const [newDeliverableDueDate, setNewDeliverableDueDate] = useState("");
+  const [newDeliverableOwner, setNewDeliverableOwner] = useState("");
   const [isCreatingDeliverable, setIsCreatingDeliverable] = useState(false);
   const [isSubmittingWithNewDeliverable, setIsSubmittingWithNewDeliverable] = useState(false);
   const ownerSuggestions = useOwnerSuggestions();
@@ -70,34 +75,6 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted, initia
       return res.json();
     },
     enabled: !!action?.solutionId && open,
-  });
-
-  const createDeliverable = useMutation({
-    mutationFn: async (name: string) => {
-      const deliverableResponse = await apiRequest("POST", "/api/deliverables", {
-        name,
-        solutionId: action?.solutionId,
-        streamId: action?.streamId,
-      });
-      const newDeliverable = await deliverableResponse.json();
-      await apiRequest("PATCH", `/api/actions/${action?.id}`, {
-        deliverableId: newDeliverable.id,
-      });
-      return newDeliverable;
-    },
-    onSuccess: async (newDeliverable) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/solutions", action?.solutionId, "deliverables"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/deliverables"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/actions", action?.id] });
-      form.setValue("deliverableId", newDeliverable.id);
-      setNewDeliverableName("");
-      setIsCreatingDeliverable(false);
-      toast({ title: "Deliverable created and assigned" });
-    },
-    onError: () => {
-      toast({ title: "Failed to create deliverable", variant: "destructive" });
-    },
   });
 
   const form = useForm<EditActionForm>({
@@ -127,6 +104,15 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted, initia
         labels: action.labels || [],
       });
     }
+    if (!open) {
+      setNewDeliverableName("");
+      setNewDeliverableDescription("");
+      setNewDeliverableBorderColor("cyan");
+      setNewDeliverableDueDate("");
+      setNewDeliverableOwner("");
+      setIsCreatingDeliverable(false);
+      setIsSubmittingWithNewDeliverable(false);
+    }
   }, [action, open, form]);
 
   const updateAction = useMutation({
@@ -145,8 +131,12 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted, initia
       queryClient.invalidateQueries({ queryKey: ["/api/deliverables"] });
       toast({ title: "Action updated successfully" });
       setIsSubmittingWithNewDeliverable(false);
-      setIsCreatingDeliverable(false);
       setNewDeliverableName("");
+      setNewDeliverableDescription("");
+      setNewDeliverableBorderColor("cyan");
+      setNewDeliverableDueDate("");
+      setNewDeliverableOwner("");
+      setIsCreatingDeliverable(false);
       onOpenChange(false);
     },
     onError: () => {
@@ -172,15 +162,35 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted, initia
     },
   });
 
+  const resetNewDeliverableFields = () => {
+    setNewDeliverableName("");
+    setNewDeliverableDescription("");
+    setNewDeliverableBorderColor("cyan");
+    setNewDeliverableDueDate("");
+    setNewDeliverableOwner("");
+    setIsCreatingDeliverable(false);
+  };
+
   const onSubmit = async (data: EditActionForm) => {
     if (isCreatingDeliverable && newDeliverableName.trim()) {
       setIsSubmittingWithNewDeliverable(true);
       try {
-        const deliverableResponse = await apiRequest("POST", "/api/deliverables", {
+        const deliverablePayload: Record<string, unknown> = {
           name: newDeliverableName.trim(),
           solutionId: action?.solutionId,
           streamId: action?.streamId,
-        });
+          borderColor: newDeliverableBorderColor,
+        };
+        if (newDeliverableDescription.trim()) {
+          deliverablePayload.description = newDeliverableDescription.trim();
+        }
+        if (newDeliverableDueDate) {
+          deliverablePayload.dueDate = newDeliverableDueDate;
+        }
+        if (newDeliverableOwner.trim()) {
+          deliverablePayload.owners = [newDeliverableOwner.trim()];
+        }
+        const deliverableResponse = await apiRequest("POST", "/api/deliverables", deliverablePayload);
         const newDeliverable = await deliverableResponse.json();
         queryClient.invalidateQueries({ queryKey: ["/api/solutions", action?.solutionId, "deliverables"] });
         queryClient.invalidateQueries({ queryKey: ["/api/deliverables"] });
@@ -222,50 +232,97 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted, initia
           <div className="space-y-2">
             <Label htmlFor="deliverable">Deliverable</Label>
             {isCreatingDeliverable ? (
-              <div className="flex gap-2">
-                <Input
-                  placeholder="New deliverable name..."
-                  value={newDeliverableName}
-                  onChange={(e) => setNewDeliverableName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      if (newDeliverableName.trim()) {
-                        createDeliverable.mutate(newDeliverableName.trim());
-                      }
-                    } else if (e.key === "Escape") {
-                      setIsCreatingDeliverable(false);
-                      setNewDeliverableName("");
-                    }
-                  }}
-                  autoFocus
-                  data-testid="input-new-deliverable"
-                />
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="outline"
-                  onClick={() => {
-                    if (newDeliverableName.trim()) {
-                      createDeliverable.mutate(newDeliverableName.trim());
-                    }
-                  }}
-                  disabled={createDeliverable.isPending || !newDeliverableName.trim()}
-                >
-                  {createDeliverable.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                </Button>
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  onClick={() => {
-                    setIsCreatingDeliverable(false);
-                    setNewDeliverableName("");
-                  }}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
+              <Card className="border-2 border-dashed border-primary/50 bg-muted/30">
+                <CardHeader className="py-3 px-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <CardTitle className="text-sm font-medium">New Deliverable</CardTitle>
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      onClick={resetNewDeliverableFields}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3 px-4 pb-4 pt-0">
+                  <div className="space-y-1">
+                    <Label htmlFor="new-deliverable-name" className="text-xs">Name *</Label>
+                    <Input
+                      id="new-deliverable-name"
+                      placeholder="Deliverable name..."
+                      value={newDeliverableName}
+                      onChange={(e) => setNewDeliverableName(e.target.value)}
+                      autoFocus
+                      data-testid="input-new-deliverable"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="new-deliverable-description" className="text-xs">Description</Label>
+                    <Textarea
+                      id="new-deliverable-description"
+                      placeholder="Optional description..."
+                      value={newDeliverableDescription}
+                      onChange={(e) => setNewDeliverableDescription(e.target.value)}
+                      rows={2}
+                      data-testid="input-new-deliverable-description"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label htmlFor="new-deliverable-color" className="text-xs">Border Color</Label>
+                      <Select
+                        value={newDeliverableBorderColor}
+                        onValueChange={(value) => setNewDeliverableBorderColor(value as DeliverableBorderColorType)}
+                      >
+                        <SelectTrigger data-testid="select-new-deliverable-color">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.values(DeliverableBorderColor).map((color) => (
+                            <SelectItem key={color} value={color}>
+                              <span className="flex items-center gap-2">
+                                <span 
+                                  className="w-3 h-3 rounded-full" 
+                                  style={{ backgroundColor: color }}
+                                />
+                                {color.charAt(0).toUpperCase() + color.slice(1)}
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="new-deliverable-due-date" className="text-xs">Due Date</Label>
+                      <Input
+                        id="new-deliverable-due-date"
+                        type="date"
+                        value={newDeliverableDueDate}
+                        onChange={(e) => setNewDeliverableDueDate(e.target.value)}
+                        data-testid="input-new-deliverable-due-date"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="new-deliverable-owner" className="text-xs">Owner</Label>
+                    <Input
+                      id="new-deliverable-owner"
+                      placeholder="Owner name..."
+                      value={newDeliverableOwner}
+                      onChange={(e) => setNewDeliverableOwner(e.target.value)}
+                      list="owner-suggestions"
+                      data-testid="input-new-deliverable-owner"
+                    />
+                    <datalist id="owner-suggestions">
+                      {ownerSuggestions.map((owner) => (
+                        <option key={owner} value={owner} />
+                      ))}
+                    </datalist>
+                  </div>
+                </CardContent>
+              </Card>
             ) : (
               <Select
                 value={form.watch("deliverableId") || "__ungrouped__"}

@@ -447,7 +447,7 @@ export async function registerRoutes(
 
   app.patch("/api/deliverables/:id", authMiddleware, async (req, res) => {
     try {
-      const allowedFields = ["name", "description", "ordinal", "borderColor", "owners"];
+      const allowedFields = ["name", "description", "ordinal", "borderColor", "owners", "dueDate", "isMilestoneLinked"];
       const updateData: Record<string, any> = {};
       for (const field of allowedFields) {
         if (req.body[field] !== undefined) {

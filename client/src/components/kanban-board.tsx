@@ -234,7 +234,7 @@ function DeliverableRow({
           )}
           {deliverable ? (
             <div 
-              className={`font-medium text-sm text-foreground truncate flex-1 ${isEditMode ? "cursor-pointer hover:underline" : ""}`}
+              className={`font-medium text-sm text-foreground flex-1 break-words ${isEditMode ? "cursor-pointer hover:underline" : ""}`}
               title={deliverable.name}
               onClick={isEditMode && onEditDeliverable ? () => onEditDeliverable(deliverable) : undefined}
             >
