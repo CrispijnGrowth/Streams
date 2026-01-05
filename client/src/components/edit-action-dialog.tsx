@@ -55,6 +55,8 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted, initia
   const { toast } = useToast();
   const [newOwner, setNewOwner] = useState("");
   const [newLabel, setNewLabel] = useState("");
+  const [newDeliverableName, setNewDeliverableName] = useState("");
+  const [isCreatingDeliverable, setIsCreatingDeliverable] = useState(false);
   const ownerInputRef = useRef<HTMLInputElement>(null);
   const labelInputRef = useRef<HTMLInputElement>(null);
 
@@ -71,8 +73,37 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted, initia
   }, [open, initialFocus]);
 
   const { data: deliverables = [] } = useQuery<Deliverable[]>({
-    queryKey: ["/api/deliverables", { solutionId: action?.solutionId }],
+    queryKey: ["/api/solutions", action?.solutionId, "deliverables"],
+    queryFn: async () => {
+      const res = await fetch(`/api/solutions/${action?.solutionId}/deliverables`, {
+        headers: { "x-session-id": localStorage.getItem("sessionId") || "" },
+      });
+      if (!res.ok) throw new Error("Failed to fetch deliverables");
+      return res.json();
+    },
     enabled: !!action?.solutionId && open,
+  });
+
+  const createDeliverable = useMutation({
+    mutationFn: async (name: string) => {
+      return apiRequest("POST", "/api/deliverables", {
+        name,
+        solutionId: action?.solutionId,
+        streamId: action?.streamId,
+      });
+    },
+    onSuccess: async (response) => {
+      const newDeliverable = await response.json();
+      queryClient.invalidateQueries({ queryKey: ["/api/solutions", action?.solutionId, "deliverables"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/deliverables"] });
+      form.setValue("deliverableId", newDeliverable.id);
+      setNewDeliverableName("");
+      setIsCreatingDeliverable(false);
+      toast({ title: "Deliverable created" });
+    },
+    onError: () => {
+      toast({ title: "Failed to create deliverable", variant: "destructive" });
+    },
   });
 
   const form = useForm<EditActionForm>({
@@ -204,22 +235,81 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted, initia
 
           <div className="space-y-2">
             <Label htmlFor="deliverable">Deliverable</Label>
-            <Select
-              value={form.watch("deliverableId") || "__ungrouped__"}
-              onValueChange={(value) => form.setValue("deliverableId", value === "__ungrouped__" ? undefined : value)}
-            >
-              <SelectTrigger data-testid="select-action-deliverable">
-                <SelectValue placeholder="Ungrouped" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__ungrouped__">Ungrouped</SelectItem>
-                {deliverables.filter(d => !d.isDeleted).map((deliverable) => (
-                  <SelectItem key={deliverable.id} value={deliverable.id}>
-                    {deliverable.name}
+            {isCreatingDeliverable ? (
+              <div className="flex gap-2">
+                <Input
+                  placeholder="New deliverable name..."
+                  value={newDeliverableName}
+                  onChange={(e) => setNewDeliverableName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      if (newDeliverableName.trim()) {
+                        createDeliverable.mutate(newDeliverableName.trim());
+                      }
+                    } else if (e.key === "Escape") {
+                      setIsCreatingDeliverable(false);
+                      setNewDeliverableName("");
+                    }
+                  }}
+                  autoFocus
+                  data-testid="input-new-deliverable"
+                />
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="outline"
+                  onClick={() => {
+                    if (newDeliverableName.trim()) {
+                      createDeliverable.mutate(newDeliverableName.trim());
+                    }
+                  }}
+                  disabled={createDeliverable.isPending || !newDeliverableName.trim()}
+                >
+                  {createDeliverable.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                </Button>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => {
+                    setIsCreatingDeliverable(false);
+                    setNewDeliverableName("");
+                  }}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <Select
+                value={form.watch("deliverableId") || "__ungrouped__"}
+                onValueChange={(value) => {
+                  if (value === "__create_new__") {
+                    setIsCreatingDeliverable(true);
+                  } else {
+                    form.setValue("deliverableId", value === "__ungrouped__" ? undefined : value);
+                  }
+                }}
+              >
+                <SelectTrigger data-testid="select-action-deliverable">
+                  <SelectValue placeholder="Ungrouped" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__ungrouped__">Ungrouped</SelectItem>
+                  {deliverables.filter(d => !d.isDeleted).map((deliverable) => (
+                    <SelectItem key={deliverable.id} value={deliverable.id}>
+                      {deliverable.name}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value="__create_new__" className="text-muted-foreground">
+                    <span className="flex items-center gap-2">
+                      <Plus className="h-3 w-3" />
+                      Create new deliverable...
+                    </span>
                   </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           <div className="space-y-2">
