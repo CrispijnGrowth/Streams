@@ -73,20 +73,26 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted, initia
 
   const createDeliverable = useMutation({
     mutationFn: async (name: string) => {
-      return apiRequest("POST", "/api/deliverables", {
+      const deliverableResponse = await apiRequest("POST", "/api/deliverables", {
         name,
         solutionId: action?.solutionId,
         streamId: action?.streamId,
       });
+      const newDeliverable = await deliverableResponse.json();
+      await apiRequest("PATCH", `/api/actions/${action?.id}`, {
+        deliverableId: newDeliverable.id,
+      });
+      return newDeliverable;
     },
-    onSuccess: async (response) => {
-      const newDeliverable = await response.json();
+    onSuccess: async (newDeliverable) => {
       queryClient.invalidateQueries({ queryKey: ["/api/solutions", action?.solutionId, "deliverables"] });
       queryClient.invalidateQueries({ queryKey: ["/api/deliverables"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/actions", action?.id] });
       form.setValue("deliverableId", newDeliverable.id);
       setNewDeliverableName("");
       setIsCreatingDeliverable(false);
-      toast({ title: "Deliverable created" });
+      toast({ title: "Deliverable created and assigned" });
     },
     onError: () => {
       toast({ title: "Failed to create deliverable", variant: "destructive" });
