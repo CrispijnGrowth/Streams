@@ -56,6 +56,7 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted, initia
   const { toast } = useToast();
   const [newDeliverableName, setNewDeliverableName] = useState("");
   const [isCreatingDeliverable, setIsCreatingDeliverable] = useState(false);
+  const [isSubmittingWithNewDeliverable, setIsSubmittingWithNewDeliverable] = useState(false);
   const ownerSuggestions = useOwnerSuggestions();
   const labelSuggestions = useLabelSuggestions();
 
@@ -143,9 +144,13 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted, initia
       queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
       queryClient.invalidateQueries({ queryKey: ["/api/deliverables"] });
       toast({ title: "Action updated successfully" });
+      setIsSubmittingWithNewDeliverable(false);
+      setIsCreatingDeliverable(false);
+      setNewDeliverableName("");
       onOpenChange(false);
     },
     onError: () => {
+      setIsSubmittingWithNewDeliverable(false);
       toast({ title: "Failed to update action", variant: "destructive" });
     },
   });
@@ -167,8 +172,26 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted, initia
     },
   });
 
-  const onSubmit = (data: EditActionForm) => {
-    updateAction.mutate(data);
+  const onSubmit = async (data: EditActionForm) => {
+    if (isCreatingDeliverable && newDeliverableName.trim()) {
+      setIsSubmittingWithNewDeliverable(true);
+      try {
+        const deliverableResponse = await apiRequest("POST", "/api/deliverables", {
+          name: newDeliverableName.trim(),
+          solutionId: action?.solutionId,
+          streamId: action?.streamId,
+        });
+        const newDeliverable = await deliverableResponse.json();
+        queryClient.invalidateQueries({ queryKey: ["/api/solutions", action?.solutionId, "deliverables"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/deliverables"] });
+        updateAction.mutate({ ...data, deliverableId: newDeliverable.id });
+      } catch {
+        setIsSubmittingWithNewDeliverable(false);
+        toast({ title: "Failed to create deliverable", variant: "destructive" });
+      }
+    } else {
+      updateAction.mutate(data);
+    }
   };
 
   const owners = form.watch("owners");
@@ -367,8 +390,8 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted, initia
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={updateAction.isPending} data-testid="button-save-action">
-                {updateAction.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
+              <Button type="submit" disabled={updateAction.isPending || isSubmittingWithNewDeliverable} data-testid="button-save-action">
+                {(updateAction.isPending || isSubmittingWithNewDeliverable) ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
               </Button>
             </div>
           </DialogFooter>
