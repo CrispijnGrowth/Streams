@@ -491,6 +491,30 @@ export class MemStorage implements IStorage {
         return undefined;
       }
     }
+    
+    if (data.ordinal !== undefined && data.ordinal !== deliverable.ordinal) {
+      const solutionDeliverables = Array.from(this.deliverables.values())
+        .filter((d) => d.solutionId === deliverable.solutionId && d.userId === userId && !d.isDeleted)
+        .sort((a, b) => a.ordinal - b.ordinal);
+      
+      const oldOrdinal = deliverable.ordinal;
+      const newOrdinal = data.ordinal;
+      
+      for (const d of solutionDeliverables) {
+        if (d.id === id) continue;
+        
+        if (oldOrdinal < newOrdinal) {
+          if (d.ordinal > oldOrdinal && d.ordinal <= newOrdinal) {
+            d.ordinal = d.ordinal - 1;
+          }
+        } else {
+          if (d.ordinal >= newOrdinal && d.ordinal < oldOrdinal) {
+            d.ordinal = d.ordinal + 1;
+          }
+        }
+      }
+    }
+    
     const updated: Deliverable = { ...deliverable, ...data } as Deliverable;
     this.deliverables.set(id, updated);
     return updated;

@@ -335,10 +335,18 @@ export function KanbanBoard({
     }));
   }, []);
 
+  const sortedDeliverables = useMemo(() => {
+    return [...deliverables].sort((a, b) => (a.ordinal ?? 0) - (b.ordinal ?? 0));
+  }, [deliverables]);
+
+  const deliverableIds = useMemo(() => {
+    return sortedDeliverables.map((d) => d.id);
+  }, [sortedDeliverables]);
+
   const groupedActions = useMemo(() => {
     const groups: { deliverable: Deliverable | null; actions: ActionWithProgress[] }[] = [];
     
-    for (const del of deliverables) {
+    for (const del of sortedDeliverables) {
       const delActions = actions.filter((a) => a.deliverableId === del.id);
       if (delActions.length > 0) {
         groups.push({ deliverable: del, actions: delActions });
@@ -355,22 +363,53 @@ export function KanbanBoard({
     }
     
     return groups;
-  }, [actions, deliverables]);
+  }, [actions, sortedDeliverables]);
 
   const activeAction = useMemo(() => {
     if (!activeId) return null;
     return actions.find((a) => a.id === activeId) || null;
   }, [activeId, actions]);
 
+  const activeDeliverable = useMemo(() => {
+    if (!activeDeliverableId) return null;
+    return deliverables.find((d) => d.id === activeDeliverableId) || null;
+  }, [activeDeliverableId, deliverables]);
+
   const handleDragStart = (event: DragStartEvent) => {
-    setActiveId(event.active.id as string);
+    const { active } = event;
+    const dragType = active.data?.current?.type;
+    
+    if (dragType === "deliverable") {
+      setActiveDeliverableId(active.id as string);
+    } else {
+      setActiveId(active.id as string);
+    }
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
+    const dragType = active.data?.current?.type;
+    
     setActiveId(null);
+    setActiveDeliverableId(null);
 
     if (!over) return;
+
+    if (dragType === "deliverable") {
+      const draggedDeliverable = deliverables.find((d) => d.id === active.id);
+      const overDeliverable = deliverables.find((d) => d.id === over.id);
+      
+      if (draggedDeliverable && overDeliverable && draggedDeliverable.id !== overDeliverable.id && onDeliverableReorder) {
+        const oldIndex = sortedDeliverables.findIndex((d) => d.id === draggedDeliverable.id);
+        const newIndex = sortedDeliverables.findIndex((d) => d.id === overDeliverable.id);
+        
+        if (oldIndex !== newIndex) {
+          const newOrdinal = newIndex + 1;
+          onDeliverableReorder(draggedDeliverable.id, newOrdinal);
+        }
+      }
+      return;
+    }
 
     const draggedAction = actions.find((a) => a.id === active.id);
     if (!draggedAction) return;
@@ -514,21 +553,41 @@ export function KanbanBoard({
             })}
           </div>
 
-          <div className="space-y-4">
-            {groupedActions.map((group, index) => (
-              <DeliverableRow
-                key={group.deliverable?.id || `ungrouped-${index}`}
-                deliverable={group.deliverable}
-                actions={group.actions}
-                columnData={columnData}
-                onActionClick={onActionClick}
-                onActionEdit={onActionEdit}
-                onAddAction={onAddAction}
-                onEditDeliverable={onEditDeliverable}
-                showDescription={showDescription}
-                isEditMode={isEditMode}
-              />
-            ))}
+          <SortableContext items={deliverableIds} strategy={verticalListSortingStrategy}>
+            <div className="space-y-4">
+              {groupedActions.map((group, index) => {
+                if (group.deliverable) {
+                  return (
+                    <SortableDeliverableRow
+                      key={group.deliverable.id}
+                      id={group.deliverable.id}
+                      deliverable={group.deliverable}
+                      actions={group.actions}
+                      columnData={columnData}
+                      onActionClick={onActionClick}
+                      onActionEdit={onActionEdit}
+                      onAddAction={onAddAction}
+                      onEditDeliverable={onEditDeliverable}
+                      showDescription={showDescription}
+                      isEditMode={isEditMode}
+                    />
+                  );
+                }
+                return (
+                  <DeliverableRow
+                    key={`ungrouped-${index}`}
+                    deliverable={null}
+                    actions={group.actions}
+                    columnData={columnData}
+                    onActionClick={onActionClick}
+                    onActionEdit={onActionEdit}
+                    onAddAction={onAddAction}
+                    onEditDeliverable={onEditDeliverable}
+                    showDescription={showDescription}
+                    isEditMode={isEditMode}
+                  />
+                );
+              })}
             
             {isEditMode && onAddDeliverable && (
               <div className="flex gap-4 py-3 pl-3">
@@ -595,7 +654,8 @@ export function KanbanBoard({
                 </div>
               </div>
             )}
-          </div>
+            </div>
+          </SortableContext>
         </div>
         <ScrollBar orientation="horizontal" />
       </ScrollArea>

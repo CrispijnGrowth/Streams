@@ -207,6 +207,7 @@ export const insertDeliverableSchema = z.object({
   streamId: z.string().min(1, "Stream is required"),
   borderColor: z.string().default("cyan"),
   owners: z.array(z.string()).default([]),
+  ordinal: z.number().optional(),
 });
 
 export const insertActionSchema = z.object({

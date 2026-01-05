@@ -136,6 +136,15 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
     },
   });
 
+  const updateDeliverableOrdinal = useMutation({
+    mutationFn: async ({ deliverableId, ordinal }: { deliverableId: string; ordinal: number }) => {
+      return apiRequest("PATCH", `/api/deliverables/${deliverableId}`, { ordinal });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/solutions", solutionId, "deliverables"] });
+    },
+  });
+
   const updateActionDeliverable = useMutation({
     mutationFn: async ({ actionId, deliverableId }: { actionId: string; deliverableId: string | null }) => {
       return apiRequest("PATCH", `/api/actions/${actionId}`, { deliverableId });
@@ -352,6 +361,7 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
               onStatusChange={(actionId, status) => updateActionStatus.mutate({ actionId, status })}
               onDeliverableChange={(actionId, deliverableId) => updateActionDeliverable.mutate({ actionId, deliverableId })}
               onReorder={(actionId, kanbanOrder) => updateActionOrder.mutate({ actionId, kanbanOrder })}
+              onDeliverableReorder={(deliverableId, ordinal) => updateDeliverableOrdinal.mutate({ deliverableId, ordinal })}
               onAddAction={(status, deliverableId) => createActionWithStatus.mutate({ status, deliverableId })}
               onAddDeliverable={(name, borderColor) => createDeliverable.mutate({ name, borderColor })}
               onEditDeliverable={(deliverable) => setEditingDeliverable(deliverable)}
