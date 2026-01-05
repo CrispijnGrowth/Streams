@@ -316,3 +316,19 @@ export interface ActionWithProgress extends Action {
   stepCount: number;
   doneStepCount: number;
 }
+
+export interface SolutionWithLastComment extends SolutionWithProgress {
+  lastComment?: Comment;
+}
+
+export interface DeliverableWithLastComment extends Deliverable {
+  lastComment?: Comment;
+}
+
+export interface ActionWithLastComment extends ActionWithProgress {
+  lastComment?: Comment;
+}
+
+export interface SolutionWithBreakdownAndComment extends SolutionWithDeliverableBreakdown {
+  lastComment?: Comment;
+}

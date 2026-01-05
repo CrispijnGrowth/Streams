@@ -14,13 +14,16 @@ import {
   type StreamWithProgress,
   type SolutionWithProgress,
   type SolutionWithDeliverableBreakdown,
+  type SolutionWithBreakdownAndComment,
   type DeliverableBreakdown,
   type DeliverableWithActions,
   type ActionWithProgress,
+  type ActionWithLastComment,
   type CommentEntityTypeValue,
   ActionStatus,
   MomentumStatus,
   SolutionStatus,
+  CommentEntityType,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -33,7 +36,7 @@ export interface IStorage {
 
   getSolutions(userId: string): Promise<SolutionWithProgress[]>;
   getSolutionsByStream(userId: string, streamId: string): Promise<SolutionWithProgress[]>;
-  getSolutionsByStreamWithBreakdown(userId: string, streamId: string): Promise<SolutionWithDeliverableBreakdown[]>;
+  getSolutionsByStreamWithBreakdown(userId: string, streamId: string): Promise<SolutionWithBreakdownAndComment[]>;
   getSolution(userId: string, id: string): Promise<Solution | undefined>;
   createSolution(userId: string, data: InsertSolution): Promise<Solution>;
   updateSolution(userId: string, id: string, data: Partial<InsertSolution>): Promise<Solution | undefined>;
@@ -310,14 +313,16 @@ export class MemStorage implements IStorage {
     });
   }
 
-  async getSolutionsByStreamWithBreakdown(userId: string, streamId: string): Promise<SolutionWithDeliverableBreakdown[]> {
+  async getSolutionsByStreamWithBreakdown(userId: string, streamId: string): Promise<SolutionWithBreakdownAndComment[]> {
     const solutions = Array.from(this.solutions.values()).filter(
       (s) => s.streamId === streamId && s.userId === userId && !s.isDeleted
     );
     
     const activeStatuses = [ActionStatus.EXECUTING, ActionStatus.BLOCKED, ActionStatus.DELEGATED];
     
-    return solutions.map((sol) => {
+    const results: SolutionWithBreakdownAndComment[] = [];
+    
+    for (const sol of solutions) {
       const stats = this.computeSolutionProgress(sol.id, userId);
       
       const solutionDeliverables = Array.from(this.deliverables.values())
@@ -361,8 +366,12 @@ export class MemStorage implements IStorage {
         });
       }
       
-      return { ...sol, ...stats, deliverableBreakdown };
-    });
+      const lastComment = await this.getLastComment(userId, CommentEntityType.SOLUTION, sol.id);
+      
+      results.push({ ...sol, ...stats, deliverableBreakdown, lastComment });
+    }
+    
+    return results;
   }
 
   async getSolution(userId: string, id: string): Promise<Solution | undefined> {
