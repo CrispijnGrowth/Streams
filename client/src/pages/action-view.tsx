@@ -59,6 +59,8 @@ export function ActionView({ streamId, solutionId, actionId }: ActionViewProps) 
       queryClient.invalidateQueries({ queryKey: ["/api/comments", "action", actionId] });
       queryClient.invalidateQueries({ queryKey: ["/api/actions", actionId] });
       queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/solutions", solutionId, "actions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
       toast({ title: "Comment added" });
     },
     onError: () => {
