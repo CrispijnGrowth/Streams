@@ -205,14 +205,14 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted, initia
           <div className="space-y-2">
             <Label htmlFor="deliverable">Deliverable</Label>
             <Select
-              value={form.watch("deliverableId") || ""}
-              onValueChange={(value) => form.setValue("deliverableId", value === "" ? undefined : value)}
+              value={form.watch("deliverableId") || "__ungrouped__"}
+              onValueChange={(value) => form.setValue("deliverableId", value === "__ungrouped__" ? undefined : value)}
             >
               <SelectTrigger data-testid="select-action-deliverable">
                 <SelectValue placeholder="Ungrouped" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Ungrouped</SelectItem>
+                <SelectItem value="__ungrouped__">Ungrouped</SelectItem>
                 {deliverables.filter(d => !d.isDeleted).map((deliverable) => (
                   <SelectItem key={deliverable.id} value={deliverable.id}>
                     {deliverable.name}
