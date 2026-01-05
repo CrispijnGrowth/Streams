@@ -15,7 +15,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { useMode } from "@/lib/mode-context";
-import type { Stream, SolutionWithDeliverableBreakdown, Solution } from "@shared/schema";
+import type { Stream, SolutionWithBreakdownAndComment, Solution } from "@shared/schema";
 import { SolutionStatus } from "@shared/schema";
 
 interface StreamViewProps {
@@ -36,7 +36,7 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
     queryKey: ["/api/streams", streamId],
   });
 
-  const { data: solutions, isLoading: solutionsLoading } = useQuery<SolutionWithDeliverableBreakdown[]>({
+  const { data: solutions, isLoading: solutionsLoading } = useQuery<SolutionWithBreakdownAndComment[]>({
     queryKey: ["/api/streams", streamId, "solutions"],
   });
 

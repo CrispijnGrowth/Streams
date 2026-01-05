@@ -2,13 +2,13 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ProgressBar } from "@/components/progress-bar";
-import { Calendar, Pencil } from "lucide-react";
+import { Calendar, Pencil, MessageSquare } from "lucide-react";
 import { format } from "date-fns";
-import type { SolutionWithDeliverableBreakdown, DeliverableBreakdown, ActionStatusType, DeliverableBorderColorType } from "@shared/schema";
+import type { SolutionWithBreakdownAndComment, DeliverableBreakdown, ActionStatusType, DeliverableBorderColorType } from "@shared/schema";
 import { SolutionStatus, ActionStatus } from "@shared/schema";
 
 interface SolutionCardProps {
-  solution: SolutionWithDeliverableBreakdown;
+  solution: SolutionWithBreakdownAndComment;
   onClick?: () => void;
   onEdit?: () => void;
   showDescription?: boolean;
@@ -157,6 +157,20 @@ export function SolutionCard({
           {solution.labels.length > 2 && (
             <span className="text-xs text-muted-foreground">+{solution.labels.length - 2}</span>
           )}
+        </div>
+      )}
+
+      {solution.lastComment && (
+        <div className="flex items-start gap-1.5 pt-1 border-t border-border/50">
+          <MessageSquare className="h-3 w-3 text-muted-foreground shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-muted-foreground line-clamp-2">
+              {solution.lastComment.content}
+            </p>
+            <span className="text-[10px] text-muted-foreground/60">
+              {format(new Date(solution.lastComment.createdAt), "MMM d, h:mm a")}
+            </span>
+          </div>
         </div>
       )}
     </Card>
