@@ -666,11 +666,12 @@ export class MemStorage implements IStorage {
     return result;
   }
 
-  async getAction(userId: string, id: string): Promise<ActionWithProgress | undefined> {
+  async getAction(userId: string, id: string): Promise<ActionWithLastComment | undefined> {
     const action = this.actions.get(id);
     if (!action || action.userId !== userId || action.isDeleted) return undefined;
     const stats = this.computeActionProgress(id, userId);
-    return { ...action, ...stats };
+    const lastComment = await this.getLastComment(userId, "action", action.id);
+    return { ...action, ...stats, lastComment };
   }
 
   async createAction(userId: string, data: InsertAction): Promise<Action> {

@@ -1,23 +1,25 @@
 import { useState, useRef, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { ListChecks, Plus, Calendar, User, Clock, Pencil } from "lucide-react";
+import { ListChecks, Plus, Calendar, User, Clock, Pencil, MessageSquare, Send, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { StepList } from "@/components/step-list";
 import { QuickAddForm, QuickAddFormRef } from "@/components/quick-add-form";
 import { EmptyState } from "@/components/empty-state";
 import { StatusBadge } from "@/components/status-badge";
 import { ProgressBar } from "@/components/progress-bar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { EditActionDialog, EditActionFocusField } from "@/components/edit-action-dialog";
 import { EditStepDialog } from "@/components/edit-step-dialog";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { format } from "date-fns";
-import type { ActionWithProgress, Step, ActionStatusType } from "@shared/schema";
+import type { ActionWithLastComment, Step, ActionStatusType, Comment } from "@shared/schema";
 import { ActionStatus } from "@shared/schema";
 
 interface ActionViewProps {
@@ -32,10 +34,36 @@ export function ActionView({ streamId, solutionId, actionId }: ActionViewProps) 
   const [editingAction, setEditingAction] = useState(false);
   const [editFocusField, setEditFocusField] = useState<EditActionFocusField>(null);
   const [editingStep, setEditingStep] = useState<Step | null>(null);
+  const [newComment, setNewComment] = useState("");
   const quickAddRef = useRef<QuickAddFormRef>(null);
 
-  const { data: action, isLoading: actionLoading } = useQuery<ActionWithProgress>({
+  const { data: action, isLoading: actionLoading } = useQuery<ActionWithLastComment>({
     queryKey: ["/api/actions", actionId],
+  });
+
+  const { data: comments = [] } = useQuery<Comment[]>({
+    queryKey: ["/api/comments", "action", actionId],
+    enabled: !!actionId,
+  });
+
+  const addComment = useMutation({
+    mutationFn: async (content: string) => {
+      return apiRequest("POST", "/api/comments", {
+        entityType: "action",
+        entityId: actionId,
+        content,
+      });
+    },
+    onSuccess: () => {
+      setNewComment("");
+      queryClient.invalidateQueries({ queryKey: ["/api/comments", "action", actionId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/actions", actionId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
+      toast({ title: "Comment added" });
+    },
+    onError: () => {
+      toast({ title: "Failed to add comment", variant: "destructive" });
+    },
   });
 
   const { data: steps, isLoading: stepsLoading } = useQuery<Step[]>({
@@ -43,7 +71,7 @@ export function ActionView({ streamId, solutionId, actionId }: ActionViewProps) 
   });
 
   const updateAction = useMutation({
-    mutationFn: async (updates: Partial<ActionWithProgress>) => {
+    mutationFn: async (updates: Partial<ActionWithLastComment>) => {
       return apiRequest("PATCH", `/api/actions/${actionId}`, updates);
     },
     onSuccess: () => {
@@ -307,6 +335,56 @@ export function ActionView({ streamId, solutionId, actionId }: ActionViewProps) 
           onAdd={(name) => createStep.mutate(name)}
           isLoading={createStep.isPending}
         />
+      </div>
+
+      <div className="space-y-4">
+        <h2 className="text-lg font-semibold flex items-center gap-2">
+          <MessageSquare className="h-5 w-5" />
+          Comments
+        </h2>
+
+        <Card className="p-4 space-y-4">
+          {comments.length > 0 ? (
+            <ScrollArea className="max-h-64">
+              <div className="space-y-3 pr-4">
+                {comments.map((comment) => (
+                  <div key={comment.id} className="text-sm border-b pb-3 last:border-0">
+                    <p className="text-foreground">{comment.content}</p>
+                    <span className="text-xs text-muted-foreground">
+                      {format(new Date(comment.createdAt), "MMM d, yyyy 'at' h:mm a")}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          ) : (
+            <p className="text-sm text-muted-foreground">No comments yet.</p>
+          )}
+
+          <div className="flex gap-2 pt-2 border-t">
+            <Input
+              placeholder="Add a comment..."
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey && newComment.trim()) {
+                  e.preventDefault();
+                  addComment.mutate(newComment.trim());
+                }
+              }}
+              data-testid="input-action-view-comment"
+            />
+            <Button
+              size="icon"
+              variant="outline"
+              disabled={!newComment.trim() || addComment.isPending}
+              onClick={() => newComment.trim() && addComment.mutate(newComment.trim())}
+              data-testid="button-add-action-view-comment"
+            >
+              {addComment.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            </Button>
+          </div>
+        </Card>
       </div>
 
       <EditActionDialog

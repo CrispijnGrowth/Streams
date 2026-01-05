@@ -646,7 +646,7 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
-  async getAction(userId: string, id: string): Promise<ActionWithProgress | undefined> {
+  async getAction(userId: string, id: string): Promise<ActionWithLastComment | undefined> {
     const [row] = await db.select().from(actions).where(
       and(eq(actions.id, id), eq(actions.userId, userId), eq(actions.isDeleted, false))
     );
@@ -654,7 +654,8 @@ export class DatabaseStorage implements IStorage {
     
     const action = mapActionFromDb(row);
     const stats = await this.computeActionProgress(action.id, userId);
-    return { ...action, ...stats };
+    const lastComment = await this.getLastComment(userId, "action", action.id);
+    return { ...action, ...stats, lastComment };
   }
 
   async createAction(userId: string, data: InsertAction): Promise<Action> {
