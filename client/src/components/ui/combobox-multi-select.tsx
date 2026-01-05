@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Check, ChevronsUpDown, Plus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,7 @@ interface ComboboxMultiSelectProps {
   emptyText?: string;
   creatable?: boolean;
   className?: string;
+  autoFocus?: boolean;
   "data-testid"?: string;
 }
 
@@ -36,10 +37,22 @@ export function ComboboxMultiSelect({
   emptyText = "No options found.",
   creatable = true,
   className,
+  autoFocus = false,
   "data-testid": testId,
 }: ComboboxMultiSelectProps) {
   const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState("");
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const hasAutoFocused = useRef(false);
+
+  useEffect(() => {
+    if (autoFocus && !hasAutoFocused.current) {
+      hasAutoFocused.current = true;
+      setTimeout(() => {
+        setOpen(true);
+      }, 100);
+    }
+  }, [autoFocus]);
 
   const filteredOptions = useMemo(() => {
     const lowerInput = inputValue.toLowerCase();
@@ -78,6 +91,7 @@ export function ComboboxMultiSelect({
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
+            ref={triggerRef}
             variant="outline"
             role="combobox"
             aria-expanded={open}

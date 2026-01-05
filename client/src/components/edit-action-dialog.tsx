@@ -52,7 +52,7 @@ interface EditActionDialogProps {
   initialFocus?: EditActionFocusField;
 }
 
-export function EditActionDialog({ action, open, onOpenChange, onDeleted }: EditActionDialogProps) {
+export function EditActionDialog({ action, open, onOpenChange, onDeleted, initialFocus }: EditActionDialogProps) {
   const { toast } = useToast();
   const [newDeliverableName, setNewDeliverableName] = useState("");
   const [isCreatingDeliverable, setIsCreatingDeliverable] = useState(false);
@@ -329,6 +329,7 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted }: Edit
               options={ownerSuggestions}
               placeholder="Select or add owners..."
               emptyText="No owners found."
+              autoFocus={initialFocus === "owner"}
               data-testid="combobox-action-owners"
             />
           </div>
@@ -341,6 +342,7 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted }: Edit
               options={labelSuggestions}
               placeholder="Select or add labels..."
               emptyText="No labels found."
+              autoFocus={initialFocus === "label"}
               data-testid="combobox-action-labels"
             />
           </div>
