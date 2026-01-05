@@ -89,9 +89,6 @@ function useBreadcrumbs() {
 function Router({ showDescriptions }: { showDescriptions: boolean }) {
   return (
     <Switch>
-      <Route path="/">
-        <StreamsOverview showDescriptions={showDescriptions} />
-      </Route>
       <Route path="/kanban">
         <GlobalKanban showDescriptions={showDescriptions} />
       </Route>
@@ -101,9 +98,13 @@ function Router({ showDescriptions }: { showDescriptions: boolean }) {
       <Route path="/settings">
         <SettingsPage />
       </Route>
-      <Route path="/stream/:streamId">
+      <Route path="/stream/:streamId/solution/:solutionId/action/:actionId">
         {(params) => (
-          <StreamView streamId={params.streamId} showDescriptions={showDescriptions} />
+          <ActionView
+            streamId={params.streamId}
+            solutionId={params.solutionId}
+            actionId={params.actionId}
+          />
         )}
       </Route>
       <Route path="/stream/:streamId/solution/:solutionId">
@@ -115,16 +116,14 @@ function Router({ showDescriptions }: { showDescriptions: boolean }) {
           />
         )}
       </Route>
-      <Route path="/stream/:streamId/solution/:solutionId/action/:actionId">
+      <Route path="/stream/:streamId">
         {(params) => (
-          <ActionView
-            streamId={params.streamId}
-            solutionId={params.solutionId}
-            actionId={params.actionId}
-          />
+          <StreamView streamId={params.streamId} showDescriptions={showDescriptions} />
         )}
       </Route>
-      <Route component={NotFound} />
+      <Route>
+        <StreamsOverview showDescriptions={showDescriptions} />
+      </Route>
     </Switch>
   );
 }
