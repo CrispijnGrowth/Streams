@@ -577,7 +577,7 @@ export class MemStorage implements IStorage {
     return action;
   }
 
-  async updateAction(userId: string, id: string, data: Partial<InsertAction>): Promise<Action | undefined> {
+  async updateAction(userId: string, id: string, data: Partial<InsertAction> & { deliverableId?: string | null }): Promise<Action | undefined> {
     const action = this.actions.get(id);
     if (!action || action.userId !== userId || action.isDeleted) return undefined;
     if (data.solutionId && data.solutionId !== action.solutionId) {
@@ -599,7 +599,11 @@ export class MemStorage implements IStorage {
       }
     }
     const statusChanged = data.status !== undefined && data.status !== action.status;
-    const updated: Action = { ...action, ...data } as Action;
+    const updateData = { ...data };
+    if (data.deliverableId === null) {
+      updateData.deliverableId = undefined;
+    }
+    const updated: Action = { ...action, ...updateData } as Action;
     this.actions.set(id, updated);
     if (statusChanged && action.streamId) {
       this.updateStreamMomentum(action.streamId, userId);

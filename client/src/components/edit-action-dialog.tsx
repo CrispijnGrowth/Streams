@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -25,17 +25,18 @@ import {
 import { X, Plus, Loader2 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { Action } from "@shared/schema";
+import type { Action, Deliverable } from "@shared/schema";
 import { ActionStatus } from "@shared/schema";
 
 export type EditActionFocusField = "owner" | "label" | null;
 
 const editActionSchema = z.object({
   name: z.string().min(1, "Name is required"),
+  deliverableId: z.string().optional(),
   description: z.string().optional(),
   dueDate: z.string().optional(),
   status: z.string(),
-  effort: z.number().optional(),
+  effort: z.union([z.number(), z.nan()]).optional().transform(val => (typeof val === 'number' && !isNaN(val)) ? val : undefined),
   owners: z.array(z.string()).default([]),
   labels: z.array(z.string()).default([]),
 });
@@ -69,10 +70,16 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted, initia
     }
   }, [open, initialFocus]);
 
+  const { data: deliverables = [] } = useQuery<Deliverable[]>({
+    queryKey: ["/api/deliverables", { solutionId: action?.solutionId }],
+    enabled: !!action?.solutionId && open,
+  });
+
   const form = useForm<EditActionForm>({
     resolver: zodResolver(editActionSchema),
     defaultValues: {
       name: "",
+      deliverableId: undefined,
       description: "",
       dueDate: "",
       status: ActionStatus.BACKLOG,
@@ -86,6 +93,7 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted, initia
     if (action && open) {
       form.reset({
         name: action.name,
+        deliverableId: action.deliverableId || undefined,
         description: action.description || "",
         dueDate: action.dueDate || "",
         status: action.status,
@@ -98,13 +106,18 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted, initia
 
   const updateAction = useMutation({
     mutationFn: async (data: EditActionForm) => {
-      return apiRequest("PATCH", `/api/actions/${action?.id}`, data);
+      const payload = {
+        ...data,
+        deliverableId: data.deliverableId === "" ? null : data.deliverableId,
+      };
+      return apiRequest("PATCH", `/api/actions/${action?.id}`, payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/actions", action?.id] });
       queryClient.invalidateQueries({ queryKey: ["/api/solutions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/deliverables"] });
       toast({ title: "Action updated successfully" });
       onOpenChange(false);
     },
@@ -187,6 +200,26 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted, initia
             {form.formState.errors.name && (
               <p className="text-sm text-destructive">{form.formState.errors.name.message}</p>
             )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="deliverable">Deliverable</Label>
+            <Select
+              value={form.watch("deliverableId") || ""}
+              onValueChange={(value) => form.setValue("deliverableId", value === "" ? undefined : value)}
+            >
+              <SelectTrigger data-testid="select-action-deliverable">
+                <SelectValue placeholder="Ungrouped" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Ungrouped</SelectItem>
+                {deliverables.filter(d => !d.isDeleted).map((deliverable) => (
+                  <SelectItem key={deliverable.id} value={deliverable.id}>
+                    {deliverable.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
