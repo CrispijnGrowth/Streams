@@ -308,38 +308,6 @@ export function ActionView({ streamId, solutionId, actionId }: ActionViewProps) 
       </Card>
 
       <div className="space-y-4">
-        <div className="flex items-center justify-between gap-4">
-          <h2 className="text-lg font-semibold">Steps</h2>
-          <span className="text-sm text-muted-foreground">
-            {steps?.filter((s) => s.isDone).length || 0}/{steps?.length || 0} complete
-          </span>
-        </div>
-
-        {!steps || steps.length === 0 ? (
-          <Card className="p-8">
-            <EmptyState
-              icon={ListChecks}
-              title="No steps yet"
-              description="Break down this action into smaller steps to track progress."
-            />
-          </Card>
-        ) : (
-          <StepList
-            steps={steps.filter((s) => !s.isDeleted)}
-            onToggle={(stepId, isDone) => toggleStep.mutate({ stepId, isDone })}
-            onEdit={(step) => setEditingStep(step)}
-          />
-        )}
-
-        <QuickAddForm
-          ref={quickAddRef}
-          placeholder="Add new step..."
-          onAdd={(name) => createStep.mutate(name)}
-          isLoading={createStep.isPending}
-        />
-      </div>
-
-      <div className="space-y-4">
         <h2 className="text-lg font-semibold flex items-center gap-2">
           <MessageSquare className="h-5 w-5" />
           Comments
@@ -387,6 +355,38 @@ export function ActionView({ streamId, solutionId, actionId }: ActionViewProps) 
             </Button>
           </div>
         </Card>
+      </div>
+
+      <div className="space-y-4">
+        <div className="flex items-center justify-between gap-4">
+          <h2 className="text-lg font-semibold">Steps</h2>
+          <span className="text-sm text-muted-foreground">
+            {steps?.filter((s) => s.isDone).length || 0}/{steps?.length || 0} complete
+          </span>
+        </div>
+
+        {!steps || steps.length === 0 ? (
+          <Card className="p-8">
+            <EmptyState
+              icon={ListChecks}
+              title="No steps yet"
+              description="Break down this action into smaller steps to track progress."
+            />
+          </Card>
+        ) : (
+          <StepList
+            steps={steps.filter((s) => !s.isDeleted)}
+            onToggle={(stepId, isDone) => toggleStep.mutate({ stepId, isDone })}
+            onEdit={(step) => setEditingStep(step)}
+          />
+        )}
+
+        <QuickAddForm
+          ref={quickAddRef}
+          placeholder="Add new step..."
+          onAdd={(name) => createStep.mutate(name)}
+          isLoading={createStep.isPending}
+        />
       </div>
 
       <EditActionDialog
