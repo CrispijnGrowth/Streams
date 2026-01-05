@@ -25,7 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
-import { Plus } from "lucide-react";
+import { Plus, GripVertical } from "lucide-react";
 
 const borderColorMap: Record<DeliverableBorderColorType, string> = {
   cyan: "var(--deliverable-cyan)",
@@ -46,6 +46,7 @@ interface KanbanBoardProps {
   onStatusChange?: (actionId: string, newStatus: ActionStatusType) => void;
   onDeliverableChange?: (actionId: string, newDeliverableId: string | null) => void;
   onReorder?: (actionId: string, newKanbanOrder: number) => void;
+  onDeliverableReorder?: (deliverableId: string, newOrdinal: number) => void;
   onAddAction?: (status: ActionStatusType, deliverableId?: string) => void;
   onAddDeliverable?: (name: string, borderColor: DeliverableBorderColorType) => void;
   onEditDeliverable?: (deliverable: Deliverable) => void;
@@ -103,6 +104,7 @@ interface DroppableCellProps {
   id: string;
   status: ActionStatusType;
   items: ActionWithProgress[];
+  columnIndex?: number;
   onActionClick?: (id: string) => void;
   onActionEdit?: (action: ActionWithProgress) => void;
   onAddAction?: () => void;
@@ -114,6 +116,7 @@ function DroppableCell({
   id,
   status,
   items,
+  columnIndex = 0,
   onActionClick,
   onActionEdit,
   onAddAction,
@@ -121,13 +124,14 @@ function DroppableCell({
   isEditMode = false,
 }: DroppableCellProps) {
   const { setNodeRef, isOver } = useDroppable({ id });
+  const bgColor = columnIndex % 2 === 0 ? "bg-[hsl(var(--kanban-column-a))]" : "bg-[hsl(var(--kanban-column-b))]";
 
   return (
     <SortableContext items={items.map((a) => a.id)} strategy={verticalListSortingStrategy}>
       <div
         ref={setNodeRef}
-        className={`w-72 flex-shrink-0 space-y-2 min-h-[60px] p-1 rounded-lg transition-colors ${
-          isOver ? "bg-accent/30" : ""
+        className={`w-72 flex-shrink-0 space-y-2 min-h-[60px] p-2 rounded-lg transition-colors ${bgColor} ${
+          isOver ? "ring-2 ring-primary/30" : ""
         }`}
         data-testid={`kanban-cell-${status.toLowerCase().replace(/\s/g, "-")}`}
       >
@@ -175,6 +179,11 @@ interface DeliverableRowProps {
   onEditDeliverable?: (deliverable: Deliverable) => void;
   showDescription?: boolean;
   isEditMode?: boolean;
+  isDragging?: boolean;
+  dragHandleProps?: {
+    attributes: ReturnType<typeof useSortable>["attributes"];
+    listeners: ReturnType<typeof useSortable>["listeners"];
+  };
 }
 
 function DeliverableRow({
@@ -187,6 +196,8 @@ function DeliverableRow({
   onEditDeliverable,
   showDescription,
   isEditMode = false,
+  isDragging = false,
+  dragHandleProps,
 }: DeliverableRowProps) {
   const rowId = deliverable?.id || "ungrouped";
   const borderColor = deliverable?.borderColor 
@@ -195,7 +206,7 @@ function DeliverableRow({
   
   return (
     <div 
-      className="relative flex gap-4 py-3"
+      className={`relative flex gap-4 py-3 ${isDragging ? "opacity-50" : ""}`}
       data-testid={`deliverable-row-${rowId}`}
     >
       <div 
@@ -207,24 +218,33 @@ function DeliverableRow({
         }}
       />
       
-      <div className="w-40 flex-shrink-0 flex items-start pt-2 pl-3 z-10">
+      <div className="w-40 flex-shrink-0 flex items-start pt-2 pl-1 z-10 gap-1">
+        {deliverable && dragHandleProps && (
+          <div 
+            className="cursor-grab active:cursor-grabbing text-muted-foreground/50 hover:text-muted-foreground"
+            {...dragHandleProps.attributes}
+            {...dragHandleProps.listeners}
+          >
+            <GripVertical className="h-4 w-4" />
+          </div>
+        )}
         {deliverable ? (
           <div 
-            className={`font-medium text-sm text-foreground truncate ${isEditMode ? "cursor-pointer hover:underline" : ""}`}
+            className={`font-medium text-sm text-foreground truncate flex-1 ${isEditMode ? "cursor-pointer hover:underline" : ""}`}
             title={deliverable.name}
             onClick={isEditMode && onEditDeliverable ? () => onEditDeliverable(deliverable) : undefined}
           >
             {deliverable.name}
           </div>
         ) : (
-          <div className="font-medium text-sm text-muted-foreground italic">
+          <div className="font-medium text-sm text-muted-foreground italic pl-5">
             Ungrouped
           </div>
         )}
       </div>
 
       <div className="flex gap-4 flex-1 pr-3">
-        {columnData.map((column) => {
+        {columnData.map((column, columnIndex) => {
           const columnActions = actions
             .filter((a) => a.status === column.status)
             .sort((a, b) => a.kanbanOrder - b.kanbanOrder);
@@ -235,6 +255,7 @@ function DeliverableRow({
               id={`cell__${rowId}__${column.status}`}
               status={column.status}
               items={columnActions}
+              columnIndex={columnIndex}
               onActionClick={onActionClick}
               onActionEdit={onActionEdit}
               onAddAction={onAddAction ? () => onAddAction(column.status, deliverable?.id) : undefined}
@@ -248,6 +269,36 @@ function DeliverableRow({
   );
 }
 
+interface SortableDeliverableRowProps extends DeliverableRowProps {
+  id: string;
+}
+
+function SortableDeliverableRow({ id, ...props }: SortableDeliverableRowProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id, data: { type: "deliverable" } });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <DeliverableRow 
+        {...props} 
+        isDragging={isDragging}
+        dragHandleProps={{ attributes, listeners }}
+      />
+    </div>
+  );
+}
+
 export function KanbanBoard({
   actions,
   deliverables = [],
@@ -256,6 +307,7 @@ export function KanbanBoard({
   onStatusChange,
   onDeliverableChange,
   onReorder,
+  onDeliverableReorder,
   onAddAction,
   onAddDeliverable,
   onEditDeliverable,
@@ -263,6 +315,7 @@ export function KanbanBoard({
 }: KanbanBoardProps) {
   const { isEditMode } = useMode();
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [activeDeliverableId, setActiveDeliverableId] = useState<string | null>(null);
   const [newDeliverableName, setNewDeliverableName] = useState("");
   const [newDeliverableColor, setNewDeliverableColor] = useState<DeliverableBorderColorType>("cyan");
   const [addDeliverableOpen, setAddDeliverableOpen] = useState(false);
@@ -381,18 +434,19 @@ export function KanbanBoard({
       >
         <ScrollArea className="w-full">
           <div className="flex gap-4 pb-4 min-w-max">
-            {columnData.map((column) => {
+            {columnData.map((column, columnIndex) => {
               const columnActions = actions
                 .filter((a) => a.status === column.status)
                 .sort((a, b) => a.kanbanOrder - b.kanbanOrder);
+              const bgColor = columnIndex % 2 === 0 ? "bg-[hsl(var(--kanban-column-a))]" : "bg-[hsl(var(--kanban-column-b))]";
               
               return (
                 <div
                   key={column.status}
-                  className="w-72 flex-shrink-0"
+                  className={`w-72 flex-shrink-0 rounded-lg ${bgColor}`}
                   data-testid={`kanban-column-${column.status.toLowerCase().replace(/\s/g, "-")}`}
                 >
-                  <div className="sticky top-0 bg-background z-10 pb-3 border-b mb-3">
+                  <div className="sticky top-0 z-10 pb-3 border-b mb-3 pt-2 px-2">
                     <div className="flex items-center justify-between px-1">
                       <div className="flex items-center gap-2">
                         <div className={`w-3 h-3 rounded-full ${column.color}`} />
@@ -405,6 +459,7 @@ export function KanbanBoard({
                     id={`cell__ungrouped__${column.status}`}
                     status={column.status}
                     items={columnActions}
+                    columnIndex={columnIndex}
                     onActionClick={onActionClick}
                     onActionEdit={onActionEdit}
                     onAddAction={onAddAction ? () => onAddAction(column.status) : undefined}
@@ -442,10 +497,11 @@ export function KanbanBoard({
       <ScrollArea className="w-full">
         <div className="min-w-max">
           <div className="flex gap-4 pb-3 border-b mb-3 pl-44">
-            {columnData.map((column) => {
+            {columnData.map((column, columnIndex) => {
               const columnCount = actions.filter((a) => a.status === column.status).length;
+              const bgColor = columnIndex % 2 === 0 ? "bg-[hsl(var(--kanban-column-a))]" : "bg-[hsl(var(--kanban-column-b))]";
               return (
-                <div key={column.status} className="w-72 flex-shrink-0">
+                <div key={column.status} className={`w-72 flex-shrink-0 rounded-t-lg pt-2 px-2 ${bgColor}`}>
                   <div className="flex items-center justify-between px-1">
                     <div className="flex items-center gap-2">
                       <div className={`w-3 h-3 rounded-full ${column.color}`} />
