@@ -9,8 +9,10 @@ import {
   insertDeliverableSchema,
   insertActionSchema,
   insertStepSchema,
+  insertCommentSchema,
   insertUserSchema,
   UserRole,
+  CommentEntityType,
 } from "@shared/schema";
 
 declare global {
@@ -614,6 +616,32 @@ export async function registerRoutes(
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete step" });
+    }
+  });
+
+  app.get("/api/comments/:entityType/:entityId", authMiddleware, async (req, res) => {
+    try {
+      const { entityType, entityId } = req.params;
+      if (!["solution", "deliverable", "action"].includes(entityType)) {
+        return res.status(400).json({ error: "Invalid entity type" });
+      }
+      const comments = await storage.getComments(req.userId!, entityType as any, entityId);
+      res.json(comments);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch comments" });
+    }
+  });
+
+  app.post("/api/comments", authMiddleware, async (req, res) => {
+    try {
+      const parsed = insertCommentSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.message });
+      }
+      const comment = await storage.createComment(req.userId!, parsed.data);
+      res.status(201).json(comment);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create comment" });
     }
   });
 
