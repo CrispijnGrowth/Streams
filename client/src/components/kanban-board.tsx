@@ -18,8 +18,25 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { ActionCard } from "@/components/action-card";
-import { ActionStatus, type ActionWithProgress, type ActionStatusType, type Deliverable } from "@shared/schema";
+import { ActionStatus, type ActionWithProgress, type ActionStatusType, type Deliverable, DeliverableBorderColor, type DeliverableBorderColorType } from "@shared/schema";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { useMode } from "@/lib/mode-context";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
+import { Plus } from "lucide-react";
+
+const borderColorMap: Record<DeliverableBorderColorType, string> = {
+  cyan: "var(--deliverable-cyan)",
+  magenta: "var(--deliverable-magenta)",
+  yellow: "var(--deliverable-yellow)",
+  lime: "var(--deliverable-lime)",
+  orange: "var(--deliverable-orange)",
+  pink: "var(--deliverable-pink)",
+  blue: "var(--deliverable-blue)",
+  green: "var(--deliverable-green)",
+};
 
 interface KanbanBoardProps {
   actions: ActionWithProgress[];
@@ -29,6 +46,9 @@ interface KanbanBoardProps {
   onStatusChange?: (actionId: string, newStatus: ActionStatusType) => void;
   onDeliverableChange?: (actionId: string, newDeliverableId: string | null) => void;
   onReorder?: (actionId: string, newKanbanOrder: number) => void;
+  onAddAction?: (status: ActionStatusType, deliverableId?: string) => void;
+  onAddDeliverable?: (name: string, borderColor: DeliverableBorderColorType) => void;
+  onEditDeliverable?: (deliverable: Deliverable) => void;
   showDescription?: boolean;
 }
 
@@ -85,7 +105,9 @@ interface DroppableCellProps {
   items: ActionWithProgress[];
   onActionClick?: (id: string) => void;
   onActionEdit?: (action: ActionWithProgress) => void;
+  onAddAction?: () => void;
   showDescription?: boolean;
+  isEditMode?: boolean;
 }
 
 function DroppableCell({
@@ -94,7 +116,9 @@ function DroppableCell({
   items,
   onActionClick,
   onActionEdit,
+  onAddAction,
   showDescription,
+  isEditMode = false,
 }: DroppableCellProps) {
   const { setNodeRef, isOver } = useDroppable({ id });
 
@@ -119,10 +143,22 @@ function DroppableCell({
               key={action.id}
               action={action}
               onClick={() => onActionClick?.(action.id)}
-              onEdit={() => onActionEdit?.(action)}
+              onEdit={isEditMode ? () => onActionEdit?.(action) : undefined}
               showDescription={showDescription}
             />
           ))
+        )}
+        {isEditMode && onAddAction && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start gap-2 text-muted-foreground"
+            onClick={onAddAction}
+            data-testid={`button-add-action-${status.toLowerCase().replace(/\s/g, "-")}`}
+          >
+            <Plus className="h-4 w-4" />
+            Add Action
+          </Button>
         )}
       </div>
     </SortableContext>
@@ -135,7 +171,10 @@ interface DeliverableRowProps {
   columnData: { status: ActionStatusType; label: string; color: string; id: string }[];
   onActionClick?: (id: string) => void;
   onActionEdit?: (action: ActionWithProgress) => void;
+  onAddAction?: (status: ActionStatusType, deliverableId?: string) => void;
+  onEditDeliverable?: (deliverable: Deliverable) => void;
   showDescription?: boolean;
+  isEditMode?: boolean;
 }
 
 function DeliverableRow({
@@ -144,9 +183,15 @@ function DeliverableRow({
   columnData,
   onActionClick,
   onActionEdit,
+  onAddAction,
+  onEditDeliverable,
   showDescription,
+  isEditMode = false,
 }: DeliverableRowProps) {
   const rowId = deliverable?.id || "ungrouped";
+  const borderColor = deliverable?.borderColor 
+    ? `hsl(${borderColorMap[deliverable.borderColor]})`
+    : "hsl(var(--deliverable-border))";
   
   return (
     <div 
@@ -157,14 +202,18 @@ function DeliverableRow({
         className="absolute inset-0 rounded-lg pointer-events-none"
         style={{
           border: deliverable ? "2px solid" : "none",
-          borderColor: deliverable ? "hsl(var(--deliverable-border))" : "transparent",
-          boxShadow: deliverable ? "0 0 8px hsl(var(--deliverable-border) / 0.3)" : "none",
+          borderColor: deliverable ? borderColor : "transparent",
+          boxShadow: deliverable ? `0 0 8px ${borderColor.replace(")", " / 0.3)")}` : "none",
         }}
       />
       
       <div className="w-40 flex-shrink-0 flex items-start pt-2 pl-3 z-10">
         {deliverable ? (
-          <div className="font-medium text-sm text-foreground truncate" title={deliverable.name}>
+          <div 
+            className={`font-medium text-sm text-foreground truncate ${isEditMode ? "cursor-pointer hover:underline" : ""}`}
+            title={deliverable.name}
+            onClick={isEditMode && onEditDeliverable ? () => onEditDeliverable(deliverable) : undefined}
+          >
             {deliverable.name}
           </div>
         ) : (
@@ -188,7 +237,9 @@ function DeliverableRow({
               items={columnActions}
               onActionClick={onActionClick}
               onActionEdit={onActionEdit}
+              onAddAction={onAddAction ? () => onAddAction(column.status, deliverable?.id) : undefined}
               showDescription={showDescription}
+              isEditMode={isEditMode}
             />
           );
         })}
@@ -205,9 +256,16 @@ export function KanbanBoard({
   onStatusChange,
   onDeliverableChange,
   onReorder,
+  onAddAction,
+  onAddDeliverable,
+  onEditDeliverable,
   showDescription = true,
 }: KanbanBoardProps) {
+  const { isEditMode } = useMode();
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [newDeliverableName, setNewDeliverableName] = useState("");
+  const [newDeliverableColor, setNewDeliverableColor] = useState<DeliverableBorderColorType>("cyan");
+  const [addDeliverableOpen, setAddDeliverableOpen] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -349,7 +407,9 @@ export function KanbanBoard({
                     items={columnActions}
                     onActionClick={onActionClick}
                     onActionEdit={onActionEdit}
+                    onAddAction={onAddAction ? () => onAddAction(column.status) : undefined}
                     showDescription={showDescription}
+                    isEditMode={isEditMode}
                   />
                 </div>
               );
@@ -407,9 +467,78 @@ export function KanbanBoard({
                 columnData={columnData}
                 onActionClick={onActionClick}
                 onActionEdit={onActionEdit}
+                onAddAction={onAddAction}
+                onEditDeliverable={onEditDeliverable}
                 showDescription={showDescription}
+                isEditMode={isEditMode}
               />
             ))}
+            
+            {isEditMode && onAddDeliverable && (
+              <div className="flex gap-4 py-3 pl-3">
+                <div className="w-40 flex-shrink-0">
+                  <Popover open={addDeliverableOpen} onOpenChange={setAddDeliverableOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="gap-2 text-muted-foreground"
+                        data-testid="button-add-deliverable"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Add Deliverable
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-72" align="start">
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="deliverable-name">Name</Label>
+                          <Input
+                            id="deliverable-name"
+                            value={newDeliverableName}
+                            onChange={(e) => setNewDeliverableName(e.target.value)}
+                            placeholder="Enter deliverable name"
+                            data-testid="input-new-deliverable-name"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Border Color</Label>
+                          <div className="grid grid-cols-4 gap-2">
+                            {Object.entries(DeliverableBorderColor).map(([key, value]) => (
+                              <button
+                                key={value}
+                                type="button"
+                                className={`w-8 h-8 rounded-md border-2 transition-all ${
+                                  newDeliverableColor === value ? "ring-2 ring-offset-2 ring-primary" : ""
+                                }`}
+                                style={{ backgroundColor: `hsl(${borderColorMap[value]})` }}
+                                onClick={() => setNewDeliverableColor(value)}
+                                data-testid={`button-color-${value}`}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                        <Button
+                          onClick={() => {
+                            if (newDeliverableName.trim()) {
+                              onAddDeliverable(newDeliverableName.trim(), newDeliverableColor);
+                              setNewDeliverableName("");
+                              setNewDeliverableColor("cyan");
+                              setAddDeliverableOpen(false);
+                            }
+                          }}
+                          disabled={!newDeliverableName.trim()}
+                          className="w-full"
+                          data-testid="button-create-deliverable"
+                        >
+                          Create Deliverable
+                        </Button>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+            )}
           </div>
         </div>
         <ScrollBar orientation="horizontal" />

@@ -11,11 +11,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EditSolutionDialog } from "@/components/edit-solution-dialog";
 import { EditActionDialog } from "@/components/edit-action-dialog";
+import { EditDeliverablePopup } from "@/components/edit-deliverable-popup";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
-import type { SolutionWithProgress, ActionWithProgress, Action, Deliverable } from "@shared/schema";
-import { SolutionStatus } from "@shared/schema";
+import { useMode } from "@/lib/mode-context";
+import type { SolutionWithProgress, ActionWithProgress, Action, Deliverable, ActionStatusType, DeliverableBorderColorType } from "@shared/schema";
+import { SolutionStatus, ActionStatus } from "@shared/schema";
 
 interface SolutionViewProps {
   streamId: string;
@@ -26,8 +28,12 @@ interface SolutionViewProps {
 export function SolutionView({ streamId, solutionId, showDescriptions }: SolutionViewProps) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { isEditMode } = useMode();
   const [editingSolution, setEditingSolution] = useState(false);
   const [editingAction, setEditingAction] = useState<Action | null>(null);
+  const [editingDeliverable, setEditingDeliverable] = useState<Deliverable | null>(null);
+  const [pendingActionStatus, setPendingActionStatus] = useState<ActionStatusType | null>(null);
+  const [pendingDeliverableId, setPendingDeliverableId] = useState<string | undefined>(undefined);
   const quickAddRef = useRef<QuickAddFormRef>(null);
 
   const { data: solution, isLoading: solutionLoading } = useQuery<SolutionWithProgress>({
@@ -150,6 +156,71 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
     },
   });
 
+  const createDeliverable = useMutation({
+    mutationFn: async ({ name, borderColor }: { name: string; borderColor: DeliverableBorderColorType }) => {
+      return apiRequest("POST", "/api/deliverables", { name, solutionId, streamId, borderColor, owners: [] });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/solutions", solutionId, "deliverables"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/deliverables"] });
+      toast({ title: "Deliverable created" });
+    },
+    onError: () => {
+      toast({ title: "Failed to create deliverable", variant: "destructive" });
+    },
+  });
+
+  const updateDeliverable = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: { name: string; borderColor: DeliverableBorderColorType; owners: string[] } }) => {
+      return apiRequest("PATCH", `/api/deliverables/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/solutions", solutionId, "deliverables"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/deliverables"] });
+      toast({ title: "Deliverable updated" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update deliverable", variant: "destructive" });
+    },
+  });
+
+  const deleteDeliverable = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("PATCH", `/api/deliverables/${id}`, { isDeleted: true });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/solutions", solutionId, "deliverables"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/deliverables"] });
+      toast({ title: "Deliverable moved to recycle bin" });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete deliverable", variant: "destructive" });
+    },
+  });
+
+  const createActionWithStatus = useMutation({
+    mutationFn: async ({ status, deliverableId }: { status: ActionStatusType; deliverableId?: string }) => {
+      return apiRequest("POST", "/api/actions", { 
+        name: "New Action", 
+        solutionId, 
+        streamId, 
+        status,
+        deliverableId,
+      });
+    },
+    onSuccess: async (response) => {
+      const newAction = await response.json();
+      queryClient.invalidateQueries({ queryKey: ["/api/solutions", solutionId, "actions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/solutions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
+      setEditingAction(newAction);
+      toast({ title: "Action created" });
+    },
+    onError: () => {
+      toast({ title: "Failed to create action", variant: "destructive" });
+    },
+  });
+
   const timelineItems = actions?.map((a) => ({
     id: a.id,
     title: a.name,
@@ -233,15 +304,17 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
               >
                 {solution.status === SolutionStatus.ON_HOLD ? "On Hold" : "In Progress"}
               </Button>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-7 w-7"
-                onClick={() => setEditingSolution(true)}
-                data-testid="button-edit-solution"
-              >
-                <Pencil className="h-4 w-4" />
-              </Button>
+              {isEditMode && (
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7"
+                  onClick={() => setEditingSolution(true)}
+                  data-testid="button-edit-solution"
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+              )}
             </div>
             <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
               {solution.milestoneDate && (
@@ -279,6 +352,9 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
               onStatusChange={(actionId, status) => updateActionStatus.mutate({ actionId, status })}
               onDeliverableChange={(actionId, deliverableId) => updateActionDeliverable.mutate({ actionId, deliverableId })}
               onReorder={(actionId, kanbanOrder) => updateActionOrder.mutate({ actionId, kanbanOrder })}
+              onAddAction={(status, deliverableId) => createActionWithStatus.mutate({ status, deliverableId })}
+              onAddDeliverable={(name, borderColor) => createDeliverable.mutate({ name, borderColor })}
+              onEditDeliverable={(deliverable) => setEditingDeliverable(deliverable)}
               showDescription={showDescriptions}
             />
 
@@ -315,6 +391,15 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
         action={editingAction}
         open={editingAction !== null}
         onOpenChange={(open) => !open && setEditingAction(null)}
+      />
+
+      <EditDeliverablePopup
+        deliverable={editingDeliverable}
+        open={editingDeliverable !== null}
+        onOpenChange={(open) => !open && setEditingDeliverable(null)}
+        onSave={(id, data) => updateDeliverable.mutate({ id, data })}
+        onDelete={(id) => deleteDeliverable.mutate(id)}
+        isPending={updateDeliverable.isPending || deleteDeliverable.isPending}
       />
     </div>
   );
