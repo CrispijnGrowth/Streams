@@ -275,6 +275,7 @@ export interface ActiveActionInfo {
 export interface DeliverableBreakdown {
   id: string;
   name: string;
+  borderColor: DeliverableBorderColorType;
   activeActions: ActiveActionInfo[];
 }
 

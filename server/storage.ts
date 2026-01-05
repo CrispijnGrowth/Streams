@@ -331,6 +331,7 @@ export class MemStorage implements IStorage {
         return {
           id: del.id,
           name: del.name,
+          borderColor: del.borderColor as any,
           activeActions,
         };
       });
@@ -347,6 +348,7 @@ export class MemStorage implements IStorage {
         deliverableBreakdown.unshift({
           id: "unassigned",
           name: "Unassigned",
+          borderColor: "cyan" as any,
           activeActions: unassignedActiveActions,
         });
       }

@@ -2,9 +2,9 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ProgressBar } from "@/components/progress-bar";
-import { Calendar, Pencil, Circle, AlertCircle, ArrowRightLeft, Minus } from "lucide-react";
+import { Calendar, Pencil } from "lucide-react";
 import { format } from "date-fns";
-import type { SolutionWithDeliverableBreakdown, DeliverableBreakdown, ActionStatusType } from "@shared/schema";
+import type { SolutionWithDeliverableBreakdown, DeliverableBreakdown, ActionStatusType, DeliverableBorderColorType } from "@shared/schema";
 import { SolutionStatus, ActionStatus } from "@shared/schema";
 
 interface SolutionCardProps {
@@ -15,16 +15,27 @@ interface SolutionCardProps {
   isDragging?: boolean;
 }
 
-function getStatusIcon(status: ActionStatusType) {
+const borderColorMap: Record<DeliverableBorderColorType, string> = {
+  cyan: "var(--deliverable-cyan)",
+  magenta: "var(--deliverable-magenta)",
+  yellow: "var(--deliverable-yellow)",
+  lime: "var(--deliverable-lime)",
+  orange: "var(--deliverable-orange)",
+  pink: "var(--deliverable-pink)",
+  blue: "var(--deliverable-blue)",
+  green: "var(--deliverable-green)",
+};
+
+function getStatusColor(status: ActionStatusType): string {
   switch (status) {
     case ActionStatus.EXECUTING:
-      return <Circle className="h-2.5 w-2.5 fill-status-executing text-status-executing" />;
+      return "hsl(var(--status-executing))";
     case ActionStatus.BLOCKED:
-      return <AlertCircle className="h-2.5 w-2.5 text-status-blocked" />;
+      return "hsl(var(--status-blocked))";
     case ActionStatus.DELEGATED:
-      return <ArrowRightLeft className="h-2.5 w-2.5 text-status-delegated" />;
+      return "hsl(var(--status-delegated))";
     default:
-      return <Minus className="h-2.5 w-2.5 text-muted-foreground" />;
+      return "hsl(var(--muted-foreground))";
   }
 }
 
@@ -102,32 +113,37 @@ export function SolutionCard({
 
       {solution.deliverableBreakdown && solution.deliverableBreakdown.length > 0 && (
         <div className="space-y-1.5 pt-1 border-t border-border/50">
-          {solution.deliverableBreakdown.map((deliverable) => (
-            <div key={deliverable.id} className="space-y-0.5">
-              <div className="text-xs font-medium text-foreground/80 truncate">
-                {deliverable.name}
+          {solution.deliverableBreakdown.map((deliverable) => {
+            const borderColor = `hsl(${borderColorMap[deliverable.borderColor] || "var(--deliverable-cyan)"})`;
+            return (
+              <div 
+                key={deliverable.id} 
+                className="space-y-0.5 p-1.5 rounded-md"
+                style={{ border: `1px solid ${borderColor}` }}
+              >
+                <div className="text-xs font-medium text-foreground/80 truncate">
+                  {deliverable.name}
+                </div>
+                {deliverable.activeActions.length > 0 ? (
+                  <div className="space-y-0.5 pl-2">
+                    {deliverable.activeActions.map((action) => (
+                      <div key={action.id} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <span 
+                          className="w-2 h-2 rounded-full shrink-0" 
+                          style={{ backgroundColor: getStatusColor(action.status) }}
+                        />
+                        <span className="truncate">{action.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-xs text-muted-foreground/60 pl-2 italic">
+                    No active actions
+                  </div>
+                )}
               </div>
-              {deliverable.activeActions.length > 0 ? (
-                <div className="space-y-0.5 pl-2">
-                  {deliverable.activeActions.slice(0, 3).map((action) => (
-                    <div key={action.id} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      {getStatusIcon(action.status)}
-                      <span className="truncate">{action.name}</span>
-                    </div>
-                  ))}
-                  {deliverable.activeActions.length > 3 && (
-                    <div className="text-xs text-muted-foreground pl-4">
-                      +{deliverable.activeActions.length - 3} more
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="text-xs text-muted-foreground/60 pl-2 italic">
-                  No active actions
-                </div>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
