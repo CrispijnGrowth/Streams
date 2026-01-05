@@ -61,6 +61,9 @@ export function EditDeliverablePopup({
   const handleSave = () => {
     if (deliverable && name.trim()) {
       const effectiveDueDate = isMilestoneLinked ? parentMilestoneDate : dueDate;
+      if (!isMilestoneLinked && effectiveDueDate && !validateDueDate(effectiveDueDate)) {
+        return;
+      }
       onSave(deliverable.id, { 
         name: name.trim(), 
         borderColor, 
@@ -77,7 +80,7 @@ export function EditDeliverablePopup({
     : (dueDate ? format(new Date(dueDate), "MMM d, yyyy") : "No date set");
 
   const validateDueDate = (date: string) => {
-    if (isMilestoneLinked && parentMilestoneDate && date) {
+    if (parentMilestoneDate && date) {
       return new Date(date) <= new Date(parentMilestoneDate);
     }
     return true;
@@ -138,8 +141,12 @@ export function EditDeliverablePopup({
                     type="date"
                     value={dueDate ? dueDate.split("T")[0] : ""}
                     onChange={(e) => setDueDate(e.target.value)}
+                    max={parentMilestoneDate ? parentMilestoneDate.split("T")[0] : undefined}
                     data-testid="input-deliverable-due-date"
                   />
+                  {dueDate && !validateDueDate(dueDate) && (
+                    <p className="text-xs text-destructive">Due date cannot exceed parent milestone date</p>
+                  )}
                 </div>
               )}
             </div>
@@ -189,7 +196,7 @@ export function EditDeliverablePopup({
               <Button
                 size="sm"
                 onClick={handleSave}
-                disabled={!name.trim() || isPending}
+                disabled={!name.trim() || isPending || (!isMilestoneLinked && dueDate && !validateDueDate(dueDate))}
                 data-testid="button-save-deliverable"
               >
                 {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
