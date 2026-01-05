@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/lib/theme-provider";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
+import { ModeProvider, useMode } from "@/lib/mode-context";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { DescriptionsToggle } from "@/components/descriptions-toggle";
 import { BreadcrumbNav } from "@/components/breadcrumb-nav";
@@ -14,7 +15,8 @@ import { PageTransition } from "@/components/page-transition";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Layers, LayoutGrid, Trash2, Search, LogOut, Settings, Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Layers, LayoutGrid, Trash2, Search, LogOut, Settings, Loader2, Pencil, Play } from "lucide-react";
 import { StreamsOverview } from "@/pages/streams-overview";
 import { StreamView } from "@/pages/stream-view";
 import { SolutionView } from "@/pages/solution-view";
@@ -170,6 +172,32 @@ function TopNav() {
   );
 }
 
+function ModeToggle() {
+  const { mode, toggleMode, isEditMode } = useMode();
+  
+  return (
+    <Button
+      variant={isEditMode ? "default" : "outline"}
+      size="sm"
+      onClick={toggleMode}
+      className="gap-2"
+      data-testid="button-mode-toggle"
+    >
+      {isEditMode ? (
+        <>
+          <Pencil className="h-4 w-4" />
+          <span>Edit Mode</span>
+        </>
+      ) : (
+        <>
+          <Play className="h-4 w-4" />
+          <span>Operate Mode</span>
+        </>
+      )}
+    </Button>
+  );
+}
+
 function UserMenu() {
   const { user, logout } = useAuth();
   const [, setLocation] = useLocation();
@@ -291,7 +319,9 @@ function AppContent() {
             </>
           )}
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
+          <ModeToggle />
+          <div className="h-4 w-px bg-border" />
           <Button
             variant="ghost"
             size="sm"
@@ -326,7 +356,9 @@ function App() {
       <ThemeProvider defaultTheme="system">
         <TooltipProvider>
           <AuthProvider>
-            <AppContent />
+            <ModeProvider>
+              <AppContent />
+            </ModeProvider>
           </AuthProvider>
           <Toaster />
         </TooltipProvider>

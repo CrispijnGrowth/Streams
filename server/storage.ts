@@ -473,6 +473,8 @@ export class MemStorage implements IStorage {
       description: data.description,
       solutionId: data.solutionId,
       streamId: data.streamId,
+      borderColor: (data.borderColor || "cyan") as Deliverable["borderColor"],
+      owners: data.owners || [],
       ordinal,
       isDeleted: false,
     };
@@ -928,6 +930,8 @@ export class MemStorage implements IStorage {
             name: deliverableData.name,
             solutionId: solution.id,
             streamId: stream.id,
+            borderColor: "cyan",
+            owners: [],
           });
 
           for (const actionData of deliverableData.actions) {

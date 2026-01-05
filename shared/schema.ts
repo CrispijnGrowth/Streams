@@ -30,6 +30,19 @@ export const MomentumStatus = {
   STALLED: "Stalled",
 } as const;
 
+export const DeliverableBorderColor = {
+  CYAN: "cyan",
+  MAGENTA: "magenta",
+  YELLOW: "yellow",
+  LIME: "lime",
+  ORANGE: "orange",
+  PINK: "pink",
+  BLUE: "blue",
+  GREEN: "green",
+} as const;
+
+export type DeliverableBorderColorType = (typeof DeliverableBorderColor)[keyof typeof DeliverableBorderColor];
+
 export type MomentumStatusType = (typeof MomentumStatus)[keyof typeof MomentumStatus];
 
 export const SolutionStatus = {
@@ -129,6 +142,8 @@ export interface Deliverable {
   description?: string;
   solutionId: string;
   streamId: string;
+  borderColor: DeliverableBorderColorType;
+  owners: string[];
   ordinal: number;
   isDeleted: boolean;
 }
@@ -190,6 +205,8 @@ export const insertDeliverableSchema = z.object({
   description: z.string().optional(),
   solutionId: z.string().min(1, "Solution is required"),
   streamId: z.string().min(1, "Stream is required"),
+  borderColor: z.string().default("cyan"),
+  owners: z.array(z.string()).default([]),
 });
 
 export const insertActionSchema = z.object({
