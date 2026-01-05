@@ -22,12 +22,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ComboboxMultiSelect } from "@/components/ui/combobox-multi-select";
-import { Plus, Loader2, X } from "lucide-react";
+import { Plus, Loader2, X, MessageSquare, Send } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useOwnerSuggestions, useLabelSuggestions } from "@/hooks/use-suggestions";
-import type { Action, Deliverable, DeliverableBorderColorType } from "@shared/schema";
+import type { Action, Deliverable, DeliverableBorderColorType, Comment } from "@shared/schema";
 import { ActionStatus, DeliverableBorderColor } from "@shared/schema";
+import { format } from "date-fns";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export type EditActionFocusField = "owner" | "label" | null;
@@ -62,6 +64,7 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted, initia
   const [newDeliverableOwner, setNewDeliverableOwner] = useState("");
   const [isCreatingDeliverable, setIsCreatingDeliverable] = useState(false);
   const [isSubmittingWithNewDeliverable, setIsSubmittingWithNewDeliverable] = useState(false);
+  const [newComment, setNewComment] = useState("");
   const ownerSuggestions = useOwnerSuggestions();
   const labelSuggestions = useLabelSuggestions();
 
@@ -75,6 +78,37 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted, initia
       return res.json();
     },
     enabled: !!action?.solutionId && open,
+  });
+
+  const { data: comments = [] } = useQuery<Comment[]>({
+    queryKey: ["/api/comments", "action", action?.id],
+    queryFn: async () => {
+      const res = await fetch(`/api/comments/action/${action?.id}`, {
+        headers: { "x-session-id": localStorage.getItem("streams-session-id") || "" },
+      });
+      if (!res.ok) throw new Error("Failed to fetch comments");
+      return res.json();
+    },
+    enabled: !!action?.id && open,
+  });
+
+  const addComment = useMutation({
+    mutationFn: async (content: string) => {
+      return apiRequest("POST", "/api/comments", {
+        entityType: "action",
+        entityId: action?.id,
+        content,
+      });
+    },
+    onSuccess: () => {
+      setNewComment("");
+      queryClient.invalidateQueries({ queryKey: ["/api/comments", "action", action?.id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
+      toast({ title: "Comment added" });
+    },
+    onError: () => {
+      toast({ title: "Failed to add comment", variant: "destructive" });
+    },
   });
 
   const form = useForm<EditActionForm>({
@@ -112,6 +146,7 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted, initia
       setNewDeliverableOwner("");
       setIsCreatingDeliverable(false);
       setIsSubmittingWithNewDeliverable(false);
+      setNewComment("");
     }
   }, [action, open, form]);
 
@@ -431,6 +466,51 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted, initia
               autoFocus={initialFocus === "label"}
               data-testid="combobox-action-labels"
             />
+          </div>
+
+          <div className="space-y-2 border-t pt-4">
+            <Label className="flex items-center gap-1.5">
+              <MessageSquare className="h-4 w-4" />
+              Comments
+            </Label>
+            {comments.length > 0 && (
+              <ScrollArea className="h-32 rounded-md border p-2">
+                <div className="space-y-2">
+                  {comments.map((comment) => (
+                    <div key={comment.id} className="text-sm">
+                      <p className="text-foreground">{comment.content}</p>
+                      <span className="text-xs text-muted-foreground">
+                        {format(new Date(comment.createdAt), "MMM d, h:mm a")}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            )}
+            <div className="flex gap-2">
+              <Input
+                placeholder="Add a comment..."
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey && newComment.trim()) {
+                    e.preventDefault();
+                    addComment.mutate(newComment.trim());
+                  }
+                }}
+                data-testid="input-action-comment"
+              />
+              <Button
+                type="button"
+                size="icon"
+                variant="outline"
+                disabled={!newComment.trim() || addComment.isPending}
+                onClick={() => newComment.trim() && addComment.mutate(newComment.trim())}
+                data-testid="button-add-action-comment"
+              >
+                {addComment.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              </Button>
+            </div>
           </div>
 
           <DialogFooter className="flex justify-between gap-2 pt-4">

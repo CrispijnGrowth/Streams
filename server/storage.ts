@@ -49,9 +49,9 @@ export interface IStorage {
   updateDeliverable(userId: string, id: string, data: Partial<InsertDeliverable>): Promise<Deliverable | undefined>;
   deleteDeliverable(userId: string, id: string): Promise<boolean>;
 
-  getActions(userId: string): Promise<ActionWithProgress[]>;
-  getActionsBySolution(userId: string, solutionId: string): Promise<ActionWithProgress[]>;
-  getAction(userId: string, id: string): Promise<ActionWithProgress | undefined>;
+  getActions(userId: string): Promise<ActionWithLastComment[]>;
+  getActionsBySolution(userId: string, solutionId: string): Promise<ActionWithLastComment[]>;
+  getAction(userId: string, id: string): Promise<ActionWithLastComment | undefined>;
   createAction(userId: string, data: InsertAction): Promise<Action>;
   updateAction(userId: string, id: string, data: Partial<InsertAction>): Promise<Action | undefined>;
   deleteAction(userId: string, id: string): Promise<boolean>;
@@ -642,22 +642,28 @@ export class MemStorage implements IStorage {
     return true;
   }
 
-  async getActions(userId: string): Promise<ActionWithProgress[]> {
+  async getActions(userId: string): Promise<ActionWithLastComment[]> {
     const actions = Array.from(this.actions.values()).filter((a) => a.userId === userId && !a.isDeleted);
-    return actions.map((action) => {
+    const result: ActionWithLastComment[] = [];
+    for (const action of actions) {
       const stats = this.computeActionProgress(action.id, userId);
-      return { ...action, ...stats };
-    });
+      const lastComment = await this.getLastComment(userId, "action", action.id);
+      result.push({ ...action, ...stats, lastComment });
+    }
+    return result;
   }
 
-  async getActionsBySolution(userId: string, solutionId: string): Promise<ActionWithProgress[]> {
+  async getActionsBySolution(userId: string, solutionId: string): Promise<ActionWithLastComment[]> {
     const actions = Array.from(this.actions.values()).filter(
       (a) => a.solutionId === solutionId && a.userId === userId && !a.isDeleted
     );
-    return actions.map((action) => {
+    const result: ActionWithLastComment[] = [];
+    for (const action of actions) {
       const stats = this.computeActionProgress(action.id, userId);
-      return { ...action, ...stats };
-    });
+      const lastComment = await this.getLastComment(userId, "action", action.id);
+      result.push({ ...action, ...stats, lastComment });
+    }
+    return result;
   }
 
   async getAction(userId: string, id: string): Promise<ActionWithProgress | undefined> {

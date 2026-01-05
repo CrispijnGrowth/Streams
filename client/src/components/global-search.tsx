@@ -14,7 +14,7 @@ import { Search, Layers, Package, CheckSquare, ListChecks } from "lucide-react";
 import type {
   StreamWithProgress,
   SolutionWithProgress,
-  ActionWithProgress,
+  ActionWithLastComment,
   Step,
 } from "@shared/schema";
 
@@ -40,7 +40,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
     queryKey: ["/api/streams"],
   });
 
-  const { data: allActions } = useQuery<ActionWithProgress[]>({
+  const { data: allActions } = useQuery<ActionWithLastComment[]>({
     queryKey: ["/api/actions"],
   });
 

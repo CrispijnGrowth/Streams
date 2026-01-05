@@ -3,12 +3,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/status-badge";
 import { ProgressBar } from "@/components/progress-bar";
-import { Calendar, User, GripVertical, Pencil } from "lucide-react";
+import { Calendar, User, GripVertical, Pencil, MessageSquare } from "lucide-react";
 import { format } from "date-fns";
-import type { ActionWithProgress } from "@shared/schema";
+import type { ActionWithLastComment } from "@shared/schema";
 
 interface ActionCardProps {
-  action: ActionWithProgress;
+  action: ActionWithLastComment;
   onClick?: () => void;
   onEdit?: () => void;
   showDescription?: boolean;
@@ -120,6 +120,20 @@ export function ActionCard({
               +{action.labels.length - 2}
             </span>
           )}
+        </div>
+      )}
+
+      {action.lastComment && (
+        <div className="flex items-start gap-1.5 pt-1 border-t border-border/50">
+          <MessageSquare className="h-3 w-3 text-muted-foreground shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-muted-foreground line-clamp-2">
+              {action.lastComment.content}
+            </p>
+            <span className="text-[10px] text-muted-foreground/60">
+              {format(new Date(action.lastComment.createdAt), "MMM d, h:mm a")}
+            </span>
+          </div>
         </div>
       )}
     </Card>

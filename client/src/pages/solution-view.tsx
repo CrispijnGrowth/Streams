@@ -15,7 +15,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { useMode } from "@/lib/mode-context";
-import type { SolutionWithProgress, ActionWithProgress, Action, Deliverable, ActionStatusType, DeliverableBorderColorType } from "@shared/schema";
+import type { SolutionWithProgress, ActionWithLastComment, Action, Deliverable, ActionStatusType, DeliverableBorderColorType } from "@shared/schema";
 import { SolutionStatus, ActionStatus } from "@shared/schema";
 
 interface SolutionViewProps {
@@ -38,7 +38,7 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
     queryKey: ["/api/solutions", solutionId],
   });
 
-  const { data: actions, isLoading: actionsLoading } = useQuery<ActionWithProgress[]>({
+  const { data: actions, isLoading: actionsLoading } = useQuery<ActionWithLastComment[]>({
     queryKey: ["/api/solutions", solutionId, "actions"],
   });
 

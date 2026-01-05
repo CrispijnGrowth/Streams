@@ -5,7 +5,7 @@ import { KanbanBoard } from "@/components/kanban-board";
 import { EmptyState } from "@/components/empty-state";
 import { KanbanSkeleton } from "@/components/loading-skeleton";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { ActionWithProgress } from "@shared/schema";
+import type { ActionWithLastComment } from "@shared/schema";
 
 interface GlobalKanbanProps {
   showDescriptions: boolean;
@@ -14,7 +14,7 @@ interface GlobalKanbanProps {
 export function GlobalKanban({ showDescriptions }: GlobalKanbanProps) {
   const [, setLocation] = useLocation();
 
-  const { data: actions, isLoading } = useQuery<ActionWithProgress[]>({
+  const { data: actions, isLoading } = useQuery<ActionWithLastComment[]>({
     queryKey: ["/api/actions"],
   });
 

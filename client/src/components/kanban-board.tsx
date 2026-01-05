@@ -18,7 +18,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { ActionCard } from "@/components/action-card";
-import { ActionStatus, type ActionWithProgress, type ActionStatusType, type Deliverable, DeliverableBorderColor, type DeliverableBorderColorType } from "@shared/schema";
+import { ActionStatus, type ActionWithLastComment, type ActionStatusType, type Deliverable, DeliverableBorderColor, type DeliverableBorderColorType } from "@shared/schema";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { useMode } from "@/lib/mode-context";
 import { Button } from "@/components/ui/button";
@@ -40,11 +40,11 @@ const borderColorMap: Record<DeliverableBorderColorType, string> = {
 };
 
 interface KanbanBoardProps {
-  actions: ActionWithProgress[];
+  actions: ActionWithLastComment[];
   deliverables?: Deliverable[];
   parentMilestoneDate?: string;
   onActionClick?: (id: string) => void;
-  onActionEdit?: (action: ActionWithProgress) => void;
+  onActionEdit?: (action: ActionWithLastComment) => void;
   onStatusChange?: (actionId: string, newStatus: ActionStatusType) => void;
   onDeliverableChange?: (actionId: string, newDeliverableId: string | null) => void;
   onReorder?: (actionId: string, newKanbanOrder: number) => void;
@@ -66,7 +66,7 @@ const kanbanColumns: { status: ActionStatusType; label: string; color: string }[
 ];
 
 interface SortableActionCardProps {
-  action: ActionWithProgress;
+  action: ActionWithLastComment;
   onClick?: () => void;
   onEdit?: () => void;
   showDescription?: boolean;
@@ -105,10 +105,10 @@ function SortableActionCard({ action, onClick, onEdit, showDescription }: Sortab
 interface DroppableCellProps {
   id: string;
   status: ActionStatusType;
-  items: ActionWithProgress[];
+  items: ActionWithLastComment[];
   columnIndex?: number;
   onActionClick?: (id: string) => void;
-  onActionEdit?: (action: ActionWithProgress) => void;
+  onActionEdit?: (action: ActionWithLastComment) => void;
   onAddAction?: () => void;
   showDescription?: boolean;
   isEditMode?: boolean;
@@ -170,11 +170,11 @@ function DroppableCell({
 
 interface DeliverableRowProps {
   deliverable: Deliverable | null;
-  actions: ActionWithProgress[];
+  actions: ActionWithLastComment[];
   columnData: { status: ActionStatusType; label: string; color: string; id: string }[];
   parentMilestoneDate?: string;
   onActionClick?: (id: string) => void;
-  onActionEdit?: (action: ActionWithProgress) => void;
+  onActionEdit?: (action: ActionWithLastComment) => void;
   onAddAction?: (status: ActionStatusType, deliverableId?: string) => void;
   onEditDeliverable?: (deliverable: Deliverable) => void;
   showDescription?: boolean;
@@ -372,7 +372,7 @@ export function KanbanBoard({
   }, [sortedDeliverables]);
 
   const groupedActions = useMemo(() => {
-    const groups: { deliverable: Deliverable | null; actions: ActionWithProgress[] }[] = [];
+    const groups: { deliverable: Deliverable | null; actions: ActionWithLastComment[] }[] = [];
     
     for (const del of sortedDeliverables) {
       const delActions = actions.filter((a) => a.deliverableId === del.id);

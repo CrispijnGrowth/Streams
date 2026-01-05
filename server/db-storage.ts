@@ -20,6 +20,7 @@ import {
   type DeliverableBreakdown,
   type DeliverableWithActions,
   type ActionWithProgress,
+  type ActionWithLastComment,
   type CommentEntityTypeValue,
   ActionStatus,
   MomentumStatus,
@@ -613,32 +614,34 @@ export class DatabaseStorage implements IStorage {
     return true;
   }
 
-  async getActions(userId: string): Promise<ActionWithProgress[]> {
+  async getActions(userId: string): Promise<ActionWithLastComment[]> {
     const rows = await db.select().from(actions).where(
       and(eq(actions.userId, userId), eq(actions.isDeleted, false))
     );
     rows.sort((a, b) => a.kanbanOrder - b.kanbanOrder);
     
-    const result: ActionWithProgress[] = [];
+    const result: ActionWithLastComment[] = [];
     for (const row of rows) {
       const action = mapActionFromDb(row);
       const stats = await this.computeActionProgress(action.id, userId);
-      result.push({ ...action, ...stats });
+      const lastComment = await this.getLastComment(userId, "action", action.id);
+      result.push({ ...action, ...stats, lastComment });
     }
     return result;
   }
 
-  async getActionsBySolution(userId: string, solutionId: string): Promise<ActionWithProgress[]> {
+  async getActionsBySolution(userId: string, solutionId: string): Promise<ActionWithLastComment[]> {
     const rows = await db.select().from(actions).where(
       and(eq(actions.solutionId, solutionId), eq(actions.userId, userId), eq(actions.isDeleted, false))
     );
     rows.sort((a, b) => a.kanbanOrder - b.kanbanOrder);
     
-    const result: ActionWithProgress[] = [];
+    const result: ActionWithLastComment[] = [];
     for (const row of rows) {
       const action = mapActionFromDb(row);
       const stats = await this.computeActionProgress(action.id, userId);
-      result.push({ ...action, ...stats });
+      const lastComment = await this.getLastComment(userId, "action", action.id);
+      result.push({ ...action, ...stats, lastComment });
     }
     return result;
   }
