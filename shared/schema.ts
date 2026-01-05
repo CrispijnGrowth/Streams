@@ -183,6 +183,23 @@ export interface Step {
   isDeleted: boolean;
 }
 
+export const CommentEntityType = {
+  SOLUTION: "solution",
+  DELIVERABLE: "deliverable",
+  ACTION: "action",
+} as const;
+
+export type CommentEntityTypeValue = (typeof CommentEntityType)[keyof typeof CommentEntityType];
+
+export interface Comment {
+  id: string;
+  userId: string;
+  entityType: CommentEntityTypeValue;
+  entityId: string;
+  content: string;
+  createdAt: string;
+}
+
 export const insertStreamSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
@@ -236,11 +253,18 @@ export const insertStepSchema = z.object({
   owner: z.string().optional(),
 });
 
+export const insertCommentSchema = z.object({
+  entityType: z.enum(["solution", "deliverable", "action"]),
+  entityId: z.string().min(1, "Entity ID is required"),
+  content: z.string().min(1, "Comment content is required"),
+});
+
 export type InsertStream = z.infer<typeof insertStreamSchema>;
 export type InsertSolution = z.infer<typeof insertSolutionSchema>;
 export type InsertDeliverable = z.infer<typeof insertDeliverableSchema>;
 export type InsertAction = z.infer<typeof insertActionSchema>;
 export type InsertStep = z.infer<typeof insertStepSchema>;
+export type InsertComment = z.infer<typeof insertCommentSchema>;
 
 export interface InProgressSolutionInfo {
   name: string;

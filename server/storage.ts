@@ -4,17 +4,20 @@ import {
   type Deliverable,
   type Action,
   type Step,
+  type Comment,
   type InsertStream,
   type InsertSolution,
   type InsertDeliverable,
   type InsertAction,
   type InsertStep,
+  type InsertComment,
   type StreamWithProgress,
   type SolutionWithProgress,
   type SolutionWithDeliverableBreakdown,
   type DeliverableBreakdown,
   type DeliverableWithActions,
   type ActionWithProgress,
+  type CommentEntityTypeValue,
   ActionStatus,
   MomentumStatus,
   SolutionStatus,
@@ -72,6 +75,10 @@ export interface IStorage {
 
   seedExampleData(userId: string): Promise<void>;
   hasExampleData(userId: string): Promise<boolean>;
+
+  getComments(userId: string, entityType: CommentEntityTypeValue, entityId: string): Promise<Comment[]>;
+  getLastComment(userId: string, entityType: CommentEntityTypeValue, entityId: string): Promise<Comment | undefined>;
+  createComment(userId: string, data: InsertComment): Promise<Comment>;
 }
 
 export class MemStorage implements IStorage {
@@ -80,6 +87,7 @@ export class MemStorage implements IStorage {
   private deliverables: Map<string, Deliverable> = new Map();
   private actions: Map<string, Action> = new Map();
   private steps: Map<string, Step> = new Map();
+  private comments: Map<string, Comment> = new Map();
   private seededUsers: Set<string> = new Set();
 
   constructor() {
@@ -1074,6 +1082,31 @@ export class MemStorage implements IStorage {
         }
       }
     }
+  }
+
+  async getComments(userId: string, entityType: CommentEntityTypeValue, entityId: string): Promise<Comment[]> {
+    return Array.from(this.comments.values())
+      .filter((c) => c.userId === userId && c.entityType === entityType && c.entityId === entityId)
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  }
+
+  async getLastComment(userId: string, entityType: CommentEntityTypeValue, entityId: string): Promise<Comment | undefined> {
+    const comments = await this.getComments(userId, entityType, entityId);
+    return comments.length > 0 ? comments[comments.length - 1] : undefined;
+  }
+
+  async createComment(userId: string, data: InsertComment): Promise<Comment> {
+    const id = randomUUID();
+    const comment: Comment = {
+      id,
+      userId,
+      entityType: data.entityType as CommentEntityTypeValue,
+      entityId: data.entityId,
+      content: data.content,
+      createdAt: new Date().toISOString(),
+    };
+    this.comments.set(id, comment);
+    return comment;
   }
 }
 
