@@ -315,7 +315,7 @@ export async function registerRoutes(
 
   app.get("/api/streams/:id/solutions", authMiddleware, async (req, res) => {
     try {
-      const solutions = await storage.getSolutionsByStream(req.userId!, req.params.id);
+      const solutions = await storage.getSolutionsByStreamWithBreakdown(req.userId!, req.params.id);
       res.json(solutions);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch solutions" });

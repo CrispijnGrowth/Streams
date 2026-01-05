@@ -266,6 +266,22 @@ export interface SolutionWithProgress extends Solution {
   delegatedCount: number;
 }
 
+export interface ActiveActionInfo {
+  id: string;
+  name: string;
+  status: ActionStatusType;
+}
+
+export interface DeliverableBreakdown {
+  id: string;
+  name: string;
+  activeActions: ActiveActionInfo[];
+}
+
+export interface SolutionWithDeliverableBreakdown extends SolutionWithProgress {
+  deliverableBreakdown: DeliverableBreakdown[];
+}
+
 export interface DeliverableWithActions extends Deliverable {
   actions: ActionWithProgress[];
 }

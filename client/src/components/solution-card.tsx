@@ -2,17 +2,30 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ProgressBar } from "@/components/progress-bar";
-import { Calendar, Pencil } from "lucide-react";
+import { Calendar, Pencil, Circle, AlertCircle, ArrowRightLeft, Minus } from "lucide-react";
 import { format } from "date-fns";
-import type { SolutionWithProgress } from "@shared/schema";
-import { SolutionStatus } from "@shared/schema";
+import type { SolutionWithDeliverableBreakdown, DeliverableBreakdown, ActionStatusType } from "@shared/schema";
+import { SolutionStatus, ActionStatus } from "@shared/schema";
 
 interface SolutionCardProps {
-  solution: SolutionWithProgress;
+  solution: SolutionWithDeliverableBreakdown;
   onClick?: () => void;
   onEdit?: () => void;
   showDescription?: boolean;
   isDragging?: boolean;
+}
+
+function getStatusIcon(status: ActionStatusType) {
+  switch (status) {
+    case ActionStatus.EXECUTING:
+      return <Circle className="h-2.5 w-2.5 fill-status-executing text-status-executing" />;
+    case ActionStatus.BLOCKED:
+      return <AlertCircle className="h-2.5 w-2.5 text-status-blocked" />;
+    case ActionStatus.DELEGATED:
+      return <ArrowRightLeft className="h-2.5 w-2.5 text-status-delegated" />;
+    default:
+      return <Minus className="h-2.5 w-2.5 text-muted-foreground" />;
+  }
 }
 
 export function SolutionCard({
@@ -87,36 +100,49 @@ export function SolutionCard({
         <span className="text-xs text-muted-foreground">{solution.actionCount}A</span>
       </div>
 
-      <div className="flex items-center gap-1.5 flex-wrap">
-        {solution.doingCount > 0 && (
-          <Badge 
-            variant="outline" 
-            className={`text-xs py-0 h-5 ${isOnHold ? "bg-muted-foreground/10 text-muted-foreground border-muted-foreground/30" : "bg-status-executing/10 text-status-executing border-status-executing/30"}`}
-          >
-            {solution.doingCount} Doing
-          </Badge>
-        )}
-        {solution.blockedCount > 0 && (
-          <Badge 
-            variant="outline" 
-            className={`text-xs py-0 h-5 ${isOnHold ? "bg-muted-foreground/10 text-muted-foreground border-muted-foreground/30" : "bg-status-blocked/10 text-status-blocked border-status-blocked/30"}`}
-          >
-            {solution.blockedCount} Blocked
-          </Badge>
-        )}
-        {solution.labels.length > 0 && (
-          <>
-            {solution.labels.slice(0, 2).map((label) => (
-              <Badge key={label} variant="secondary" className="text-xs py-0 h-5">
-                {label}
-              </Badge>
-            ))}
-            {solution.labels.length > 2 && (
-              <span className="text-xs text-muted-foreground">+{solution.labels.length - 2}</span>
-            )}
-          </>
-        )}
-      </div>
+      {solution.deliverableBreakdown && solution.deliverableBreakdown.length > 0 && (
+        <div className="space-y-1.5 pt-1 border-t border-border/50">
+          {solution.deliverableBreakdown.map((deliverable) => (
+            <div key={deliverable.id} className="space-y-0.5">
+              <div className="text-xs font-medium text-foreground/80 truncate">
+                {deliverable.name}
+              </div>
+              {deliverable.activeActions.length > 0 ? (
+                <div className="space-y-0.5 pl-2">
+                  {deliverable.activeActions.slice(0, 3).map((action) => (
+                    <div key={action.id} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      {getStatusIcon(action.status)}
+                      <span className="truncate">{action.name}</span>
+                    </div>
+                  ))}
+                  {deliverable.activeActions.length > 3 && (
+                    <div className="text-xs text-muted-foreground pl-4">
+                      +{deliverable.activeActions.length - 3} more
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-xs text-muted-foreground/60 pl-2 italic">
+                  No active actions
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {solution.labels.length > 0 && (
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {solution.labels.slice(0, 2).map((label) => (
+            <Badge key={label} variant="secondary" className="text-xs py-0 h-5">
+              {label}
+            </Badge>
+          ))}
+          {solution.labels.length > 2 && (
+            <span className="text-xs text-muted-foreground">+{solution.labels.length - 2}</span>
+          )}
+        </div>
+      )}
     </Card>
   );
 }

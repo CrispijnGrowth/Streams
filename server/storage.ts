@@ -11,6 +11,8 @@ import {
   type InsertStep,
   type StreamWithProgress,
   type SolutionWithProgress,
+  type SolutionWithDeliverableBreakdown,
+  type DeliverableBreakdown,
   type DeliverableWithActions,
   type ActionWithProgress,
   ActionStatus,
@@ -28,6 +30,7 @@ export interface IStorage {
 
   getSolutions(userId: string): Promise<SolutionWithProgress[]>;
   getSolutionsByStream(userId: string, streamId: string): Promise<SolutionWithProgress[]>;
+  getSolutionsByStreamWithBreakdown(userId: string, streamId: string): Promise<SolutionWithDeliverableBreakdown[]>;
   getSolution(userId: string, id: string): Promise<Solution | undefined>;
   createSolution(userId: string, data: InsertSolution): Promise<Solution>;
   updateSolution(userId: string, id: string, data: Partial<InsertSolution>): Promise<Solution | undefined>;
@@ -296,6 +299,59 @@ export class MemStorage implements IStorage {
     return solutions.map((sol) => {
       const stats = this.computeSolutionProgress(sol.id, userId);
       return { ...sol, ...stats };
+    });
+  }
+
+  async getSolutionsByStreamWithBreakdown(userId: string, streamId: string): Promise<SolutionWithDeliverableBreakdown[]> {
+    const solutions = Array.from(this.solutions.values()).filter(
+      (s) => s.streamId === streamId && s.userId === userId && !s.isDeleted
+    );
+    
+    const activeStatuses = [ActionStatus.EXECUTING, ActionStatus.BLOCKED, ActionStatus.DELEGATED];
+    
+    return solutions.map((sol) => {
+      const stats = this.computeSolutionProgress(sol.id, userId);
+      
+      const solutionDeliverables = Array.from(this.deliverables.values())
+        .filter((d) => d.solutionId === sol.id && d.userId === userId && !d.isDeleted)
+        .sort((a, b) => a.ordinal - b.ordinal);
+      
+      const solutionActions = Array.from(this.actions.values())
+        .filter((a) => a.solutionId === sol.id && a.userId === userId && !a.isDeleted);
+      
+      const deliverableBreakdown: DeliverableBreakdown[] = solutionDeliverables.map((del) => {
+        const activeActions = solutionActions
+          .filter((a) => a.deliverableId === del.id && activeStatuses.includes(a.status as any))
+          .map((a) => ({
+            id: a.id,
+            name: a.name,
+            status: a.status as any,
+          }));
+        
+        return {
+          id: del.id,
+          name: del.name,
+          activeActions,
+        };
+      });
+      
+      const unassignedActiveActions = solutionActions
+        .filter((a) => !a.deliverableId && activeStatuses.includes(a.status as any))
+        .map((a) => ({
+          id: a.id,
+          name: a.name,
+          status: a.status as any,
+        }));
+      
+      if (unassignedActiveActions.length > 0) {
+        deliverableBreakdown.unshift({
+          id: "unassigned",
+          name: "Unassigned",
+          activeActions: unassignedActiveActions,
+        });
+      }
+      
+      return { ...sol, ...stats, deliverableBreakdown };
     });
   }
 
