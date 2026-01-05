@@ -394,6 +394,7 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
         onDelete={(id) => deleteDeliverable.mutate(id)}
         isPending={updateDeliverable.isPending || deleteDeliverable.isPending}
         parentMilestoneDate={solution.milestoneDate}
+        parentSolutionName={solution.name}
       />
     </div>
   );

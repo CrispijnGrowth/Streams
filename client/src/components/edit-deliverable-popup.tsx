@@ -30,6 +30,7 @@ interface EditDeliverablePopupProps {
   isPending?: boolean;
   anchorElement?: HTMLElement | null;
   parentMilestoneDate?: string;
+  parentSolutionName?: string;
 }
 
 export function EditDeliverablePopup({
@@ -40,6 +41,7 @@ export function EditDeliverablePopup({
   onDelete,
   isPending = false,
   parentMilestoneDate,
+  parentSolutionName,
 }: EditDeliverablePopupProps) {
   const [name, setName] = useState("");
   const [borderColor, setBorderColor] = useState<DeliverableBorderColorType>("cyan");
@@ -74,10 +76,6 @@ export function EditDeliverablePopup({
       onOpenChange(false);
     }
   };
-
-  const displayDate = isMilestoneLinked 
-    ? (parentMilestoneDate ? format(new Date(parentMilestoneDate), "MMM d, yyyy") : "No milestone set")
-    : (dueDate ? format(new Date(dueDate), "MMM d, yyyy") : "No date set");
 
   const validateDueDate = (date: string) => {
     if (parentMilestoneDate && date) {
@@ -118,8 +116,10 @@ export function EditDeliverablePopup({
           </div>
 
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="milestone-linked">Part of milestone delivery</Label>
+            <div className="flex items-center justify-between gap-2">
+              <Label htmlFor="milestone-linked" className="text-sm leading-tight">
+                Part of {parentSolutionName || "solution"} milestone
+              </Label>
               <Switch
                 id="milestone-linked"
                 checked={isMilestoneLinked}
@@ -127,29 +127,27 @@ export function EditDeliverablePopup({
                 data-testid="switch-milestone-linked"
               />
             </div>
-            <div className="text-sm text-muted-foreground">
-              {isMilestoneLinked ? (
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  <span>Milestone: {displayDate}</span>
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  <Label htmlFor="due-date" className="text-sm font-normal">Due Date</Label>
-                  <Input
-                    id="due-date"
-                    type="date"
-                    value={dueDate ? dueDate.split("T")[0] : ""}
-                    onChange={(e) => setDueDate(e.target.value)}
-                    max={parentMilestoneDate ? parentMilestoneDate.split("T")[0] : undefined}
-                    data-testid="input-deliverable-due-date"
-                  />
-                  {dueDate && !validateDueDate(dueDate) && (
-                    <p className="text-xs text-destructive">Due date cannot exceed parent milestone date</p>
-                  )}
-                </div>
-              )}
-            </div>
+            {isMilestoneLinked && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Calendar className="h-4 w-4" />
+                <span>Milestone: {parentMilestoneDate ? format(new Date(parentMilestoneDate), "MMM d, yyyy") : "No milestone set"}</span>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="due-date">Due Date</Label>
+            <Input
+              id="due-date"
+              type="date"
+              value={dueDate ? dueDate.split("T")[0] : ""}
+              onChange={(e) => setDueDate(e.target.value)}
+              max={parentMilestoneDate ? parentMilestoneDate.split("T")[0] : undefined}
+              data-testid="input-deliverable-due-date"
+            />
+            {dueDate && !validateDueDate(dueDate) && (
+              <p className="text-xs text-destructive">Due date cannot exceed parent milestone date</p>
+            )}
           </div>
 
           <div className="space-y-2">
