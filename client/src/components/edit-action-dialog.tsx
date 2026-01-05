@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,7 +14,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -22,9 +21,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { X, Plus, Loader2 } from "lucide-react";
+import { ComboboxMultiSelect } from "@/components/ui/combobox-multi-select";
+import { Plus, Loader2, X } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useOwnerSuggestions, useLabelSuggestions } from "@/hooks/use-suggestions";
 import type { Action, Deliverable } from "@shared/schema";
 import { ActionStatus } from "@shared/schema";
 
@@ -51,26 +52,12 @@ interface EditActionDialogProps {
   initialFocus?: EditActionFocusField;
 }
 
-export function EditActionDialog({ action, open, onOpenChange, onDeleted, initialFocus }: EditActionDialogProps) {
+export function EditActionDialog({ action, open, onOpenChange, onDeleted }: EditActionDialogProps) {
   const { toast } = useToast();
-  const [newOwner, setNewOwner] = useState("");
-  const [newLabel, setNewLabel] = useState("");
   const [newDeliverableName, setNewDeliverableName] = useState("");
   const [isCreatingDeliverable, setIsCreatingDeliverable] = useState(false);
-  const ownerInputRef = useRef<HTMLInputElement>(null);
-  const labelInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (open && initialFocus) {
-      setTimeout(() => {
-        if (initialFocus === "owner") {
-          ownerInputRef.current?.focus();
-        } else if (initialFocus === "label") {
-          labelInputRef.current?.focus();
-        }
-      }, 100);
-    }
-  }, [open, initialFocus]);
+  const ownerSuggestions = useOwnerSuggestions();
+  const labelSuggestions = useLabelSuggestions();
 
   const { data: deliverables = [] } = useQuery<Deliverable[]>({
     queryKey: ["/api/solutions", action?.solutionId, "deliverables"],
@@ -176,36 +163,6 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted, initia
 
   const onSubmit = (data: EditActionForm) => {
     updateAction.mutate(data);
-  };
-
-  const addOwner = () => {
-    if (newOwner.trim()) {
-      const current = form.getValues("owners");
-      if (!current.includes(newOwner.trim())) {
-        form.setValue("owners", [...current, newOwner.trim()]);
-      }
-      setNewOwner("");
-    }
-  };
-
-  const removeOwner = (owner: string) => {
-    const current = form.getValues("owners");
-    form.setValue("owners", current.filter((o) => o !== owner));
-  };
-
-  const addLabel = () => {
-    if (newLabel.trim()) {
-      const current = form.getValues("labels");
-      if (!current.includes(newLabel.trim())) {
-        form.setValue("labels", [...current, newLabel.trim()]);
-      }
-      setNewLabel("");
-    }
-  };
-
-  const removeLabel = (label: string) => {
-    const current = form.getValues("labels");
-    form.setValue("labels", current.filter((l) => l !== label));
   };
 
   const owners = form.watch("owners");
@@ -366,74 +323,26 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted, initia
 
           <div className="space-y-2">
             <Label>Owners</Label>
-            <div className="flex flex-wrap gap-1 mb-2">
-              {owners.map((owner) => (
-                <Badge key={owner} variant="secondary" className="gap-1">
-                  {owner}
-                  <button
-                    type="button"
-                    onClick={() => removeOwner(owner)}
-                    className="ml-1 hover:text-destructive"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </Badge>
-              ))}
-            </div>
-            <div className="flex gap-2">
-              <Input
-                ref={ownerInputRef}
-                placeholder="Add owner..."
-                value={newOwner}
-                onChange={(e) => setNewOwner(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    addOwner();
-                  }
-                }}
-                data-testid="input-new-owner"
-              />
-              <Button type="button" size="icon" variant="outline" onClick={addOwner}>
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
+            <ComboboxMultiSelect
+              value={owners}
+              onChange={(value) => form.setValue("owners", value)}
+              options={ownerSuggestions}
+              placeholder="Select or add owners..."
+              emptyText="No owners found."
+              data-testid="combobox-action-owners"
+            />
           </div>
 
           <div className="space-y-2">
             <Label>Labels</Label>
-            <div className="flex flex-wrap gap-1 mb-2">
-              {labels.map((label) => (
-                <Badge key={label} variant="outline" className="gap-1">
-                  {label}
-                  <button
-                    type="button"
-                    onClick={() => removeLabel(label)}
-                    className="ml-1 hover:text-destructive"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </Badge>
-              ))}
-            </div>
-            <div className="flex gap-2">
-              <Input
-                ref={labelInputRef}
-                placeholder="Add label..."
-                value={newLabel}
-                onChange={(e) => setNewLabel(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    addLabel();
-                  }
-                }}
-                data-testid="input-new-label"
-              />
-              <Button type="button" size="icon" variant="outline" onClick={addLabel}>
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
+            <ComboboxMultiSelect
+              value={labels}
+              onChange={(value) => form.setValue("labels", value)}
+              options={labelSuggestions}
+              placeholder="Select or add labels..."
+              emptyText="No labels found."
+              data-testid="combobox-action-labels"
+            />
           </div>
 
           <DialogFooter className="flex justify-between gap-2 pt-4">
