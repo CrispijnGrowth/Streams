@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { pgTable, text, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, integer } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
   id: text("id").primaryKey(),
@@ -10,6 +10,96 @@ export const users = pgTable("users", {
   showDescriptions: boolean("show_descriptions").notNull().default(true),
   themePreference: text("theme_preference").notNull().default("system"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const streams = pgTable("streams", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  key: text("key").notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  phases: text("phases").array().notNull().default([]),
+  owners: text("owners").array().notNull().default([]),
+  labels: text("labels").array().notNull().default([]),
+  momentumStatus: text("momentum_status").notNull().default("Active"),
+  computedMilestoneDate: text("computed_milestone_date"),
+  lastMovementAt: text("last_movement_at"),
+  ordinal: integer("ordinal").notNull(),
+  isDeleted: boolean("is_deleted").notNull().default(false),
+});
+
+export const solutions = pgTable("solutions", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  key: text("key").notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  streamId: text("stream_id").notNull(),
+  milestoneDate: text("milestone_date"),
+  phases: text("phases").array().notNull().default([]),
+  owners: text("owners").array().notNull().default([]),
+  labels: text("labels").array().notNull().default([]),
+  status: text("status").notNull().default("In Progress"),
+  ordinal: integer("ordinal").notNull(),
+  isDeleted: boolean("is_deleted").notNull().default(false),
+});
+
+export const deliverables = pgTable("deliverables", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  key: text("key").notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  solutionId: text("solution_id").notNull(),
+  streamId: text("stream_id").notNull(),
+  borderColor: text("border_color").notNull().default("cyan"),
+  owners: text("owners").array().notNull().default([]),
+  ordinal: integer("ordinal").notNull(),
+  isMilestoneLinked: boolean("is_milestone_linked").notNull().default(true),
+  dueDate: text("due_date"),
+  isDeleted: boolean("is_deleted").notNull().default(false),
+});
+
+export const actions = pgTable("actions", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  key: text("key").notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  solutionId: text("solution_id").notNull(),
+  deliverableId: text("deliverable_id"),
+  streamId: text("stream_id").notNull(),
+  status: text("status").notNull().default("Backlog"),
+  dueDate: text("due_date"),
+  effort: integer("effort"),
+  owners: text("owners").array().notNull().default([]),
+  labels: text("labels").array().notNull().default([]),
+  kanbanOrder: integer("kanban_order").notNull().default(1),
+  ordinal: integer("ordinal").notNull(),
+  isDeleted: boolean("is_deleted").notNull().default(false),
+});
+
+export const steps = pgTable("steps", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  key: text("key").notNull(),
+  name: text("name").notNull(),
+  note: text("note"),
+  actionId: text("action_id").notNull(),
+  isDone: boolean("is_done").notNull().default(false),
+  dueDate: text("due_date"),
+  owner: text("owner"),
+  ordinal: integer("ordinal").notNull(),
+  isDeleted: boolean("is_deleted").notNull().default(false),
+});
+
+export const comments = pgTable("comments", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  entityType: text("entity_type").notNull(),
+  entityId: text("entity_id").notNull(),
+  content: text("content").notNull(),
+  createdAt: text("created_at").notNull(),
 });
 
 export const ActionStatus = {
