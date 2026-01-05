@@ -393,9 +393,17 @@ export class MemStorage implements IStorage {
       }
     }
     const statusChanged = data.status !== undefined && data.status !== sol.status;
+    const milestoneDateChanged = data.milestoneDate !== undefined && data.milestoneDate !== sol.milestoneDate;
     const oldStreamId = sol.streamId;
     const updated: Solution = { ...sol, ...data } as Solution;
     this.solutions.set(id, updated);
+    if (milestoneDateChanged) {
+      for (const deliverable of this.deliverables.values()) {
+        if (deliverable.solutionId === id && deliverable.userId === userId && !deliverable.isDeleted && deliverable.isMilestoneLinked) {
+          deliverable.dueDate = updated.milestoneDate;
+        }
+      }
+    }
     this.updateStreamMilestone(oldStreamId, userId);
     if (data.streamId && data.streamId !== oldStreamId) {
       this.updateStreamMilestone(data.streamId, userId);
@@ -465,6 +473,16 @@ export class MemStorage implements IStorage {
       (d) => d.solutionId === data.solutionId && d.userId === userId
     );
     const ordinal = solutionDeliverables.length + 1;
+    const isMilestoneLinked = data.isMilestoneLinked !== false;
+    let dueDate = data.dueDate;
+    if (isMilestoneLinked && parentSolution.milestoneDate) {
+      dueDate = parentSolution.milestoneDate;
+    }
+    if (isMilestoneLinked && dueDate && parentSolution.milestoneDate) {
+      if (new Date(dueDate) > new Date(parentSolution.milestoneDate)) {
+        dueDate = parentSolution.milestoneDate;
+      }
+    }
     const deliverable: Deliverable = {
       id,
       userId,
@@ -476,6 +494,8 @@ export class MemStorage implements IStorage {
       borderColor: (data.borderColor || "cyan") as Deliverable["borderColor"],
       owners: data.owners || [],
       ordinal,
+      isMilestoneLinked,
+      dueDate,
       isDeleted: false,
     };
     this.deliverables.set(id, deliverable);
@@ -485,11 +505,10 @@ export class MemStorage implements IStorage {
   async updateDeliverable(userId: string, id: string, data: Partial<InsertDeliverable>): Promise<Deliverable | undefined> {
     const deliverable = this.deliverables.get(id);
     if (!deliverable || deliverable.userId !== userId || deliverable.isDeleted) return undefined;
-    if (data.solutionId && data.solutionId !== deliverable.solutionId) {
-      const newParentSolution = this.solutions.get(data.solutionId);
-      if (!newParentSolution || newParentSolution.userId !== userId || newParentSolution.isDeleted) {
-        return undefined;
-      }
+    const solutionId = data.solutionId || deliverable.solutionId;
+    const parentSolution = this.solutions.get(solutionId);
+    if (!parentSolution || parentSolution.userId !== userId || parentSolution.isDeleted) {
+      return undefined;
     }
     
     if (data.ordinal !== undefined && data.ordinal !== deliverable.ordinal) {
@@ -515,7 +534,23 @@ export class MemStorage implements IStorage {
       }
     }
     
-    const updated: Deliverable = { ...deliverable, ...data } as Deliverable;
+    const isMilestoneLinked = data.isMilestoneLinked ?? deliverable.isMilestoneLinked;
+    let dueDate = data.dueDate ?? deliverable.dueDate;
+    if (isMilestoneLinked && parentSolution.milestoneDate) {
+      dueDate = parentSolution.milestoneDate;
+    }
+    if (isMilestoneLinked && dueDate && parentSolution.milestoneDate) {
+      if (new Date(dueDate) > new Date(parentSolution.milestoneDate)) {
+        dueDate = parentSolution.milestoneDate;
+      }
+    }
+    
+    const updated: Deliverable = { 
+      ...deliverable, 
+      ...data,
+      isMilestoneLinked,
+      dueDate,
+    } as Deliverable;
     this.deliverables.set(id, updated);
     return updated;
   }
@@ -956,6 +991,7 @@ export class MemStorage implements IStorage {
             streamId: stream.id,
             borderColor: "cyan",
             owners: [],
+            isMilestoneLinked: true,
           });
 
           for (const actionData of deliverableData.actions) {

@@ -145,6 +145,8 @@ export interface Deliverable {
   borderColor: DeliverableBorderColorType;
   owners: string[];
   ordinal: number;
+  isMilestoneLinked: boolean;
+  dueDate?: string;
   isDeleted: boolean;
 }
 
@@ -208,6 +210,8 @@ export const insertDeliverableSchema = z.object({
   borderColor: z.string().default("cyan"),
   owners: z.array(z.string()).default([]),
   ordinal: z.number().optional(),
+  isMilestoneLinked: z.boolean().default(true),
+  dueDate: z.string().optional(),
 });
 
 export const insertActionSchema = z.object({

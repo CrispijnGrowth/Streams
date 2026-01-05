@@ -171,7 +171,7 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
   });
 
   const updateDeliverable = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: { name: string; borderColor: DeliverableBorderColorType; owners: string[] } }) => {
+    mutationFn: async ({ id, data }: { id: string; data: { name: string; borderColor: DeliverableBorderColorType; owners: string[]; isMilestoneLinked: boolean; dueDate?: string } }) => {
       return apiRequest("PATCH", `/api/deliverables/${id}`, data);
     },
     onSuccess: () => {
@@ -393,6 +393,7 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
         onSave={(id, data) => updateDeliverable.mutate({ id, data })}
         onDelete={(id) => deleteDeliverable.mutate(id)}
         isPending={updateDeliverable.isPending || deleteDeliverable.isPending}
+        parentMilestoneDate={solution.milestoneDate}
       />
     </div>
   );

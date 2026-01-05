@@ -3,10 +3,12 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { ComboboxMultiSelect } from "@/components/ui/combobox-multi-select";
 import { useOwnerSuggestions } from "@/hooks/use-suggestions";
 import { DeliverableBorderColor, type Deliverable, type DeliverableBorderColorType } from "@shared/schema";
-import { Loader2, Trash2 } from "lucide-react";
+import { Loader2, Trash2, Calendar } from "lucide-react";
+import { format } from "date-fns";
 
 const borderColorMap: Record<DeliverableBorderColorType, string> = {
   cyan: "var(--deliverable-cyan)",
@@ -23,10 +25,11 @@ interface EditDeliverablePopupProps {
   deliverable: Deliverable | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (id: string, data: { name: string; borderColor: DeliverableBorderColorType; owners: string[] }) => void;
+  onSave: (id: string, data: { name: string; borderColor: DeliverableBorderColorType; owners: string[]; isMilestoneLinked: boolean; dueDate?: string }) => void;
   onDelete?: (id: string) => void;
   isPending?: boolean;
   anchorElement?: HTMLElement | null;
+  parentMilestoneDate?: string;
 }
 
 export function EditDeliverablePopup({
@@ -36,10 +39,13 @@ export function EditDeliverablePopup({
   onSave,
   onDelete,
   isPending = false,
+  parentMilestoneDate,
 }: EditDeliverablePopupProps) {
   const [name, setName] = useState("");
   const [borderColor, setBorderColor] = useState<DeliverableBorderColorType>("cyan");
   const [owners, setOwners] = useState<string[]>([]);
+  const [isMilestoneLinked, setIsMilestoneLinked] = useState(true);
+  const [dueDate, setDueDate] = useState<string>("");
   const ownerSuggestions = useOwnerSuggestions();
 
   useEffect(() => {
@@ -47,14 +53,34 @@ export function EditDeliverablePopup({
       setName(deliverable.name);
       setBorderColor(deliverable.borderColor || "cyan");
       setOwners(deliverable.owners || []);
+      setIsMilestoneLinked(deliverable.isMilestoneLinked ?? true);
+      setDueDate(deliverable.dueDate || "");
     }
   }, [deliverable, open]);
 
   const handleSave = () => {
     if (deliverable && name.trim()) {
-      onSave(deliverable.id, { name: name.trim(), borderColor, owners });
+      const effectiveDueDate = isMilestoneLinked ? parentMilestoneDate : dueDate;
+      onSave(deliverable.id, { 
+        name: name.trim(), 
+        borderColor, 
+        owners,
+        isMilestoneLinked,
+        dueDate: effectiveDueDate || undefined,
+      });
       onOpenChange(false);
     }
+  };
+
+  const displayDate = isMilestoneLinked 
+    ? (parentMilestoneDate ? format(new Date(parentMilestoneDate), "MMM d, yyyy") : "No milestone set")
+    : (dueDate ? format(new Date(dueDate), "MMM d, yyyy") : "No date set");
+
+  const validateDueDate = (date: string) => {
+    if (isMilestoneLinked && parentMilestoneDate && date) {
+      return new Date(date) <= new Date(parentMilestoneDate);
+    }
+    return true;
   };
 
   if (!deliverable) return null;
@@ -86,6 +112,37 @@ export function EditDeliverablePopup({
               emptyText="No owners found."
               data-testid="combobox-deliverable-owners"
             />
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="milestone-linked">Part of milestone delivery</Label>
+              <Switch
+                id="milestone-linked"
+                checked={isMilestoneLinked}
+                onCheckedChange={setIsMilestoneLinked}
+                data-testid="switch-milestone-linked"
+              />
+            </div>
+            <div className="text-sm text-muted-foreground">
+              {isMilestoneLinked ? (
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  <span>Milestone: {displayDate}</span>
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  <Label htmlFor="due-date" className="text-sm font-normal">Due Date</Label>
+                  <Input
+                    id="due-date"
+                    type="date"
+                    value={dueDate ? dueDate.split("T")[0] : ""}
+                    onChange={(e) => setDueDate(e.target.value)}
+                    data-testid="input-deliverable-due-date"
+                  />
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="space-y-2">
