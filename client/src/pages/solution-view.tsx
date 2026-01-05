@@ -1,10 +1,9 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { CheckSquare, Users, Tag, Calendar, Pencil } from "lucide-react";
 import { Timeline } from "@/components/timeline";
 import { KanbanBoard } from "@/components/kanban-board";
-import { QuickAddForm, QuickAddFormRef } from "@/components/quick-add-form";
 import { EmptyState } from "@/components/empty-state";
 import { KanbanSkeleton, TimelineSkeleton } from "@/components/loading-skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -34,7 +33,6 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
   const [editingDeliverable, setEditingDeliverable] = useState<Deliverable | null>(null);
   const [pendingActionStatus, setPendingActionStatus] = useState<ActionStatusType | null>(null);
   const [pendingDeliverableId, setPendingDeliverableId] = useState<string | undefined>(undefined);
-  const quickAddRef = useRef<QuickAddFormRef>(null);
 
   const { data: solution, isLoading: solutionLoading } = useQuery<SolutionWithProgress>({
     queryKey: ["/api/solutions", solutionId],
@@ -64,13 +62,6 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
   });
 
   useKeyboardShortcuts([
-    {
-      key: "n",
-      handler: useCallback(() => {
-        quickAddRef.current?.focus();
-      }, []),
-      description: "Focus quick add input",
-    },
     {
       key: "e",
       handler: useCallback(() => {
@@ -368,16 +359,6 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
               showDescription={showDescriptions}
             />
 
-            {isEditMode && (
-              <div className="max-w-sm">
-                <QuickAddForm
-                  ref={quickAddRef}
-                  placeholder="Add new action..."
-                  onAdd={(name) => createAction.mutate(name)}
-                  isLoading={createAction.isPending}
-                />
-              </div>
-            )}
           </div>
         </div>
       </div>

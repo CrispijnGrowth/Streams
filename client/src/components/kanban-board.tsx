@@ -152,16 +152,14 @@ function DroppableCell({
           ))
         )}
         {isEditMode && onAddAction && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full justify-start gap-2 text-muted-foreground"
+          <div
+            className="bg-card border border-dashed border-border/50 rounded-lg p-3 cursor-pointer hover-elevate active-elevate-2 flex items-center gap-2 text-muted-foreground"
             onClick={onAddAction}
             data-testid={`button-add-action-${status.toLowerCase().replace(/\s/g, "-")}`}
           >
             <Plus className="h-4 w-4" />
-            Add Action
-          </Button>
+            <span className="text-sm">Add Action</span>
+          </div>
         )}
       </div>
     </SortableContext>
@@ -347,18 +345,12 @@ export function KanbanBoard({
     
     for (const del of sortedDeliverables) {
       const delActions = actions.filter((a) => a.deliverableId === del.id);
-      if (delActions.length > 0) {
-        groups.push({ deliverable: del, actions: delActions });
-      }
+      groups.push({ deliverable: del, actions: delActions });
     }
     
     const ungroupedActions = actions.filter((a) => !a.deliverableId);
     if (ungroupedActions.length > 0) {
       groups.push({ deliverable: null, actions: ungroupedActions });
-    }
-    
-    if (groups.length === 0 && actions.length > 0) {
-      groups.push({ deliverable: null, actions: actions });
     }
     
     return groups;
