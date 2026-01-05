@@ -63,7 +63,7 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted, initia
     queryKey: ["/api/solutions", action?.solutionId, "deliverables"],
     queryFn: async () => {
       const res = await fetch(`/api/solutions/${action?.solutionId}/deliverables`, {
-        headers: { "x-session-id": localStorage.getItem("sessionId") || "" },
+        headers: { "x-session-id": localStorage.getItem("streams-session-id") || "" },
       });
       if (!res.ok) throw new Error("Failed to fetch deliverables");
       return res.json();
