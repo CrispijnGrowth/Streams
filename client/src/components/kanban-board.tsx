@@ -124,14 +124,13 @@ function DroppableCell({
   isEditMode = false,
 }: DroppableCellProps) {
   const { setNodeRef, isOver } = useDroppable({ id });
-  const bgColor = columnIndex % 2 === 0 ? "bg-[hsl(var(--kanban-column-a))]" : "bg-[hsl(var(--kanban-column-b))]";
 
   return (
     <SortableContext items={items.map((a) => a.id)} strategy={verticalListSortingStrategy}>
       <div
         ref={setNodeRef}
-        className={`w-72 flex-shrink-0 space-y-2 min-h-[60px] p-2 rounded-lg transition-colors ${bgColor} ${
-          isOver ? "ring-2 ring-primary/30" : ""
+        className={`w-72 flex-shrink-0 space-y-2 min-h-[60px] p-2 transition-colors ${
+          isOver ? "ring-2 ring-primary/30 rounded-lg" : ""
         }`}
         data-testid={`kanban-cell-${status.toLowerCase().replace(/\s/g, "-")}`}
       >
@@ -534,13 +533,21 @@ export function KanbanBoard({
       onDragEnd={handleDragEnd}
     >
       <ScrollArea className="w-full">
-        <div className="min-w-max">
-          <div className="flex gap-4 pb-3 border-b mb-3 pl-44">
+        <div className="min-w-max relative">
+          <div className="absolute top-0 bottom-0 left-44 right-0 flex gap-4 pointer-events-none" style={{ zIndex: 0 }}>
             {columnData.map((column, columnIndex) => {
-              const columnCount = actions.filter((a) => a.status === column.status).length;
               const bgColor = columnIndex % 2 === 0 ? "bg-[hsl(var(--kanban-column-a))]" : "bg-[hsl(var(--kanban-column-b))]";
               return (
-                <div key={column.status} className={`w-72 flex-shrink-0 rounded-t-lg pt-2 px-2 ${bgColor}`}>
+                <div key={`bg-${column.status}`} className={`w-72 flex-shrink-0 ${bgColor}`} />
+              );
+            })}
+          </div>
+
+          <div className="flex gap-4 pb-3 border-b mb-3 pl-44 relative" style={{ zIndex: 1 }}>
+            {columnData.map((column, columnIndex) => {
+              const columnCount = actions.filter((a) => a.status === column.status).length;
+              return (
+                <div key={column.status} className="w-72 flex-shrink-0 pt-2 px-2">
                   <div className="flex items-center justify-between px-1">
                     <div className="flex items-center gap-2">
                       <div className={`w-3 h-3 rounded-full ${column.color}`} />
@@ -554,7 +561,7 @@ export function KanbanBoard({
           </div>
 
           <SortableContext items={deliverableIds} strategy={verticalListSortingStrategy}>
-            <div className="space-y-4">
+            <div className="space-y-4 relative" style={{ zIndex: 1 }}>
               {groupedActions.map((group, index) => {
                 if (group.deliverable) {
                   return (
