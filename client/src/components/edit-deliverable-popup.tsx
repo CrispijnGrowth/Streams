@@ -194,7 +194,7 @@ export function EditDeliverablePopup({
               <Button
                 size="sm"
                 onClick={handleSave}
-                disabled={!name.trim() || isPending || (!isMilestoneLinked && dueDate && !validateDueDate(dueDate))}
+                disabled={!name.trim() || isPending || (!isMilestoneLinked && !!dueDate && !validateDueDate(dueDate))}
                 data-testid="button-save-deliverable"
               >
                 {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}

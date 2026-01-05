@@ -25,7 +25,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
-import { Plus, GripVertical } from "lucide-react";
+import { Plus, GripVertical, Calendar, Clock, User } from "lucide-react";
+import { format } from "date-fns";
 
 const borderColorMap: Record<DeliverableBorderColorType, string> = {
   cyan: "var(--deliverable-cyan)",
@@ -41,6 +42,7 @@ const borderColorMap: Record<DeliverableBorderColorType, string> = {
 interface KanbanBoardProps {
   actions: ActionWithProgress[];
   deliverables?: Deliverable[];
+  parentMilestoneDate?: string;
   onActionClick?: (id: string) => void;
   onActionEdit?: (action: ActionWithProgress) => void;
   onStatusChange?: (actionId: string, newStatus: ActionStatusType) => void;
@@ -170,6 +172,7 @@ interface DeliverableRowProps {
   deliverable: Deliverable | null;
   actions: ActionWithProgress[];
   columnData: { status: ActionStatusType; label: string; color: string; id: string }[];
+  parentMilestoneDate?: string;
   onActionClick?: (id: string) => void;
   onActionEdit?: (action: ActionWithProgress) => void;
   onAddAction?: (status: ActionStatusType, deliverableId?: string) => void;
@@ -187,6 +190,7 @@ function DeliverableRow({
   deliverable,
   actions,
   columnData,
+  parentMilestoneDate,
   onActionClick,
   onActionEdit,
   onAddAction,
@@ -200,6 +204,8 @@ function DeliverableRow({
   const borderColor = deliverable?.borderColor 
     ? `hsl(${borderColorMap[deliverable.borderColor]})`
     : "hsl(var(--deliverable-border))";
+  
+  const effectiveMilestoneDate = deliverable?.isMilestoneLinked ? parentMilestoneDate : null;
   
   return (
     <div 
@@ -215,27 +221,51 @@ function DeliverableRow({
         }}
       />
       
-      <div className="w-40 flex-shrink-0 flex items-start pt-2 pl-1 z-10 gap-1">
-        {deliverable && dragHandleProps && (
-          <div 
-            className="cursor-grab active:cursor-grabbing text-muted-foreground/50 hover:text-muted-foreground"
-            {...dragHandleProps.attributes}
-            {...dragHandleProps.listeners}
-          >
-            <GripVertical className="h-4 w-4" />
-          </div>
-        )}
-        {deliverable ? (
-          <div 
-            className={`font-medium text-sm text-foreground truncate flex-1 ${isEditMode ? "cursor-pointer hover:underline" : ""}`}
-            title={deliverable.name}
-            onClick={isEditMode && onEditDeliverable ? () => onEditDeliverable(deliverable) : undefined}
-          >
-            {deliverable.name}
-          </div>
-        ) : (
-          <div className="font-medium text-sm text-muted-foreground italic pl-5">
-            Ungrouped
+      <div className="w-40 flex-shrink-0 flex flex-col pt-2 pl-1 z-10 gap-1">
+        <div className="flex items-start gap-1">
+          {deliverable && dragHandleProps && (
+            <div 
+              className="cursor-grab active:cursor-grabbing text-muted-foreground/50 hover:text-muted-foreground"
+              {...dragHandleProps.attributes}
+              {...dragHandleProps.listeners}
+            >
+              <GripVertical className="h-4 w-4" />
+            </div>
+          )}
+          {deliverable ? (
+            <div 
+              className={`font-medium text-sm text-foreground truncate flex-1 ${isEditMode ? "cursor-pointer hover:underline" : ""}`}
+              title={deliverable.name}
+              onClick={isEditMode && onEditDeliverable ? () => onEditDeliverable(deliverable) : undefined}
+            >
+              {deliverable.name}
+            </div>
+          ) : (
+            <div className="font-medium text-sm text-muted-foreground italic pl-5">
+              Ungrouped
+            </div>
+          )}
+        </div>
+        {deliverable && (
+          <div className="flex flex-col gap-0.5 pl-5 text-xs text-muted-foreground">
+            {effectiveMilestoneDate && (
+              <div className="flex items-center gap-1" title="Milestone">
+                <Calendar className="h-3 w-3" />
+                <span>{format(new Date(effectiveMilestoneDate), "MMM d")}</span>
+              </div>
+            )}
+            {deliverable.dueDate && (
+              <div className="flex items-center gap-1" title="Due Date">
+                <Clock className="h-3 w-3" />
+                <span>{format(new Date(deliverable.dueDate), "MMM d")}</span>
+              </div>
+            )}
+            {deliverable.owners && deliverable.owners.length > 0 && (
+              <div className="flex items-center gap-1 truncate" title={deliverable.owners.join(", ")}>
+                <User className="h-3 w-3 flex-shrink-0" />
+                <span className="truncate">{deliverable.owners.join(", ")}</span>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -299,6 +329,7 @@ function SortableDeliverableRow({ id, ...props }: SortableDeliverableRowProps) {
 export function KanbanBoard({
   actions,
   deliverables = [],
+  parentMilestoneDate,
   onActionClick,
   onActionEdit,
   onStatusChange,
@@ -563,6 +594,7 @@ export function KanbanBoard({
                       deliverable={group.deliverable}
                       actions={group.actions}
                       columnData={columnData}
+                      parentMilestoneDate={parentMilestoneDate}
                       onActionClick={onActionClick}
                       onActionEdit={onActionEdit}
                       onAddAction={onAddAction}
@@ -578,6 +610,7 @@ export function KanbanBoard({
                     deliverable={null}
                     actions={group.actions}
                     columnData={columnData}
+                    parentMilestoneDate={parentMilestoneDate}
                     onActionClick={onActionClick}
                     onActionEdit={onActionEdit}
                     onAddAction={onAddAction}

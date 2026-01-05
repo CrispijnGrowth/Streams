@@ -347,6 +347,7 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
             <KanbanBoard
               actions={actions.filter((a) => !a.isDeleted)}
               deliverables={deliverables?.filter((d) => !d.isDeleted) || []}
+              parentMilestoneDate={solution.milestoneDate}
               onActionClick={handleActionClick}
               onActionEdit={(action) => setEditingAction(action)}
               onStatusChange={(actionId, status) => updateActionStatus.mutate({ actionId, status })}
