@@ -315,7 +315,7 @@ export class DatabaseStorage implements IStorage {
     return mapStreamFromDb(newStream);
   }
 
-  async updateStream(userId: string, id: string, data: Partial<InsertStream & { isDeleted?: boolean; lastMovementAt?: string }>): Promise<Stream | undefined> {
+  async updateStream(userId: string, id: string, data: Partial<InsertStream & { isDeleted?: boolean; lastMovementAt?: string; momentumStatus?: string }>): Promise<Stream | undefined> {
     const [existing] = await db.select().from(streams).where(
       and(eq(streams.id, id), eq(streams.userId, userId))
     );
@@ -327,6 +327,7 @@ export class DatabaseStorage implements IStorage {
     if (data.phases !== undefined) updateData.phases = data.phases;
     if (data.owners !== undefined) updateData.owners = data.owners;
     if (data.labels !== undefined) updateData.labels = data.labels;
+    if (data.momentumStatus !== undefined) updateData.momentumStatus = data.momentumStatus;
     if (data.isDeleted !== undefined) updateData.isDeleted = data.isDeleted;
     if (data.lastMovementAt !== undefined) updateData.lastMovementAt = data.lastMovementAt;
     
