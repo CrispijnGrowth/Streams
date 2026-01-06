@@ -495,6 +495,7 @@ export class DatabaseStorage implements IStorage {
     
     await db.insert(solutions).values(newSolution);
     await this.updateStreamMilestone(data.streamId, userId);
+    await db.update(streams).set({ lastMovementAt: new Date().toISOString() }).where(eq(streams.id, data.streamId));
     return mapSolutionFromDb(newSolution);
   }
 
@@ -606,6 +607,7 @@ export class DatabaseStorage implements IStorage {
     };
     
     await db.insert(deliverables).values(newDeliverable);
+    await db.update(streams).set({ lastMovementAt: new Date().toISOString() }).where(eq(streams.id, data.streamId));
     return mapDeliverableFromDb(newDeliverable);
   }
 
@@ -816,6 +818,7 @@ export class DatabaseStorage implements IStorage {
     };
     
     await db.insert(steps).values(newStep);
+    await db.update(streams).set({ lastMovementAt: new Date().toISOString() }).where(eq(streams.id, parentAction.streamId));
     return mapStepFromDb(newStep);
   }
 
@@ -834,6 +837,13 @@ export class DatabaseStorage implements IStorage {
     if (data.isDeleted !== undefined) updateData.isDeleted = data.isDeleted;
     
     await db.update(steps).set(updateData).where(eq(steps.id, id));
+    
+    if (data.isDone !== undefined) {
+      const [parentAction] = await db.select().from(actions).where(eq(actions.id, existing.actionId));
+      if (parentAction) {
+        await db.update(streams).set({ lastMovementAt: new Date().toISOString() }).where(eq(streams.id, parentAction.streamId));
+      }
+    }
     
     const [updated] = await db.select().from(steps).where(eq(steps.id, id));
     return updated ? mapStepFromDb(updated) : undefined;
