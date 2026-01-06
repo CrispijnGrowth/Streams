@@ -36,6 +36,7 @@ interface TimelineItem {
   };
   type?: TimelineItemType;
   parentId?: string;
+  parentName?: string;
   borderColor?: string;
 }
 
@@ -107,6 +108,8 @@ function DraggableTimelineBall({ item, position, onClick, isDraggable = true, en
         enterAnimation={isDragging ? undefined : enterAnimation}
         shape={item.type === "action" ? "diamond" : "circle"}
         borderColor={item.borderColor}
+        itemType={item.type}
+        parentName={item.parentName}
       />
     </div>
   );
@@ -155,6 +158,8 @@ function DraggableUndatedBall({ item, isDraggable = true, onClick, enterAnimatio
         enterAnimation={isDragging ? undefined : enterAnimation}
         shape={item.type === "action" ? "diamond" : "circle"}
         borderColor={item.borderColor}
+        itemType={item.type}
+        parentName={item.parentName}
       />
     </div>
   );
@@ -551,6 +556,8 @@ export function Timeline({
               counts={activeItem.counts}
               shape={activeItem.type === "action" ? "diamond" : "circle"}
               borderColor={activeItem.borderColor}
+              itemType={activeItem.type}
+              parentName={activeItem.parentName}
             />
           </div>
         )}

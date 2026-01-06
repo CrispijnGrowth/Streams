@@ -228,6 +228,7 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
     date: d.dueDate,
     type: "deliverable" as const,
     borderColor: d.borderColor,
+    parentName: solution?.name,
   })) || [];
 
   const actionTimelineItems = actions
@@ -244,6 +245,7 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
         type: "action" as const,
         parentId: a.deliverableId,
         borderColor: parentDeliverable?.borderColor,
+        parentName: parentDeliverable?.name,
       };
     }) || [];
 

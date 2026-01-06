@@ -7,6 +7,8 @@ import { format } from "date-fns";
 
 type MarkerShape = "circle" | "diamond";
 
+type ItemType = "stream" | "solution" | "deliverable" | "action";
+
 interface TimelineBallProps {
   id: string;
   title: string;
@@ -30,6 +32,8 @@ interface TimelineBallProps {
   };
   shape?: MarkerShape;
   borderColor?: string;
+  itemType?: ItemType;
+  parentName?: string;
 }
 
 function generateAcronym(title: string): string {
@@ -79,6 +83,13 @@ const fillColorClasses: Record<string, string> = {
   green: "bg-green-400",
 };
 
+const itemTypeLabels: Record<ItemType, string> = {
+  stream: "Stream",
+  solution: "Solution",
+  deliverable: "Deliverable",
+  action: "Action",
+};
+
 export function TimelineBall({
   id,
   title,
@@ -94,6 +105,8 @@ export function TimelineBall({
   enterAnimation,
   shape = "circle",
   borderColor,
+  itemType,
+  parentName,
 }: TimelineBallProps) {
   const [isHovered, setIsHovered] = useState(false);
   const acronym = generateAcronym(title);
@@ -181,9 +194,19 @@ export function TimelineBall({
         data-testid={`tooltip-${id}`}
       >
         <div className="space-y-1">
+          {itemType && (
+            <span className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">
+              {itemTypeLabels[itemType]}
+            </span>
+          )}
           <h4 className="font-medium text-sm">{title}</h4>
+          {parentName && (
+            <p className="text-[11px] text-muted-foreground">
+              in {parentName}
+            </p>
+          )}
           {description && (
-            <p className="text-xs text-muted-foreground line-clamp-2">{description}</p>
+            <p className="text-xs text-muted-foreground/80 line-clamp-2">{description}</p>
           )}
         </div>
         <div className="flex items-center gap-2 flex-wrap">
