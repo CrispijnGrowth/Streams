@@ -34,6 +34,7 @@ interface TimelineBallProps {
   borderColor?: string;
   itemType?: ItemType;
   parentName?: string;
+  drivingSolutionName?: string;
 }
 
 function generateAcronym(title: string): string {
@@ -107,6 +108,7 @@ export function TimelineBall({
   borderColor,
   itemType,
   parentName,
+  drivingSolutionName,
 }: TimelineBallProps) {
   const [isHovered, setIsHovered] = useState(false);
   const acronym = generateAcronym(title);
@@ -222,7 +224,12 @@ export function TimelineBall({
             <ProgressBar value={progress} size="sm" />
           </div>
         )}
-        {counts && (counts.doing || counts.blocked || counts.delegated) && (
+        {itemType === "stream" && drivingSolutionName ? (
+          <div className="text-xs pt-1 text-muted-foreground">
+            <span className="italic">Milestone from:</span>{" "}
+            <span className="font-medium text-foreground">{drivingSolutionName}</span>
+          </div>
+        ) : counts && (counts.doing || counts.blocked || counts.delegated) ? (
           <div className="flex items-center gap-2 text-xs pt-1">
             {counts.doing !== undefined && counts.doing > 0 && (
               <span className="text-status-executing">{counts.doing} Doing</span>
@@ -234,7 +241,7 @@ export function TimelineBall({
               <span className="text-status-delegated">{counts.delegated} Delegated</span>
             )}
           </div>
-        )}
+        ) : null}
       </TooltipContent>
     </Tooltip>
   );

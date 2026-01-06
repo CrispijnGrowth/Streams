@@ -70,9 +70,16 @@ export function StreamCard({ stream, onClick, onEdit, showDescription = true }: 
       <div className="space-y-2">
         {stream.inProgressSolutions.slice(0, 3).map((sol) => (
           <div key={sol.name} className="space-y-0.5">
-            <span className={`text-xs line-clamp-1 ${sol.isEarliest ? "font-medium" : "text-muted-foreground"}`}>
-              {sol.name}
-            </span>
+            <div className="flex items-center justify-between gap-2">
+              <span className={`text-xs line-clamp-1 flex-1 ${sol.isEarliest ? "font-medium" : "text-muted-foreground"}`}>
+                {sol.name}
+              </span>
+              {sol.milestoneDate && (
+                <span className={`text-[10px] font-mono shrink-0 ${sol.isEarliest ? "text-foreground" : "text-muted-foreground"}`}>
+                  {format(new Date(sol.milestoneDate), "MMM d")}
+                </span>
+              )}
+            </div>
             <div className="flex items-center gap-2">
               <div className="flex-1">
                 <ProgressBar value={sol.progress} size="sm" showLabel={false} />

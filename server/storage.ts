@@ -168,7 +168,7 @@ export class MemStorage implements IStorage {
     doingCount: number;
     blockedCount: number;
     delegatedCount: number;
-    inProgressSolutions: { name: string; progress: number; isEarliest: boolean }[];
+    inProgressSolutions: { name: string; progress: number; isEarliest: boolean; milestoneDate?: string }[];
   } {
     const streamSolutions = Array.from(this.solutions.values()).filter(
       (s) => s.streamId === streamId && s.userId === userId && !s.isDeleted
@@ -218,6 +218,7 @@ export class MemStorage implements IStorage {
         name: s.name,
         progress: s.progress,
         isEarliest: s.name === earliestName,
+        milestoneDate: s.milestoneDate || undefined,
       }));
     
     return {

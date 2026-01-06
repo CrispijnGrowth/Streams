@@ -360,6 +360,7 @@ export interface InProgressSolutionInfo {
   name: string;
   progress: number;
   isEarliest: boolean;
+  milestoneDate?: string;
 }
 
 export interface StreamWithProgress extends Stream {

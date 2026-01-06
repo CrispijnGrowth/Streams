@@ -231,7 +231,7 @@ export class DatabaseStorage implements IStorage {
       let doingCount = 0;
       let blockedCount = 0;
       let delegatedCount = 0;
-      const inProgressSolutions: { name: string; progress: number; isEarliest: boolean }[] = [];
+      const inProgressSolutions: { name: string; progress: number; isEarliest: boolean; milestoneDate?: string }[] = [];
 
       const inProgressWithDates: { name: string; progress: number; milestoneDate?: string }[] = [];
 
@@ -265,6 +265,7 @@ export class DatabaseStorage implements IStorage {
           name: sol.name,
           progress: sol.progress,
           isEarliest: sol.milestoneDate === earliestDate && earliestDate !== undefined,
+          milestoneDate: sol.milestoneDate,
         });
       }
 

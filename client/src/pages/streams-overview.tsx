@@ -162,20 +162,24 @@ export function StreamsOverview({ showDescriptions }: StreamsOverviewProps) {
     },
   });
 
-  const timelineItems = streams?.map((s) => ({
-    id: s.id,
-    title: s.name,
-    description: s.description,
-    date: s.computedMilestoneDate,
-    momentumStatus: s.momentumStatus,
-    progress: s.progress,
-    counts: {
-      doing: s.doingCount,
-      blocked: s.blockedCount,
-      delegated: s.delegatedCount,
-    },
-    type: "stream" as const,
-  })) || [];
+  const timelineItems = streams?.map((s) => {
+    const drivingSolution = s.inProgressSolutions.find(sol => sol.isEarliest);
+    return {
+      id: s.id,
+      title: s.name,
+      description: s.description,
+      date: s.computedMilestoneDate,
+      momentumStatus: s.momentumStatus,
+      progress: s.progress,
+      counts: {
+        doing: s.doingCount,
+        blocked: s.blockedCount,
+        delegated: s.delegatedCount,
+      },
+      type: "stream" as const,
+      drivingSolutionName: drivingSolution?.name,
+    };
+  }) || [];
 
   const handleStreamClick = (streamId: string) => {
     setLocation(`/stream/${streamId}`);
