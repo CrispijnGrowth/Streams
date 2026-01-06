@@ -69,6 +69,7 @@ interface DraggableTimelineBallProps {
 }
 
 function DraggableTimelineBall({ item, position, onClick, isDraggable = true, enterAnimation, stackIndex = 0, stackTotal = 1 }: DraggableTimelineBallProps) {
+  const [isHovered, setIsHovered] = useState(false);
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: item.id,
     disabled: !isDraggable,
@@ -81,14 +82,16 @@ function DraggableTimelineBall({ item, position, onClick, isDraggable = true, en
   return (
     <div
       ref={setNodeRef}
-      className="absolute transition-all duration-200 hover:z-[100] hover:scale-105"
+      className="absolute transition-all duration-200"
       style={{
         left: `${position}%`,
-        transform: `translateX(-50%) translateY(${verticalOffset}px)`,
+        transform: `translateX(-50%) translateY(${verticalOffset}px) scale(${isHovered ? 1.08 : 1})`,
         opacity: isDragging ? 0.5 : 1,
         cursor: isDraggable ? "grab" : "pointer",
-        zIndex: baseZIndex,
+        zIndex: isHovered ? 100 : baseZIndex,
       }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       {...(isDraggable ? { ...attributes, ...listeners } : {})}
     >
       <TimelineBall
@@ -117,6 +120,7 @@ interface DraggableUndatedBallProps {
 }
 
 function DraggableUndatedBall({ item, isDraggable = true, onClick, enterAnimation }: DraggableUndatedBallProps) {
+  const [isHovered, setIsHovered] = useState(false);
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `undated-${item.id}`,
     disabled: !isDraggable,
@@ -126,10 +130,15 @@ function DraggableUndatedBall({ item, isDraggable = true, onClick, enterAnimatio
   return (
     <div
       ref={setNodeRef}
+      className="transition-all duration-200"
       style={{
         opacity: isDragging ? 0.5 : 1,
         cursor: isDraggable ? "grab" : "pointer",
+        transform: `scale(${isHovered ? 1.08 : 1})`,
+        zIndex: isHovered ? 100 : 1,
       }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       {...(isDraggable ? { ...attributes, ...listeners } : {})}
     >
       <TimelineBall
