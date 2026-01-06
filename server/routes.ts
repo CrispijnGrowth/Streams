@@ -293,6 +293,28 @@ export async function registerRoutes(
           updateData[field] = req.body[field];
         }
       }
+      
+      // If momentumStatus is being set, calculate the appropriate lastMovementAt
+      if (req.body.momentumStatus) {
+        const now = new Date();
+        switch (req.body.momentumStatus) {
+          case "Active":
+            // Reset to now (0 days ago)
+            updateData.lastMovementAt = now.toISOString();
+            break;
+          case "Slowing":
+            // Set to 7 days ago (will transition to Stalled after 7 more days)
+            now.setDate(now.getDate() - 7);
+            updateData.lastMovementAt = now.toISOString();
+            break;
+          case "Stalled":
+            // Set to 14 days ago
+            now.setDate(now.getDate() - 14);
+            updateData.lastMovementAt = now.toISOString();
+            break;
+        }
+      }
+      
       const stream = await storage.updateStream(req.userId!, req.params.id, updateData);
       if (!stream) {
         return res.status(404).json({ error: "Stream not found" });

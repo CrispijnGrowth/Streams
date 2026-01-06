@@ -20,7 +20,7 @@ import {
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
-import type { StreamWithProgress, Stream, MomentumStatus } from "@shared/schema";
+import type { StreamWithProgress, Stream, MomentumStatusType } from "@shared/schema";
 
 type SortField = "ordinal" | "name" | "date" | "progress";
 type SortDirection = "asc" | "desc";
@@ -162,6 +162,18 @@ export function StreamsOverview({ showDescriptions }: StreamsOverviewProps) {
     },
   });
 
+  const updateStreamMomentum = useMutation({
+    mutationFn: async ({ streamId, momentumStatus }: { streamId: string; momentumStatus: MomentumStatusType }) => {
+      return apiRequest("PATCH", `/api/streams/${streamId}`, { momentumStatus });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
+    },
+    onError: () => {
+      toast({ title: "Failed to update status", variant: "destructive" });
+    },
+  });
+
   const timelineItems = streams?.map((s) => {
     const drivingSolution = s.inProgressSolutions.find(sol => sol.isEarliest);
     return {
@@ -287,6 +299,7 @@ export function StreamsOverview({ showDescriptions }: StreamsOverviewProps) {
                   stream={stream}
                   onClick={() => handleStreamClick(stream.id)}
                   onEdit={() => setEditingStream(stream)}
+                  onMomentumClick={(newStatus) => updateStreamMomentum.mutate({ streamId: stream.id, momentumStatus: newStatus })}
                   showDescription={showDescriptions}
                 />
               ))}

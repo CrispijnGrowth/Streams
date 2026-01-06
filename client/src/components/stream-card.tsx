@@ -5,16 +5,17 @@ import { MomentumBadge } from "@/components/status-badge";
 import { ProgressBar } from "@/components/progress-bar";
 import { Calendar, Pencil } from "lucide-react";
 import { format } from "date-fns";
-import type { StreamWithProgress } from "@shared/schema";
+import type { StreamWithProgress, MomentumStatusType } from "@shared/schema";
 
 interface StreamCardProps {
   stream: StreamWithProgress;
   onClick?: () => void;
   onEdit?: () => void;
+  onMomentumClick?: (newStatus: MomentumStatusType) => void;
   showDescription?: boolean;
 }
 
-export function StreamCard({ stream, onClick, onEdit, showDescription = true }: StreamCardProps) {
+export function StreamCard({ stream, onClick, onEdit, onMomentumClick, showDescription = true }: StreamCardProps) {
   const isOverdue =
     stream.computedMilestoneDate &&
     new Date(stream.computedMilestoneDate) < new Date() &&
@@ -23,6 +24,19 @@ export function StreamCard({ stream, onClick, onEdit, showDescription = true }: 
   const handleEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
     onEdit?.();
+  };
+
+  const handleMomentumClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!onMomentumClick) return;
+    
+    // Cycle through: Active -> Slowing -> Stalled -> Active
+    const nextStatus: Record<MomentumStatusType, MomentumStatusType> = {
+      Active: "Slowing",
+      Slowing: "Stalled",
+      Stalled: "Active",
+    };
+    onMomentumClick(nextStatus[stream.momentumStatus]);
   };
 
   return (
@@ -47,7 +61,11 @@ export function StreamCard({ stream, onClick, onEdit, showDescription = true }: 
           </Button>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <MomentumBadge status={stream.momentumStatus} />
+          <MomentumBadge 
+            status={stream.momentumStatus} 
+            onClick={onMomentumClick ? handleMomentumClick : undefined}
+            clickable={!!onMomentumClick}
+          />
           {stream.computedMilestoneDate && (
             <div
               className={`flex items-center gap-1 text-xs ${isOverdue ? "text-status-blocked" : "text-muted-foreground"}`}

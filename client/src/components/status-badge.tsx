@@ -52,6 +52,8 @@ export function SolutionStatusBadge({ status, size = "default" }: SolutionStatus
 
 interface MomentumBadgeProps {
   status: MomentumStatusType;
+  onClick?: (e: React.MouseEvent) => void;
+  clickable?: boolean;
 }
 
 const momentumStyles: Record<MomentumStatusType, string> = {
@@ -60,12 +62,13 @@ const momentumStyles: Record<MomentumStatusType, string> = {
   Stalled: "bg-momentum-stalled/20 text-momentum-stalled border-momentum-stalled/30",
 };
 
-export function MomentumBadge({ status }: MomentumBadgeProps) {
+export function MomentumBadge({ status, onClick, clickable = false }: MomentumBadgeProps) {
   return (
     <Badge
       variant="outline"
-      className={`${momentumStyles[status]} text-xs`}
+      className={`${momentumStyles[status]} text-xs ${clickable ? "cursor-pointer" : ""}`}
       data-testid={`badge-momentum-${status.toLowerCase()}`}
+      onClick={onClick}
     >
       {status}
     </Badge>
