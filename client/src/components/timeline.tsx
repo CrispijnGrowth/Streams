@@ -64,24 +64,30 @@ interface DraggableTimelineBallProps {
     active: boolean;
     delayMs: number;
   };
+  stackIndex?: number;
+  stackTotal?: number;
 }
 
-function DraggableTimelineBall({ item, position, onClick, isDraggable = true, enterAnimation }: DraggableTimelineBallProps) {
+function DraggableTimelineBall({ item, position, onClick, isDraggable = true, enterAnimation, stackIndex = 0, stackTotal = 1 }: DraggableTimelineBallProps) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: item.id,
     disabled: !isDraggable,
     data: { item },
   });
 
+  const verticalOffset = stackTotal > 1 ? (stackIndex - (stackTotal - 1) / 2) * 8 : 0;
+  const baseZIndex = stackTotal - stackIndex;
+
   return (
     <div
       ref={setNodeRef}
-      className="absolute"
+      className="absolute transition-all duration-200 hover:z-[100] hover:scale-105"
       style={{
         left: `${position}%`,
-        transform: "translateX(-50%)",
+        transform: `translateX(-50%) translateY(${verticalOffset}px)`,
         opacity: isDragging ? 0.5 : 1,
         cursor: isDraggable ? "grab" : "pointer",
+        zIndex: baseZIndex,
       }}
       {...(isDraggable ? { ...attributes, ...listeners } : {})}
     >
@@ -456,22 +462,43 @@ export function Timeline({
             )}
 
             <div className="absolute inset-0 flex items-center">
-              {visibleItems
-                .map((item) => ({
-                  item,
-                  position: getPositionForDate(item.date!),
-                }))
-                .sort((a, b) => a.position - b.position)
-                .map(({ item, position }, index) => (
-                  <DraggableTimelineBall
-                    key={item.id}
-                    item={item}
-                    position={position}
-                    onClick={() => onItemClick?.(item.id)}
-                    isDraggable={isDraggable}
-                    enterAnimation={animateIn ? { active: true, delayMs: index * 50 } : undefined}
-                  />
-                ))}
+              {(() => {
+                const itemsWithPositions = visibleItems
+                  .map((item) => ({
+                    item,
+                    position: getPositionForDate(item.date!),
+                  }))
+                  .sort((a, b) => a.position - b.position);
+
+                const stackGroups: Map<string, number[]> = new Map();
+                itemsWithPositions.forEach(({ position }, idx) => {
+                  const key = position.toFixed(1);
+                  if (!stackGroups.has(key)) {
+                    stackGroups.set(key, []);
+                  }
+                  stackGroups.get(key)!.push(idx);
+                });
+
+                return itemsWithPositions.map(({ item, position }, index) => {
+                  const key = position.toFixed(1);
+                  const group = stackGroups.get(key) || [index];
+                  const stackIndex = group.indexOf(index);
+                  const stackTotal = group.length;
+
+                  return (
+                    <DraggableTimelineBall
+                      key={item.id}
+                      item={item}
+                      position={position}
+                      onClick={() => onItemClick?.(item.id)}
+                      isDraggable={isDraggable}
+                      enterAnimation={animateIn ? { active: true, delayMs: index * 50 } : undefined}
+                      stackIndex={stackIndex}
+                      stackTotal={stackTotal}
+                    />
+                  );
+                });
+              })()}
             </div>
           </div>
 

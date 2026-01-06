@@ -154,7 +154,7 @@ export function TimelineBall({
             focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2
             cursor-pointer
             flex items-center justify-center
-            ${isHovered ? "scale-110 shadow-lg" : "shadow-sm"}
+            ${isHovered ? "shadow-lg" : "shadow-sm"}
             ${momentumStatus === "Stalled" || momentumStatus === "Slowing" ? "opacity-70" : ""}
             ${enterAnimation?.active ? "animate-ball-enter" : ""}
           `}
