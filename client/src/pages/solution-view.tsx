@@ -230,20 +230,22 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
     borderColor: d.borderColor,
   })) || [];
 
-  const actionTimelineItems = actions?.map((a) => {
-    const parentDeliverable = deliverables?.find(d => d.id === a.deliverableId);
-    return {
-      id: a.id,
-      title: a.name,
-      description: a.description,
-      date: a.dueDate,
-      status: a.status,
-      progress: a.progress,
-      type: "action" as const,
-      parentId: a.deliverableId,
-      borderColor: parentDeliverable?.borderColor,
-    };
-  }) || [];
+  const actionTimelineItems = actions
+    ?.filter((a) => a.status !== ActionStatus.DONE && a.status !== ActionStatus.ARCHIVE)
+    .map((a) => {
+      const parentDeliverable = deliverables?.find(d => d.id === a.deliverableId);
+      return {
+        id: a.id,
+        title: a.name,
+        description: a.description,
+        date: a.dueDate,
+        status: a.status,
+        progress: a.progress,
+        type: "action" as const,
+        parentId: a.deliverableId,
+        borderColor: parentDeliverable?.borderColor,
+      };
+    }) || [];
 
   const timelineItems = [...deliverableTimelineItems, ...actionTimelineItems];
 

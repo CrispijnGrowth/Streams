@@ -66,6 +66,15 @@ const borderColorClasses: Record<string, string> = {
   orange: "border-orange-400",
 };
 
+const fillColorClasses: Record<string, string> = {
+  cyan: "bg-cyan-400",
+  pink: "bg-pink-400",
+  yellow: "bg-yellow-400",
+  green: "bg-green-400",
+  purple: "bg-purple-400",
+  orange: "bg-orange-400",
+};
+
 export function TimelineBall({
   id,
   title,
@@ -89,19 +98,38 @@ export function TimelineBall({
     ? { animationDelay: `${enterAnimation.delayMs}ms` }
     : undefined;
 
-  const sizeClasses = {
+  const circleSizeClasses = {
     sm: "w-6 h-6",
     default: "w-9 h-9",
     lg: "w-11 h-11",
   };
 
-  const textSizeClasses = {
+  const diamondSizeClasses = {
+    sm: "w-5 h-5",
+    default: "w-7 h-7",
+    lg: "w-9 h-9",
+  };
+
+  const sizeClasses = shape === "diamond" ? diamondSizeClasses : circleSizeClasses;
+
+  const circleTextSizeClasses = {
     sm: "text-[7px]",
     default: "text-[9px]",
     lg: "text-[10px]",
   };
 
+  const diamondTextSizeClasses = {
+    sm: "text-[6px]",
+    default: "text-[8px]",
+    lg: "text-[9px]",
+  };
+
+  const textSizeClasses = shape === "diamond" ? diamondTextSizeClasses : circleTextSizeClasses;
+
   const getBallColor = () => {
+    if (borderColor && fillColorClasses[borderColor]) {
+      return fillColorClasses[borderColor];
+    }
     if (momentumStatus) {
       return momentumColors[momentumStatus];
     }
@@ -122,7 +150,6 @@ export function TimelineBall({
             ${sizeClasses[size]}
             ${isNoDate ? "border-2 border-dashed border-muted-foreground/50 bg-transparent" : getBallColor()}
             ${shapeClass}
-            ${borderColor ? `border-2 ${borderColorClass}` : ""}
             transition-all duration-200 ease-out
             focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2
             cursor-pointer
