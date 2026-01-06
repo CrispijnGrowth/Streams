@@ -103,7 +103,7 @@ export function EditDeliverablePopup({
   const handleSave = () => {
     if (deliverable && name.trim()) {
       const effectiveDueDate = isMilestoneLinked ? parentMilestoneDate : dueDate;
-      if (!isMilestoneLinked && effectiveDueDate && !validateDueDate(effectiveDueDate)) {
+      if (isMilestoneLinked && effectiveDueDate && !validateDueDate(effectiveDueDate)) {
         return;
       }
       onSave(deliverable.id, { 
@@ -182,10 +182,10 @@ export function EditDeliverablePopup({
               type="date"
               value={dueDate ? dueDate.split("T")[0] : ""}
               onChange={(e) => setDueDate(e.target.value)}
-              max={parentMilestoneDate ? parentMilestoneDate.split("T")[0] : undefined}
+              max={isMilestoneLinked && parentMilestoneDate ? parentMilestoneDate.split("T")[0] : undefined}
               data-testid="input-deliverable-due-date"
             />
-            {dueDate && !validateDueDate(dueDate) && (
+            {isMilestoneLinked && dueDate && !validateDueDate(dueDate) && (
               <p className="text-xs text-destructive">Due date cannot exceed parent milestone date</p>
             )}
           </div>
