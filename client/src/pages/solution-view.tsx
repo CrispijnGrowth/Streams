@@ -341,7 +341,10 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
         <div className="space-y-6">
           <div className="flex items-center justify-between gap-4 pb-3 border-b flex-wrap">
             <div className="flex items-center gap-3">
-              <h1 className="text-lg font-semibold" data-testid="text-solution-name">{solution.name}</h1>
+              <div>
+                <span className="text-[10px] uppercase tracking-widest font-semibold text-primary">Solution</span>
+                <h1 className="text-lg font-semibold" data-testid="text-solution-name">{solution.name}</h1>
+              </div>
               <Button
                 size="sm"
                 variant={solution.status === SolutionStatus.ON_HOLD ? "secondary" : "outline"}

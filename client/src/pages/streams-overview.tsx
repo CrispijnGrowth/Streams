@@ -225,7 +225,10 @@ export function StreamsOverview({ showDescriptions }: StreamsOverviewProps) {
       <div className="flex-1 overflow-auto p-6">
         <div className="space-y-4">
           <div className="flex items-center justify-between gap-4 flex-wrap">
-            <h2 className="text-lg font-semibold">All Streams</h2>
+            <div>
+              <span className="text-[10px] uppercase tracking-widest font-semibold text-primary">Portfolio</span>
+              <h2 className="text-lg font-semibold">All Streams</h2>
+            </div>
             <span className="text-sm text-muted-foreground">
               {filteredAndSortedStreams.length} of {streams?.filter((s) => !s.isDeleted).length || 0} stream{(streams?.filter((s) => !s.isDeleted).length || 0) !== 1 ? "s" : ""}
             </span>

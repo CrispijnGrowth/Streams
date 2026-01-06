@@ -228,7 +228,10 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
           <div className="space-y-3 pb-4 border-b pt-2">
             <div className="flex items-center justify-between gap-4 flex-wrap">
               <div className="flex items-center gap-3">
-                <h1 className="text-xl font-semibold" data-testid="text-stream-name">{stream.name}</h1>
+                <div>
+                  <span className="text-[10px] uppercase tracking-widest font-semibold text-primary">Stream</span>
+                  <h1 className="text-xl font-semibold" data-testid="text-stream-name">{stream.name}</h1>
+                </div>
                 {isEditMode && (
                   <Button
                     size="icon"

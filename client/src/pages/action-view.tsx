@@ -242,9 +242,12 @@ export function ActionView({ streamId, solutionId, actionId }: ActionViewProps) 
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-semibold" data-testid="text-action-title">
-                {action.name}
-              </h1>
+              <div>
+                <span className="text-[10px] uppercase tracking-widest font-semibold text-primary">Action</span>
+                <h1 className="text-xl font-semibold" data-testid="text-action-title">
+                  {action.name}
+                </h1>
+              </div>
               <Button
                 size="icon"
                 variant="ghost"
