@@ -15,7 +15,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { useMode } from "@/lib/mode-context";
-import type { Stream, SolutionWithBreakdownAndComment, Solution } from "@shared/schema";
+import type { Stream, SolutionWithBreakdownAndComment, Solution, MomentumStatusType } from "@shared/schema";
 import { SolutionStatus } from "@shared/schema";
 
 interface StreamViewProps {
@@ -68,6 +68,30 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
     },
   });
 
+  const updateMomentum = useMutation({
+    mutationFn: async (momentumStatus: MomentumStatusType) => {
+      return apiRequest("PATCH", `/api/streams/${streamId}`, { momentumStatus });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/streams", streamId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
+    },
+    onError: () => {
+      toast({ title: "Failed to update status", variant: "destructive" });
+    },
+  });
+
+  const cycleMomentum = () => {
+    if (!stream?.momentumStatus) return;
+    const nextStatus: Record<MomentumStatusType, MomentumStatusType> = {
+      Active: "Slowing",
+      Slowing: "Stalled",
+      Stalled: "Active",
+    };
+    updateMomentum.mutate(nextStatus[stream.momentumStatus as MomentumStatusType]);
+  };
+
+  
   const openEditWithFocus = useCallback((focus: EditStreamFocusField) => {
     if (stream) {
       setEditFocusField(focus);
@@ -244,7 +268,12 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
                   </Button>
                 )}
                 {stream.momentumStatus && (
-                  <Badge variant="secondary" className={getMomentumColor(stream.momentumStatus)}>
+                  <Badge 
+                    variant="secondary" 
+                    className={`${getMomentumColor(stream.momentumStatus)} cursor-pointer`}
+                    onClick={cycleMomentum}
+                    data-testid="badge-momentum-status"
+                  >
                     <Activity className="w-3 h-3 mr-1" />
                     {stream.momentumStatus}
                   </Badge>
