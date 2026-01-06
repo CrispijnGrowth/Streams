@@ -59,20 +59,24 @@ const momentumColors: Record<MomentumStatusType, string> = {
 
 const borderColorClasses: Record<string, string> = {
   cyan: "border-cyan-400",
-  pink: "border-pink-400",
+  magenta: "border-fuchsia-400",
   yellow: "border-yellow-400",
-  green: "border-green-400",
-  purple: "border-purple-400",
+  lime: "border-lime-400",
   orange: "border-orange-400",
+  pink: "border-pink-400",
+  blue: "border-blue-400",
+  green: "border-green-400",
 };
 
 const fillColorClasses: Record<string, string> = {
   cyan: "bg-cyan-400",
-  pink: "bg-pink-400",
+  magenta: "bg-fuchsia-400",
   yellow: "bg-yellow-400",
-  green: "bg-green-400",
-  purple: "bg-purple-400",
+  lime: "bg-lime-400",
   orange: "bg-orange-400",
+  pink: "bg-pink-400",
+  blue: "bg-blue-400",
+  green: "bg-green-400",
 };
 
 export function TimelineBall({
