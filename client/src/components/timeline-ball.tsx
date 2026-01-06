@@ -193,20 +193,20 @@ export function TimelineBall({
         className="min-w-64 max-w-sm p-4 space-y-2 z-[9999]"
         data-testid={`tooltip-${id}`}
       >
-        <div className="space-y-1">
+        <div className="space-y-1.5">
           {itemType && (
-            <span className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">
+            <span className="text-[10px] uppercase tracking-widest font-semibold text-primary">
               {itemTypeLabels[itemType]}
             </span>
           )}
-          <h4 className="font-medium text-sm">{title}</h4>
+          <h4 className="font-semibold text-sm text-foreground">{title}</h4>
           {parentName && (
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-[11px] text-muted-foreground italic">
               in {parentName}
             </p>
           )}
           {description && (
-            <p className="text-xs text-muted-foreground/80 line-clamp-2">{description}</p>
+            <p className="text-xs text-muted-foreground line-clamp-2 pt-1">{description}</p>
           )}
         </div>
         <div className="flex items-center gap-2 flex-wrap">
