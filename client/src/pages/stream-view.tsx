@@ -150,6 +150,8 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
       blocked: s.blockedCount,
       delegated: s.delegatedCount,
     },
+    type: "solution" as const,
+    parentName: stream?.name,
   })) || [];
 
   const handleSolutionClick = (solutionId: string) => {

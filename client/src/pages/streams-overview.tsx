@@ -174,6 +174,7 @@ export function StreamsOverview({ showDescriptions }: StreamsOverviewProps) {
       blocked: s.blockedCount,
       delegated: s.delegatedCount,
     },
+    type: "stream" as const,
   })) || [];
 
   const handleStreamClick = (streamId: string) => {
