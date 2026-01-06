@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { Package, Users, Tag, Calendar, Activity, Pencil, Zap } from "lucide-react";
+import { Package, Users, Tag, Calendar, Activity, Pencil } from "lucide-react";
 import { Timeline } from "@/components/timeline";
 import { SolutionCard } from "@/components/solution-card";
 import { QuickAddForm, QuickAddFormRef } from "@/components/quick-add-form";
@@ -51,20 +51,6 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
     },
     onError: () => {
       toast({ title: "Failed to delete stream", variant: "destructive" });
-    },
-  });
-
-  const activateStream = useMutation({
-    mutationFn: async () => {
-      return apiRequest("POST", `/api/streams/${streamId}/activate`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/streams", streamId] });
-      queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
-      toast({ title: "Stream activated" });
-    },
-    onError: () => {
-      toast({ title: "Failed to activate stream", variant: "destructive" });
     },
   });
 
@@ -278,23 +264,10 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
                     {stream.momentumStatus}
                   </Badge>
                 )}
-                {stream.momentumStatus !== "Active" && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => activateStream.mutate()}
-                    disabled={activateStream.isPending}
-                    data-testid="button-activate-stream"
-                  >
-                    <Zap className="w-3 h-3 mr-1" />
-                    Activate
-                  </Button>
-                )}
-                {stream.computedMilestoneDate && (
-                  <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                    <Calendar className="w-4 h-4" />
-                    <span>{new Date(stream.computedMilestoneDate).toLocaleDateString()}</span>
-                  </div>
+                {stream.lastMovementAt && (
+                  <span className="text-sm text-muted-foreground">
+                    Last change: {new Date(stream.lastMovementAt).toLocaleDateString('en-GB')}
+                  </span>
                 )}
               </div>
             </div>
@@ -320,6 +293,12 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
                       {label}
                     </Badge>
                   ))}
+                </div>
+              )}
+              {stream.computedMilestoneDate && (
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <Calendar className="w-4 h-4" />
+                  <span>Milestone: {new Date(stream.computedMilestoneDate).toLocaleDateString('en-GB')}</span>
                 </div>
               )}
             </div>
