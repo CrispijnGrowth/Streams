@@ -17,6 +17,7 @@ import {
   CommentEntityType,
   ActionStatus,
   MomentumStatus,
+  SolutionStatus,
 } from "@shared/schema";
 
 const upload = multer({ storage: multer.memoryStorage() });
@@ -837,7 +838,7 @@ export async function registerRoutes(
         const solution = await storage.createSolution(userId, {
           streamId,
           name: row.solution_name,
-          status: "in_progress",
+          status: SolutionStatus.IN_PROGRESS,
           phases: [],
           owners: row.owners?.split(";").map(o => o.trim()).filter(Boolean) || [],
           labels: row.labels?.split(";").map(l => l.trim()).filter(Boolean) || [],
