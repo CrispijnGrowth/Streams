@@ -335,6 +335,25 @@ export class DatabaseStorage implements IStorage {
     return updated ? mapStreamFromDb(updated) : undefined;
   }
 
+  private async updateStreamMilestone(streamId: string, userId: string): Promise<void> {
+    const streamSolutions = await db.select().from(solutions).where(
+      and(eq(solutions.streamId, streamId), eq(solutions.userId, userId), eq(solutions.isDeleted, false))
+    );
+    
+    const datedSolutions = streamSolutions.filter(s => s.milestoneDate);
+    
+    let computedMilestoneDate: string | null = null;
+    if (datedSolutions.length > 0) {
+      computedMilestoneDate = datedSolutions.reduce((min, s) => {
+        if (!s.milestoneDate) return min;
+        if (!min) return s.milestoneDate;
+        return s.milestoneDate < min ? s.milestoneDate : min;
+      }, datedSolutions[0].milestoneDate);
+    }
+    
+    await db.update(streams).set({ computedMilestoneDate }).where(eq(streams.id, streamId));
+  }
+
   async deleteStream(userId: string, id: string): Promise<boolean> {
     const [existing] = await db.select().from(streams).where(
       and(eq(streams.id, id), eq(streams.userId, userId))
@@ -474,6 +493,7 @@ export class DatabaseStorage implements IStorage {
     };
     
     await db.insert(solutions).values(newSolution);
+    await this.updateStreamMilestone(data.streamId, userId);
     return mapSolutionFromDb(newSolution);
   }
 
@@ -496,6 +516,11 @@ export class DatabaseStorage implements IStorage {
     await db.update(solutions).set(updateData).where(eq(solutions.id, id));
     
     const [updated] = await db.select().from(solutions).where(eq(solutions.id, id));
+    
+    if (updated) {
+      await this.updateStreamMilestone(updated.streamId, userId);
+    }
+    
     return updated ? mapSolutionFromDb(updated) : undefined;
   }
 
@@ -506,6 +531,7 @@ export class DatabaseStorage implements IStorage {
     if (!existing) return false;
     
     await db.update(solutions).set({ isDeleted: true }).where(eq(solutions.id, id));
+    await this.updateStreamMilestone(existing.streamId, userId);
     return true;
   }
 

@@ -5,6 +5,8 @@ import { ProgressBar } from "@/components/progress-bar";
 import type { ActionStatusType, MomentumStatusType } from "@shared/schema";
 import { format } from "date-fns";
 
+type MarkerShape = "circle" | "diamond";
+
 interface TimelineBallProps {
   id: string;
   title: string;
@@ -26,6 +28,8 @@ interface TimelineBallProps {
     active: boolean;
     delayMs: number;
   };
+  shape?: MarkerShape;
+  borderColor?: string;
 }
 
 function generateAcronym(title: string): string {
@@ -53,6 +57,15 @@ const momentumColors: Record<MomentumStatusType, string> = {
   Stalled: "bg-momentum-stalled",
 };
 
+const borderColorClasses: Record<string, string> = {
+  cyan: "border-cyan-400",
+  pink: "border-pink-400",
+  yellow: "border-yellow-400",
+  green: "border-green-400",
+  purple: "border-purple-400",
+  orange: "border-orange-400",
+};
+
 export function TimelineBall({
   id,
   title,
@@ -66,6 +79,8 @@ export function TimelineBall({
   size = "default",
   counts,
   enterAnimation,
+  shape = "circle",
+  borderColor,
 }: TimelineBallProps) {
   const [isHovered, setIsHovered] = useState(false);
   const acronym = generateAcronym(title);
@@ -96,6 +111,9 @@ export function TimelineBall({
     return "bg-primary";
   };
 
+  const shapeClass = shape === "diamond" ? "rotate-45 rounded-sm" : "rounded-full";
+  const borderColorClass = borderColor ? borderColorClasses[borderColor] || "" : "";
+
   return (
     <Tooltip delayDuration={100}>
       <TooltipTrigger asChild>
@@ -103,7 +121,8 @@ export function TimelineBall({
           className={`
             ${sizeClasses[size]}
             ${isNoDate ? "border-2 border-dashed border-muted-foreground/50 bg-transparent" : getBallColor()}
-            rounded-full
+            ${shapeClass}
+            ${borderColor ? `border-2 ${borderColorClass}` : ""}
             transition-all duration-200 ease-out
             focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2
             cursor-pointer
@@ -119,7 +138,7 @@ export function TimelineBall({
           data-testid={`ball-${id}`}
           aria-label={`${title}${date ? `, ${format(new Date(date), "MMM d, yyyy")}` : ", no date"}`}
         >
-          <span className={`${textSizeClasses[size]} font-bold leading-none ${isNoDate ? 'text-muted-foreground' : 'text-white'}`}>
+          <span className={`${textSizeClasses[size]} font-bold leading-none ${isNoDate ? 'text-muted-foreground' : 'text-white'} ${shape === "diamond" ? "-rotate-45" : ""}`}>
             {acronym}
           </span>
         </button>

@@ -19,6 +19,8 @@ import { usePageTransition } from "./page-transition";
 
 type ZoomLevel = "month" | "quarter" | "half-year" | "year";
 
+type TimelineItemType = "stream" | "solution" | "deliverable" | "action";
+
 interface TimelineItem {
   id: string;
   title: string;
@@ -32,6 +34,9 @@ interface TimelineItem {
     blocked?: number;
     delegated?: number;
   };
+  type?: TimelineItemType;
+  parentId?: string;
+  borderColor?: string;
 }
 
 interface TimelineProps {
@@ -91,6 +96,50 @@ function DraggableTimelineBall({ item, position, onClick, isDraggable = true, en
         counts={item.counts}
         onClick={isDragging ? undefined : onClick}
         enterAnimation={isDragging ? undefined : enterAnimation}
+        shape={item.type === "action" ? "diamond" : "circle"}
+        borderColor={item.borderColor}
+      />
+    </div>
+  );
+}
+
+interface DraggableUndatedBallProps {
+  item: TimelineItem;
+  isDraggable?: boolean;
+  onClick?: () => void;
+  enterAnimation?: { active: boolean; delayMs: number };
+}
+
+function DraggableUndatedBall({ item, isDraggable = true, onClick, enterAnimation }: DraggableUndatedBallProps) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `undated-${item.id}`,
+    disabled: !isDraggable,
+    data: { item, isUndated: true },
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        opacity: isDragging ? 0.5 : 1,
+        cursor: isDraggable ? "grab" : "pointer",
+      }}
+      {...(isDraggable ? { ...attributes, ...listeners } : {})}
+    >
+      <TimelineBall
+        id={item.id}
+        title={item.title}
+        description={item.description}
+        status={item.status}
+        momentumStatus={item.momentumStatus}
+        progress={item.progress}
+        counts={item.counts}
+        isNoDate
+        size="sm"
+        onClick={isDragging ? undefined : onClick}
+        enterAnimation={isDragging ? undefined : enterAnimation}
+        shape={item.type === "action" ? "diamond" : "circle"}
+        borderColor={item.borderColor}
       />
     </div>
   );
@@ -239,6 +288,10 @@ export function Timeline({
 
   const activeItem = useMemo(() => {
     if (!activeId) return null;
+    if (activeId.startsWith("undated-")) {
+      const realId = activeId.replace("undated-", "");
+      return items.find((i) => i.id === realId) || null;
+    }
     return items.find((i) => i.id === activeId) || null;
   }, [activeId, items]);
 
@@ -250,14 +303,24 @@ export function Timeline({
     if (!containerRef.current || !activeId) return;
 
     const containerRect = containerRef.current.getBoundingClientRect();
-    const draggedItem = items.find((i) => i.id === activeId);
+    const activeData = event.active.data.current as { item: TimelineItem; isUndated?: boolean } | undefined;
     
-    if (draggedItem?.date) {
-      const originalPosition = getPositionForDate(draggedItem.date);
-      const deltaPercent = (event.delta.x / containerRect.width) * 100;
-      const newPosition = Math.max(0, Math.min(100, originalPosition + deltaPercent));
-      const newDate = getDateForPosition(newPosition);
+    if (activeData?.isUndated) {
+      const pointerX = (event.active.rect.current.translated?.left ?? 0) + 
+                       (event.active.rect.current.translated?.width ?? 0) / 2;
+      const relativeX = pointerX - containerRect.left;
+      const positionPercent = Math.max(0, Math.min(100, (relativeX / containerRect.width) * 100));
+      const newDate = getDateForPosition(positionPercent);
       setDragPreviewDate(format(newDate, "yyyy-MM-dd"));
+    } else {
+      const draggedItem = items.find((i) => i.id === activeId);
+      if (draggedItem?.date) {
+        const originalPosition = getPositionForDate(draggedItem.date);
+        const deltaPercent = (event.delta.x / containerRect.width) * 100;
+        const newPosition = Math.max(0, Math.min(100, originalPosition + deltaPercent));
+        const newDate = getDateForPosition(newPosition);
+        setDragPreviewDate(format(newDate, "yyyy-MM-dd"));
+      }
     }
   };
 
@@ -266,17 +329,32 @@ export function Timeline({
     
     if (containerRef.current && onDateChange) {
       const containerRect = containerRef.current.getBoundingClientRect();
+      const activeData = active.data.current as { item: TimelineItem; isUndated?: boolean } | undefined;
       
-      const draggedItem = items.find((i) => i.id === active.id);
-      if (draggedItem?.date) {
-        const originalPosition = getPositionForDate(draggedItem.date);
-        const deltaPercent = (delta.x / containerRect.width) * 100;
-        const newPosition = Math.max(0, Math.min(100, originalPosition + deltaPercent));
-        const newDate = getDateForPosition(newPosition);
-        const formattedDate = format(newDate, "yyyy-MM-dd");
+      if (activeData?.isUndated) {
+        const pointerX = (active.rect.current.translated?.left ?? 0) + 
+                         (active.rect.current.translated?.width ?? 0) / 2;
+        const relativeX = pointerX - containerRect.left;
         
-        if (formattedDate !== draggedItem.date) {
-          onDateChange(active.id as string, formattedDate);
+        if (relativeX >= 0 && relativeX <= containerRect.width) {
+          const positionPercent = (relativeX / containerRect.width) * 100;
+          const newDate = getDateForPosition(positionPercent);
+          const formattedDate = format(newDate, "yyyy-MM-dd");
+          const itemId = activeData.item.id;
+          onDateChange(itemId, formattedDate);
+        }
+      } else {
+        const draggedItem = items.find((i) => i.id === active.id);
+        if (draggedItem?.date) {
+          const originalPosition = getPositionForDate(draggedItem.date);
+          const deltaPercent = (delta.x / containerRect.width) * 100;
+          const newPosition = Math.max(0, Math.min(100, originalPosition + deltaPercent));
+          const newDate = getDateForPosition(newPosition);
+          const formattedDate = format(newDate, "yyyy-MM-dd");
+          
+          if (formattedDate !== draggedItem.date) {
+            onDateChange(active.id as string, formattedDate);
+          }
         }
       }
     }
@@ -400,21 +478,14 @@ export function Timeline({
           {showNoDateShelf && undatedItems.length > 0 && (
             <div className="w-20 ml-2 bg-card rounded-lg border p-2 flex flex-col items-center gap-2">
               <span className="text-[10px] text-muted-foreground uppercase tracking-wide">
-                No date
+                {isDraggable ? "Drag to set" : "No date"}
               </span>
               <div className="flex flex-wrap gap-1 justify-center">
                 {undatedItems.slice(0, 4).map((item, index) => (
-                  <TimelineBall
+                  <DraggableUndatedBall
                     key={item.id}
-                    id={item.id}
-                    title={item.title}
-                    description={item.description}
-                    status={item.status}
-                    momentumStatus={item.momentumStatus}
-                    progress={item.progress}
-                    counts={item.counts}
-                    isNoDate
-                    size="sm"
+                    item={item}
+                    isDraggable={isDraggable}
                     onClick={() => onItemClick?.(item.id)}
                     enterAnimation={animateIn ? { active: true, delayMs: (visibleItems.length + index) * 50 } : undefined}
                   />
@@ -442,6 +513,8 @@ export function Timeline({
               momentumStatus={activeItem.momentumStatus}
               progress={activeItem.progress}
               counts={activeItem.counts}
+              shape={activeItem.type === "action" ? "diamond" : "circle"}
+              borderColor={activeItem.borderColor}
             />
           </div>
         )}

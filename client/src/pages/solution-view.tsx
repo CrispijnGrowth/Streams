@@ -221,17 +221,64 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
     },
   });
 
-  const timelineItems = actions?.map((a) => ({
-    id: a.id,
-    title: a.name,
-    description: a.description,
-    date: a.dueDate,
-    status: a.status,
-    progress: a.progress,
+  const deliverableTimelineItems = deliverables?.map((d) => ({
+    id: d.id,
+    title: d.name,
+    description: d.description,
+    date: d.dueDate,
+    type: "deliverable" as const,
+    borderColor: d.borderColor,
   })) || [];
+
+  const actionTimelineItems = actions?.map((a) => {
+    const parentDeliverable = deliverables?.find(d => d.id === a.deliverableId);
+    return {
+      id: a.id,
+      title: a.name,
+      description: a.description,
+      date: a.dueDate,
+      status: a.status,
+      progress: a.progress,
+      type: "action" as const,
+      parentId: a.deliverableId,
+      borderColor: parentDeliverable?.borderColor,
+    };
+  }) || [];
+
+  const timelineItems = [...deliverableTimelineItems, ...actionTimelineItems];
 
   const handleActionClick = (actionId: string) => {
     setLocation(`/stream/${streamId}/solution/${solutionId}/action/${actionId}`);
+  };
+
+  const handleTimelineItemClick = (itemId: string) => {
+    const isDeliverable = deliverables?.some(d => d.id === itemId);
+    if (isDeliverable) {
+      const deliverable = deliverables?.find(d => d.id === itemId);
+      if (deliverable) {
+        setEditingDeliverable(deliverable);
+      }
+    } else {
+      handleActionClick(itemId);
+    }
+  };
+
+  const updateDeliverableDate = useMutation({
+    mutationFn: async ({ deliverableId, dueDate }: { deliverableId: string; dueDate: string }) => {
+      return apiRequest("PATCH", `/api/deliverables/${deliverableId}`, { dueDate });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/solutions", solutionId, "deliverables"] });
+    },
+  });
+
+  const handleTimelineDateChange = (itemId: string, newDate: string) => {
+    const isDeliverable = deliverables?.some(d => d.id === itemId);
+    if (isDeliverable) {
+      updateDeliverableDate.mutate({ deliverableId: itemId, dueDate: newDate });
+    } else {
+      updateActionDate.mutate({ actionId: itemId, dueDate: newDate });
+    }
   };
 
   const isLoading = solutionLoading || actionsLoading || deliverablesLoading;
@@ -276,7 +323,7 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
         <div className="shrink-0 border-t p-4 bg-background">
           <Timeline
             items={[]}
-            onItemClick={handleActionClick}
+            onItemClick={handleTimelineItemClick}
             level="action"
           />
         </div>
@@ -367,8 +414,8 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
       <div className="shrink-0 border-t p-4 bg-background">
         <Timeline
           items={timelineItems}
-          onItemClick={handleActionClick}
-          onDateChange={(id, newDate) => updateActionDate.mutate({ actionId: id, dueDate: newDate })}
+          onItemClick={handleTimelineItemClick}
+          onDateChange={handleTimelineDateChange}
           level="action"
           defaultWindowMonths={6}
         />
