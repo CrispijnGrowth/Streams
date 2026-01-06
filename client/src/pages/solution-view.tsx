@@ -320,7 +320,7 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
             onAction={() => createAction.mutate("New Action")}
           />
         </div>
-        <div className="shrink-0 border-t p-4 bg-background">
+        <div className="shrink-0 border-t p-4 bg-background relative z-50">
           <Timeline
             items={[]}
             onItemClick={handleTimelineItemClick}
@@ -333,7 +333,7 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-auto p-6">
+      <div className="flex-1 overflow-auto p-6 relative z-0">
         <div className="space-y-6">
           <div className="flex items-center justify-between gap-4 pb-3 border-b flex-wrap">
             <div className="flex items-center gap-3">
@@ -411,7 +411,7 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
         </div>
       </div>
 
-      <div className="shrink-0 border-t p-4 bg-background">
+      <div className="shrink-0 border-t p-4 bg-background relative z-50">
         <Timeline
           items={timelineItems}
           onItemClick={handleTimelineItemClick}
