@@ -27,7 +27,7 @@ export function StreamCard({ stream, onClick, onEdit, showDescription = true }: 
 
   return (
     <Card
-      className="p-4 space-y-3 cursor-pointer hover-elevate active-elevate-2 transition-shadow group shadow-sm"
+      className="p-4 space-y-3 cursor-pointer hover-elevate active-elevate-2 transition-shadow group shadow-sm border-2 border-[#0058AB]"
       onClick={onClick}
       data-testid={`card-stream-${stream.id}`}
     >
@@ -82,7 +82,7 @@ export function StreamCard({ stream, onClick, onEdit, showDescription = true }: 
             </div>
             <div className="flex items-center gap-2">
               <div className="flex-1">
-                <ProgressBar value={sol.progress} size="sm" showLabel={false} />
+                <ProgressBar value={sol.progress} size="sm" showLabel={false} variant="stream" />
               </div>
               <span className="text-xs font-mono text-muted-foreground shrink-0">
                 {Math.round(sol.progress)}%

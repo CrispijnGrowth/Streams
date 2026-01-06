@@ -3,12 +3,17 @@ interface ProgressBarProps {
   showLabel?: boolean;
   size?: "sm" | "default";
   muted?: boolean;
+  variant?: "default" | "stream";
 }
 
-export function ProgressBar({ value, showLabel = true, size = "default", muted = false }: ProgressBarProps) {
+export function ProgressBar({ value, showLabel = true, size = "default", muted = false, variant = "default" }: ProgressBarProps) {
   const clampedValue = Math.min(100, Math.max(0, value));
   const height = size === "sm" ? "h-1" : "h-2";
-  const fillColor = muted ? "bg-muted-foreground/40" : "bg-primary";
+  const fillColor = muted 
+    ? "bg-muted-foreground/40" 
+    : variant === "stream" 
+      ? "bg-[#0058AB]" 
+      : "bg-primary";
 
   return (
     <div className="flex items-center gap-2">
