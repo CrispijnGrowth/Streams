@@ -1,5 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
+import multer from "multer";
+import XLSX from "xlsx";
 import { storage } from "./storage";
 import { authStorage, generateMagicLinkUrl } from "./auth";
 import { sendMagicLinkEmail, sendNewUserNotification, sendApprovalEmail } from "./email";
@@ -13,7 +15,11 @@ import {
   insertUserSchema,
   UserRole,
   CommentEntityType,
+  ActionStatus,
+  MomentumStatus,
 } from "@shared/schema";
+
+const upload = multer({ storage: multer.memoryStorage() });
 
 declare global {
   namespace Express {
@@ -733,6 +739,211 @@ export async function registerRoutes(
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: "Failed to restore step" });
+    }
+  });
+
+  // Excel Import - Preview
+  app.post("/api/import/preview", authMiddleware, upload.single("file"), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+      const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
+      const preview: Record<string, { headers: string[]; rowCount: number; sample: any[] }> = {};
+      
+      for (const sheetName of ["Streams", "Solutions", "Deliverables", "Actions", "Steps"]) {
+        const sheet = workbook.Sheets[sheetName];
+        if (sheet) {
+          const data = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[][];
+          const headers = data[0] || [];
+          const rows = data.slice(1).filter(row => row.length > 0);
+          preview[sheetName] = {
+            headers,
+            rowCount: rows.length,
+            sample: rows.slice(0, 3).map(row => {
+              const obj: Record<string, any> = {};
+              headers.forEach((h: string, i: number) => obj[h] = row[i]);
+              return obj;
+            })
+          };
+        }
+      }
+      res.json({ preview });
+    } catch (error) {
+      console.error("[Import] Preview error:", error);
+      res.status(500).json({ error: "Failed to parse Excel file" });
+    }
+  });
+
+  // Excel Import - Execute
+  app.post("/api/import/execute", authMiddleware, upload.single("file"), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+      const userId = req.userId!;
+      const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
+      
+      const excelDateToJS = (serial: number): Date => {
+        const utcDays = Math.floor(serial - 25569);
+        return new Date(utcDays * 86400 * 1000);
+      };
+      
+      const parseSheet = <T>(name: string): T[] => {
+        const sheet = workbook.Sheets[name];
+        if (!sheet) return [];
+        return XLSX.utils.sheet_to_json(sheet) as T[];
+      };
+
+      const streamKeyToId = new Map<string, string>();
+      const solutionKeyToId = new Map<string, string>();
+      const deliverableKeyToId = new Map<string, string>();
+      const actionKeyToId = new Map<string, string>();
+
+      const stats = { streams: 0, solutions: 0, deliverables: 0, actions: 0, steps: 0 };
+
+      // Import Streams
+      const streamsData = parseSheet<{
+        stream_key: string;
+        stream_name: string;
+        phases?: string;
+        owners?: string;
+        labels?: string;
+      }>("Streams");
+
+      for (const row of streamsData) {
+        const stream = await storage.createStream(userId, {
+          name: row.stream_name,
+          phases: row.phases?.split(";").map(p => p.trim()).filter(Boolean) || [],
+          owners: row.owners?.split(";").map(o => o.trim()).filter(Boolean) || [],
+          labels: row.labels?.split(";").map(l => l.trim()).filter(Boolean) || [],
+        });
+        streamKeyToId.set(row.stream_key, stream.id);
+        stats.streams++;
+      }
+
+      // Import Solutions
+      const solutionsData = parseSheet<{
+        solution_key: string;
+        solution_name: string;
+        stream_key: string;
+        owners?: string;
+        labels?: string;
+      }>("Solutions");
+
+      for (const row of solutionsData) {
+        const streamId = streamKeyToId.get(row.stream_key);
+        if (!streamId) continue;
+        const solution = await storage.createSolution(userId, {
+          streamId,
+          name: row.solution_name,
+          status: "in_progress",
+          phases: [],
+          owners: row.owners?.split(";").map(o => o.trim()).filter(Boolean) || [],
+          labels: row.labels?.split(";").map(l => l.trim()).filter(Boolean) || [],
+        });
+        solutionKeyToId.set(row.solution_key, solution.id);
+        stats.solutions++;
+      }
+
+      // Import Deliverables
+      const deliverablesData = parseSheet<{
+        deliverable_key: string;
+        deliverable_name: string;
+        solution_key: string;
+        stream_key: string;
+        milestone_date?: number;
+        phases?: string;
+        owners?: string;
+      }>("Deliverables");
+
+      for (const row of deliverablesData) {
+        const solutionId = solutionKeyToId.get(row.solution_key);
+        const streamId = streamKeyToId.get(row.stream_key);
+        if (!solutionId || !streamId) continue;
+        const deliverable = await storage.createDeliverable(userId, {
+          solutionId,
+          streamId,
+          name: row.deliverable_name,
+          borderColor: "cyan",
+          isMilestoneLinked: true,
+          dueDate: row.milestone_date ? excelDateToJS(row.milestone_date).toISOString() : undefined,
+          owners: row.owners?.split(";").map(o => o.trim()).filter(Boolean) || [],
+        });
+        deliverableKeyToId.set(row.deliverable_key, deliverable.id);
+        stats.deliverables++;
+      }
+
+      // Import Actions
+      const actionsData = parseSheet<{
+        action_key: string;
+        action_name: string;
+        deliverable_key: string;
+        solution_key: string;
+        stream_key: string;
+        status?: string;
+        due_date?: number;
+        effort?: number;
+        owners?: string;
+      }>("Actions");
+
+      const statusMap: Record<string, string> = {
+        "Backlog": ActionStatus.BACKLOG,
+        "To Execute": ActionStatus.TO_EXECUTE,
+        "Executing": ActionStatus.EXECUTING,
+        "Blocked": ActionStatus.BLOCKED,
+        "Delegated": ActionStatus.DELEGATED,
+        "Done": ActionStatus.DONE,
+        "Archive": ActionStatus.ARCHIVE,
+      };
+
+      for (const row of actionsData) {
+        const deliverableId = deliverableKeyToId.get(row.deliverable_key);
+        const solutionId = solutionKeyToId.get(row.solution_key);
+        const streamId = streamKeyToId.get(row.stream_key);
+        if (!solutionId || !streamId) continue;
+        const action = await storage.createAction(userId, {
+          solutionId,
+          streamId,
+          deliverableId: deliverableId || undefined,
+          name: row.action_name,
+          status: statusMap[row.status || "Backlog"] || ActionStatus.BACKLOG,
+          dueDate: row.due_date ? excelDateToJS(row.due_date).toISOString() : undefined,
+          effort: row.effort || undefined,
+          owners: row.owners?.split(";").map(o => o.trim()).filter(Boolean) || [],
+          labels: [],
+        });
+        actionKeyToId.set(row.action_key, action.id);
+        stats.actions++;
+      }
+
+      // Import Steps
+      const stepsData = parseSheet<{
+        step_key: string;
+        step_name: string;
+        action_key: string;
+        is_done?: boolean;
+        due_date?: number;
+        owner?: string;
+      }>("Steps");
+
+      for (const row of stepsData) {
+        const actionId = actionKeyToId.get(row.action_key);
+        if (!actionId) continue;
+        await storage.createStep(userId, {
+          actionId,
+          name: row.step_name,
+          isDone: row.is_done === true,
+          dueDate: row.due_date ? excelDateToJS(row.due_date).toISOString() : undefined,
+          owner: row.owner || undefined,
+        });
+        stats.steps++;
+      }
+
+      res.json({ success: true, stats });
+    } catch (error) {
+      console.error("[Import] Execute error:", error);
+      res.status(500).json({ error: "Failed to import data" });
     }
   });
 
