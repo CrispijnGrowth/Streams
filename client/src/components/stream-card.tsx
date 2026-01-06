@@ -27,7 +27,7 @@ export function StreamCard({ stream, onClick, onEdit, showDescription = true }: 
 
   return (
     <Card
-      className="p-4 space-y-3 cursor-pointer hover-elevate active-elevate-2 transition-shadow group shadow-sm border-2 border-[#0058AB]"
+      className="p-4 space-y-3 cursor-pointer hover-elevate active-elevate-2 transition-shadow group shadow-sm border-2 border-[#0066FF]"
       onClick={onClick}
       data-testid={`card-stream-${stream.id}`}
     >
