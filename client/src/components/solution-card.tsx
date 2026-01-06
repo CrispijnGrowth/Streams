@@ -61,7 +61,7 @@ export function SolutionCard({
     <Card
       className={`p-2.5 space-y-1.5 cursor-pointer hover-elevate active-elevate-2 transition-all group ${
         isDragging ? "shadow-xl scale-105 opacity-90" : ""
-      } ${isOnHold ? "opacity-50 bg-muted" : ""}`}
+      } ${isOnHold ? "opacity-60 grayscale" : ""}`}
       onClick={onClick}
       data-testid={`card-solution-${solution.id}`}
     >
