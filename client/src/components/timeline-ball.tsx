@@ -146,7 +146,7 @@ export function TimelineBall({
       <TooltipContent
         side="top"
         sideOffset={8}
-        className="min-w-64 max-w-sm p-4 space-y-2 z-[100]"
+        className="min-w-64 max-w-sm p-4 space-y-2 z-[9999]"
         data-testid={`tooltip-${id}`}
       >
         <div className="space-y-1">
