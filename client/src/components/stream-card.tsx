@@ -46,6 +46,9 @@ export function StreamCard({ stream, onClick, onEdit, onMomentumClick, showDescr
       data-testid={`card-stream-${stream.id}`}
     >
       <div className="space-y-1">
+        <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium" data-testid={`text-stream-key-${stream.id}`}>
+          {stream.key}
+        </span>
         <div className="flex items-center justify-between gap-2">
           <h3 className="font-semibold text-base truncate flex-1" data-testid={`text-stream-name-${stream.id}`}>
             {stream.name}
@@ -66,9 +69,6 @@ export function StreamCard({ stream, onClick, onEdit, onMomentumClick, showDescr
             onClick={onMomentumClick ? handleMomentumClick : undefined}
             clickable={!!onMomentumClick}
           />
-          <span className="text-xs text-muted-foreground font-mono" data-testid={`text-stream-key-${stream.id}`}>
-            {stream.key}
-          </span>
           {stream.computedMilestoneDate && (
             <div
               className={`flex items-center gap-1 text-xs ${isOverdue ? "text-status-blocked" : "text-muted-foreground"}`}

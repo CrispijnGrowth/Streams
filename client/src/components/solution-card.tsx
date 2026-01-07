@@ -65,14 +65,14 @@ export function SolutionCard({
       onClick={onClick}
       data-testid={`card-solution-${solution.id}`}
     >
+      <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium" data-testid={`text-solution-key-${solution.id}`}>
+        {solution.key}
+      </span>
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 flex-1 min-w-0">
           <h4 className="font-medium text-sm truncate" data-testid={`text-solution-name-${solution.id}`}>
             {solution.name}
           </h4>
-          <span className="text-xs text-muted-foreground font-mono shrink-0" data-testid={`text-solution-key-${solution.id}`}>
-            {solution.key}
-          </span>
         </div>
         <div className="flex items-center gap-1 shrink-0">
           {solution.milestoneDate && (
