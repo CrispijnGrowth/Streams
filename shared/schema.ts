@@ -102,6 +102,16 @@ export const comments = pgTable("comments", {
   createdAt: text("created_at").notNull(),
 });
 
+export const teamMembers = pgTable("team_members", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  name: text("name").notNull(),
+  role: text("role"),
+  photoUrl: text("photo_url"),
+  ordinal: integer("ordinal").notNull(),
+  isDeleted: boolean("is_deleted").notNull().default(false),
+});
+
 export const ActionStatus = {
   BACKLOG: "Backlog",
   TO_EXECUTE: "To Execute",
@@ -290,6 +300,16 @@ export interface Comment {
   createdAt: string;
 }
 
+export interface TeamMember {
+  id: string;
+  userId: string;
+  name: string;
+  role?: string;
+  photoUrl?: string;
+  ordinal: number;
+  isDeleted: boolean;
+}
+
 export const insertStreamSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
@@ -349,12 +369,19 @@ export const insertCommentSchema = z.object({
   content: z.string().min(1, "Comment content is required"),
 });
 
+export const insertTeamMemberSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  role: z.string().optional(),
+  photoUrl: z.string().optional(),
+});
+
 export type InsertStream = z.infer<typeof insertStreamSchema>;
 export type InsertSolution = z.infer<typeof insertSolutionSchema>;
 export type InsertDeliverable = z.infer<typeof insertDeliverableSchema>;
 export type InsertAction = z.infer<typeof insertActionSchema>;
 export type InsertStep = z.infer<typeof insertStepSchema>;
 export type InsertComment = z.infer<typeof insertCommentSchema>;
+export type InsertTeamMember = z.infer<typeof insertTeamMemberSchema>;
 
 export interface InProgressSolutionInfo {
   name: string;
