@@ -143,7 +143,7 @@ function TopNav() {
         <img 
           src={resolvedTheme === "dark" ? logoWhite : logoBlack} 
           alt="Streams" 
-          className="h-[22px] w-auto -mt-0.5"
+          className="h-[22px] w-auto -mt-1.5"
           data-testid="logo-main"
         />
       </Link>
