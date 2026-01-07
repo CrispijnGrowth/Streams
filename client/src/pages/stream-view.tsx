@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { Package, Users, Tag, Calendar, Activity, Pencil } from "lucide-react";
+import { Package, Tag, Calendar, Activity } from "lucide-react";
 import { Timeline } from "@/components/timeline";
 import { SolutionCard } from "@/components/solution-card";
 import { QuickAddForm, QuickAddFormRef } from "@/components/quick-add-form";
@@ -11,10 +11,13 @@ import { EditStreamDialog, EditStreamFocusField } from "@/components/edit-stream
 import { EditSolutionDialog } from "@/components/edit-solution-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { useMode } from "@/lib/mode-context";
+import { useTeamMembers } from "@/hooks/use-suggestions";
 import type { Stream, SolutionWithBreakdownAndComment, Solution, MomentumStatusType } from "@shared/schema";
 import { SolutionStatus } from "@shared/schema";
 
@@ -27,10 +30,19 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { isEditMode, setAutoEditForEmptyState } = useMode();
+  const teamMembers = useTeamMembers();
   const [editingStream, setEditingStream] = useState(false);
   const [editFocusField, setEditFocusField] = useState<EditStreamFocusField>(null);
   const [editingSolution, setEditingSolution] = useState<Solution | null>(null);
   const quickAddRef = useRef<QuickAddFormRef>(null);
+
+  const getOwnerInfo = (ownerName: string) => {
+    return teamMembers.find((m) => m.name === ownerName);
+  };
+
+  const getInitials = (name: string) => {
+    return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+  };
 
   const { data: stream, isLoading: streamLoading } = useQuery<Stream>({
     queryKey: ["/api/streams", streamId],
@@ -242,29 +254,20 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-auto p-6">
         <div className="space-y-6">
-          <div className="space-y-3 pb-4 border-b pt-2">
+          <div 
+            className={`space-y-3 pb-4 border-b pt-2 ${isEditMode ? "border-2 border-dashed border-primary rounded-md p-4 cursor-pointer hover-elevate" : ""}`}
+            onClick={isEditMode ? () => setEditingStream(true) : undefined}
+          >
+            <span className="text-[10px] uppercase tracking-widest font-semibold text-primary">Stream</span>
+            
             <div className="flex items-center justify-between gap-4 flex-wrap">
-              <div className="flex items-center gap-3">
-                <div>
-                  <span className="text-[10px] uppercase tracking-widest font-semibold text-primary">Stream</span>
-                  <h1 className="text-xl font-semibold" data-testid="text-stream-name">{stream.name}</h1>
-                </div>
-                {isEditMode && (
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-7 w-7"
-                    onClick={() => setEditingStream(true)}
-                    data-testid="button-edit-stream"
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                )}
+              <div className="flex items-center gap-3 flex-wrap">
+                <h1 className="text-xl font-semibold" data-testid="text-stream-name">{stream.name}</h1>
                 {stream.momentumStatus && (
                   <Badge 
                     variant="secondary" 
                     className={`${getMomentumColor(stream.momentumStatus)} cursor-pointer`}
-                    onClick={cycleMomentum}
+                    onClick={(e) => { e.stopPropagation(); cycleMomentum(); }}
                     data-testid="badge-momentum-status"
                   >
                     <Activity className="w-3 h-3 mr-1" />
@@ -277,6 +280,47 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
                   </span>
                 )}
               </div>
+              
+              <div className="flex items-center gap-3 flex-wrap">
+                {stream.computedMilestoneDate && (
+                  <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                    <Calendar className="w-4 h-4" />
+                    <span>{new Date(stream.computedMilestoneDate).toLocaleDateString('en-GB')}</span>
+                  </div>
+                )}
+                {stream.owners && stream.owners.length > 0 && (
+                  <div className="flex items-center -space-x-1.5">
+                    {stream.owners.slice(0, 5).map((owner) => {
+                      const info = getOwnerInfo(owner);
+                      return (
+                        <Tooltip key={owner}>
+                          <TooltipTrigger asChild>
+                            <Avatar className="h-7 w-7 border-2 border-background">
+                              {info?.photoUrl ? (
+                                <AvatarImage src={info.photoUrl} alt={owner} />
+                              ) : null}
+                              <AvatarFallback className="bg-primary/10 text-primary text-[10px]">
+                                {getInitials(owner)}
+                              </AvatarFallback>
+                            </Avatar>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="font-medium">{owner}</p>
+                            {info?.role && <p className="text-xs text-muted-foreground">{info.role}</p>}
+                          </TooltipContent>
+                        </Tooltip>
+                      );
+                    })}
+                    {stream.owners.length > 5 && (
+                      <Avatar className="h-7 w-7 border-2 border-background">
+                        <AvatarFallback className="bg-muted text-muted-foreground text-[10px]">
+                          +{stream.owners.length - 5}
+                        </AvatarFallback>
+                      </Avatar>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
             {showDescriptions && stream.description && (
@@ -285,30 +329,16 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
               </p>
             )}
 
-            <div className="flex items-center gap-4 flex-wrap text-sm">
-              {stream.owners && stream.owners.length > 0 && (
-                <div className="flex items-center gap-1.5 text-muted-foreground">
-                  <Users className="w-4 h-4" />
-                  <span>{stream.owners.join(", ")}</span>
-                </div>
-              )}
-              {stream.labels && stream.labels.length > 0 && (
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <Tag className="w-4 h-4 text-muted-foreground" />
-                  {stream.labels.map((label) => (
-                    <Badge key={label} variant="secondary" className="text-xs">
-                      {label}
-                    </Badge>
-                  ))}
-                </div>
-              )}
-              {stream.computedMilestoneDate && (
-                <div className="flex items-center gap-1.5 text-muted-foreground">
-                  <Calendar className="w-4 h-4" />
-                  <span>Milestone: {new Date(stream.computedMilestoneDate).toLocaleDateString('en-GB')}</span>
-                </div>
-              )}
-            </div>
+            {stream.labels && stream.labels.length > 0 && (
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <Tag className="w-4 h-4 text-muted-foreground" />
+                {stream.labels.map((label) => (
+                  <Badge key={label} variant="secondary" className="text-xs">
+                    {label}
+                  </Badge>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="space-y-4">

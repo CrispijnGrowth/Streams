@@ -1,13 +1,15 @@
 import { useState, useCallback, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { CheckSquare, Users, Tag, Calendar, Pencil } from "lucide-react";
+import { CheckSquare, Tag, Calendar } from "lucide-react";
 import { Timeline } from "@/components/timeline";
 import { KanbanBoard } from "@/components/kanban-board";
 import { EmptyState } from "@/components/empty-state";
 import { KanbanSkeleton, TimelineSkeleton } from "@/components/loading-skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { EditSolutionDialog } from "@/components/edit-solution-dialog";
 import { EditActionDialog } from "@/components/edit-action-dialog";
 import { EditDeliverablePopup } from "@/components/edit-deliverable-popup";
@@ -15,6 +17,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { useMode } from "@/lib/mode-context";
+import { useTeamMembers } from "@/hooks/use-suggestions";
 import type { SolutionWithProgress, ActionWithLastComment, Action, Deliverable, ActionStatusType, DeliverableBorderColorType } from "@shared/schema";
 import { SolutionStatus, ActionStatus } from "@shared/schema";
 
@@ -28,7 +31,16 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { isEditMode, setAutoEditForEmptyState } = useMode();
+  const teamMembers = useTeamMembers();
   const [editingSolution, setEditingSolution] = useState(false);
+
+  const getOwnerInfo = (ownerName: string) => {
+    return teamMembers.find((m) => m.name === ownerName);
+  };
+
+  const getInitials = (name: string) => {
+    return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+  };
   const [editingAction, setEditingAction] = useState<Action | null>(null);
   const [editingDeliverable, setEditingDeliverable] = useState<Deliverable | null>(null);
   const [pendingActionStatus, setPendingActionStatus] = useState<ActionStatusType | null>(null);
