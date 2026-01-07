@@ -12,6 +12,9 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar";
+import { useTheme } from "@/lib/theme-provider";
+import logoWhite from "@assets/Streams_Logo_White_1767805031570.png";
+import logoBlack from "@assets/Streams_Logo_Black_1767805053205.png";
 
 const menuItems = [
   {
@@ -28,18 +31,17 @@ const menuItems = [
 
 export function AppSidebar() {
   const [location] = useLocation();
+  const { resolvedTheme } = useTheme();
 
   return (
     <Sidebar>
       <SidebarHeader className="p-4">
-        <Link href="/" className="flex items-center gap-2" data-testid="link-home">
-          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
-            <Layers className="h-4 w-4" />
-          </div>
-          <div className="flex flex-col">
-            <span className="text-base font-semibold tracking-tight">Streams</span>
-            <span className="text-xs text-muted-foreground">Orchestration</span>
-          </div>
+        <Link href="/" className="flex items-center" data-testid="link-home">
+          <img 
+            src={resolvedTheme === "dark" ? logoWhite : logoBlack} 
+            alt="Streams" 
+            className="h-8 w-auto"
+          />
         </Link>
       </SidebarHeader>
       <SidebarContent>
