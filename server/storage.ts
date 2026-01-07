@@ -5,12 +5,14 @@ import {
   type Action,
   type Step,
   type Comment,
+  type TeamMember,
   type InsertStream,
   type InsertSolution,
   type InsertDeliverable,
   type InsertAction,
   type InsertStep,
   type InsertComment,
+  type InsertTeamMember,
   type StreamWithProgress,
   type SolutionWithProgress,
   type SolutionWithDeliverableBreakdown,
@@ -82,6 +84,12 @@ export interface IStorage {
   getComments(userId: string, entityType: CommentEntityTypeValue, entityId: string): Promise<Comment[]>;
   getLastComment(userId: string, entityType: CommentEntityTypeValue, entityId: string): Promise<Comment | undefined>;
   createComment(userId: string, data: InsertComment): Promise<Comment>;
+
+  getTeamMembers(userId: string): Promise<TeamMember[]>;
+  getTeamMember(userId: string, id: string): Promise<TeamMember | undefined>;
+  createTeamMember(userId: string, data: InsertTeamMember): Promise<TeamMember>;
+  updateTeamMember(userId: string, id: string, data: Partial<InsertTeamMember>): Promise<TeamMember | undefined>;
+  deleteTeamMember(userId: string, id: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -91,6 +99,7 @@ export class MemStorage implements IStorage {
   private actions: Map<string, Action> = new Map();
   private steps: Map<string, Step> = new Map();
   private comments: Map<string, Comment> = new Map();
+  private teamMembers: Map<string, TeamMember> = new Map();
   private seededUsers: Set<string> = new Set();
 
   constructor() {
@@ -232,10 +241,12 @@ export class MemStorage implements IStorage {
   }
 
   async getStreams(userId: string): Promise<StreamWithProgress[]> {
-    const streams = Array.from(this.streams.values()).filter((s) => s.userId === userId && !s.isDeleted);
-    return streams.map((stream) => {
+    const streams = Array.from(this.streams.values())
+      .filter((s) => s.userId === userId && !s.isDeleted)
+      .sort((a, b) => a.ordinal - b.ordinal);
+    return streams.map((stream, index) => {
       const stats = this.computeStreamProgress(stream.id, userId);
-      return { ...stream, ...stats };
+      return { ...stream, ...stats, displayKey: `Stream ${index + 1}` };
     });
   }
 
@@ -297,33 +308,49 @@ export class MemStorage implements IStorage {
   }
 
   async getSolutions(userId: string): Promise<SolutionWithProgress[]> {
-    const solutions = Array.from(this.solutions.values()).filter((s) => s.userId === userId && !s.isDeleted);
-    return solutions.map((sol) => {
-      const stats = this.computeSolutionProgress(sol.id, userId);
-      return { ...sol, ...stats };
-    });
+    const solutions = Array.from(this.solutions.values())
+      .filter((s) => s.userId === userId && !s.isDeleted)
+      .sort((a, b) => a.ordinal - b.ordinal);
+    
+    const byStream = new Map<string, typeof solutions>();
+    for (const sol of solutions) {
+      const group = byStream.get(sol.streamId) || [];
+      group.push(sol);
+      byStream.set(sol.streamId, group);
+    }
+    
+    const result: SolutionWithProgress[] = [];
+    for (const [, streamSolutions] of byStream) {
+      streamSolutions.sort((a, b) => a.ordinal - b.ordinal);
+      streamSolutions.forEach((sol, index) => {
+        const stats = this.computeSolutionProgress(sol.id, userId);
+        result.push({ ...sol, ...stats, displayKey: `Solution ${index + 1}` });
+      });
+    }
+    return result;
   }
 
   async getSolutionsByStream(userId: string, streamId: string): Promise<SolutionWithProgress[]> {
-    const solutions = Array.from(this.solutions.values()).filter(
-      (s) => s.streamId === streamId && s.userId === userId && !s.isDeleted
-    );
-    return solutions.map((sol) => {
+    const solutions = Array.from(this.solutions.values())
+      .filter((s) => s.streamId === streamId && s.userId === userId && !s.isDeleted)
+      .sort((a, b) => a.ordinal - b.ordinal);
+    return solutions.map((sol, index) => {
       const stats = this.computeSolutionProgress(sol.id, userId);
-      return { ...sol, ...stats };
+      return { ...sol, ...stats, displayKey: `Solution ${index + 1}` };
     });
   }
 
   async getSolutionsByStreamWithBreakdown(userId: string, streamId: string): Promise<SolutionWithBreakdownAndComment[]> {
-    const solutions = Array.from(this.solutions.values()).filter(
-      (s) => s.streamId === streamId && s.userId === userId && !s.isDeleted
-    );
+    const solutions = Array.from(this.solutions.values())
+      .filter((s) => s.streamId === streamId && s.userId === userId && !s.isDeleted)
+      .sort((a, b) => a.ordinal - b.ordinal);
     
     const activeStatuses = [ActionStatus.EXECUTING, ActionStatus.BLOCKED, ActionStatus.DELEGATED];
     
     const results: SolutionWithBreakdownAndComment[] = [];
     
-    for (const sol of solutions) {
+    for (let i = 0; i < solutions.length; i++) {
+      const sol = solutions[i];
       const stats = this.computeSolutionProgress(sol.id, userId);
       
       const solutionDeliverables = Array.from(this.deliverables.values())
@@ -369,7 +396,7 @@ export class MemStorage implements IStorage {
       
       const lastComment = await this.getLastComment(userId, CommentEntityType.SOLUTION, sol.id);
       
-      results.push({ ...sol, ...stats, deliverableBreakdown, lastComment });
+      results.push({ ...sol, ...stats, deliverableBreakdown, lastComment, displayKey: `Solution ${i + 1}` });
     }
     
     return results;
@@ -1124,6 +1151,50 @@ export class MemStorage implements IStorage {
     };
     this.comments.set(id, comment);
     return comment;
+  }
+
+  async getTeamMembers(userId: string): Promise<TeamMember[]> {
+    return Array.from(this.teamMembers.values())
+      .filter((m) => m.userId === userId && !m.isDeleted)
+      .sort((a, b) => a.ordinal - b.ordinal);
+  }
+
+  async getTeamMember(userId: string, id: string): Promise<TeamMember | undefined> {
+    const member = this.teamMembers.get(id);
+    if (!member || member.userId !== userId || member.isDeleted) return undefined;
+    return member;
+  }
+
+  async createTeamMember(userId: string, data: InsertTeamMember): Promise<TeamMember> {
+    const id = randomUUID();
+    const userMembers = Array.from(this.teamMembers.values()).filter((m) => m.userId === userId);
+    const ordinal = userMembers.length + 1;
+    const member: TeamMember = {
+      id,
+      userId,
+      name: data.name,
+      role: data.role,
+      photoUrl: data.photoUrl,
+      ordinal,
+      isDeleted: false,
+    };
+    this.teamMembers.set(id, member);
+    return member;
+  }
+
+  async updateTeamMember(userId: string, id: string, data: Partial<InsertTeamMember>): Promise<TeamMember | undefined> {
+    const member = this.teamMembers.get(id);
+    if (!member || member.userId !== userId || member.isDeleted) return undefined;
+    const updated = { ...member, ...data };
+    this.teamMembers.set(id, updated);
+    return updated;
+  }
+
+  async deleteTeamMember(userId: string, id: string): Promise<boolean> {
+    const member = this.teamMembers.get(id);
+    if (!member || member.userId !== userId) return false;
+    member.isDeleted = true;
+    return true;
   }
 }
 

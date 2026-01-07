@@ -8,12 +8,14 @@ import {
   type Action,
   type Step,
   type Comment,
+  type TeamMember,
   type InsertStream,
   type InsertSolution,
   type InsertDeliverable,
   type InsertAction,
   type InsertStep,
   type InsertComment,
+  type InsertTeamMember,
   type StreamWithProgress,
   type SolutionWithProgress,
   type SolutionWithBreakdownAndComment,
@@ -32,6 +34,7 @@ import {
   actions,
   steps,
   comments,
+  teamMembers,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import type { IStorage } from "./storage";
@@ -141,6 +144,18 @@ function mapCommentFromDb(row: any): Comment {
     entityId: row.entityId,
     content: row.content,
     createdAt: row.createdAt,
+  };
+}
+
+function mapTeamMemberFromDb(row: any): TeamMember {
+  return {
+    id: row.id,
+    userId: row.userId,
+    name: row.name,
+    role: row.role || undefined,
+    photoUrl: row.photoUrl || undefined,
+    ordinal: row.ordinal,
+    isDeleted: row.isDeleted,
   };
 }
 
@@ -1218,5 +1233,66 @@ export class DatabaseStorage implements IStorage {
     
     await db.insert(comments).values(newComment);
     return mapCommentFromDb(newComment);
+  }
+
+  async getTeamMembers(userId: string): Promise<TeamMember[]> {
+    const rows = await db.select().from(teamMembers).where(
+      and(eq(teamMembers.userId, userId), eq(teamMembers.isDeleted, false))
+    );
+    return rows.sort((a, b) => a.ordinal - b.ordinal).map(mapTeamMemberFromDb);
+  }
+
+  async getTeamMember(userId: string, id: string): Promise<TeamMember | undefined> {
+    const [row] = await db.select().from(teamMembers).where(
+      and(eq(teamMembers.id, id), eq(teamMembers.userId, userId), eq(teamMembers.isDeleted, false))
+    );
+    if (!row) return undefined;
+    return mapTeamMemberFromDb(row);
+  }
+
+  async createTeamMember(userId: string, data: InsertTeamMember): Promise<TeamMember> {
+    const id = randomUUID();
+    const userMembers = await db.select().from(teamMembers).where(eq(teamMembers.userId, userId));
+    const ordinal = userMembers.length + 1;
+    
+    const newMember = {
+      id,
+      userId,
+      name: data.name,
+      role: data.role || null,
+      photoUrl: data.photoUrl || null,
+      ordinal,
+      isDeleted: false,
+    };
+    
+    await db.insert(teamMembers).values(newMember);
+    return mapTeamMemberFromDb(newMember);
+  }
+
+  async updateTeamMember(userId: string, id: string, data: Partial<InsertTeamMember>): Promise<TeamMember | undefined> {
+    const [existing] = await db.select().from(teamMembers).where(
+      and(eq(teamMembers.id, id), eq(teamMembers.userId, userId), eq(teamMembers.isDeleted, false))
+    );
+    if (!existing) return undefined;
+    
+    const updateData: any = {};
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.role !== undefined) updateData.role = data.role || null;
+    if (data.photoUrl !== undefined) updateData.photoUrl = data.photoUrl || null;
+    
+    await db.update(teamMembers).set(updateData).where(eq(teamMembers.id, id));
+    
+    const [updated] = await db.select().from(teamMembers).where(eq(teamMembers.id, id));
+    return mapTeamMemberFromDb(updated);
+  }
+
+  async deleteTeamMember(userId: string, id: string): Promise<boolean> {
+    const [existing] = await db.select().from(teamMembers).where(
+      and(eq(teamMembers.id, id), eq(teamMembers.userId, userId))
+    );
+    if (!existing) return false;
+    
+    await db.update(teamMembers).set({ isDeleted: true }).where(eq(teamMembers.id, id));
+    return true;
   }
 }

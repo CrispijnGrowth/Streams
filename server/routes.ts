@@ -12,6 +12,7 @@ import {
   insertActionSchema,
   insertStepSchema,
   insertCommentSchema,
+  insertTeamMemberSchema,
   insertUserSchema,
   UserRole,
   CommentEntityType,
@@ -945,6 +946,53 @@ export async function registerRoutes(
     } catch (error) {
       console.error("[Import] Execute error:", error);
       res.status(500).json({ error: "Failed to import data" });
+    }
+  });
+
+  // Team Members API
+  app.get("/api/team-members", authMiddleware, async (req, res) => {
+    try {
+      const members = await storage.getTeamMembers(req.userId!);
+      res.json(members);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch team members" });
+    }
+  });
+
+  app.post("/api/team-members", authMiddleware, async (req, res) => {
+    try {
+      const parsed = insertTeamMemberSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid team member data" });
+      }
+      const member = await storage.createTeamMember(req.userId!, parsed.data);
+      res.status(201).json(member);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create team member" });
+    }
+  });
+
+  app.patch("/api/team-members/:id", authMiddleware, async (req, res) => {
+    try {
+      const member = await storage.updateTeamMember(req.userId!, req.params.id, req.body);
+      if (!member) {
+        return res.status(404).json({ error: "Team member not found" });
+      }
+      res.json(member);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update team member" });
+    }
+  });
+
+  app.delete("/api/team-members/:id", authMiddleware, async (req, res) => {
+    try {
+      const success = await storage.deleteTeamMember(req.userId!, req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: "Team member not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete team member" });
     }
   });
 
