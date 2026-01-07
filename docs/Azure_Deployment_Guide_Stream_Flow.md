@@ -57,7 +57,7 @@ This will host your Node.js application. We'll create the App Service Plan and t
    - **Resource Group**: Choose `sovereign-cloud-clarity-rg`.
    - **Name**: Enter `stream-flow`.
    - **Publish**: Select **Code**.
-   - **Runtime stack**: Select **Node 20 LTS**.
+   - **Runtime stack**: Select **Node 24 LTS**.
    - **Operating System**: Select **Linux**.
    - **Region**: Select **West Europe**.
 

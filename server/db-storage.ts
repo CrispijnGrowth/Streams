@@ -362,6 +362,14 @@ export class DatabaseStorage implements IStorage {
     );
     if (!existing) return false;
     
+    // Cascade soft-delete to all child solutions
+    const childSolutions = await db.select().from(solutions).where(
+      and(eq(solutions.streamId, id), eq(solutions.userId, userId))
+    );
+    for (const solution of childSolutions) {
+      await this.deleteSolution(userId, solution.id);
+    }
+    
     await db.update(streams).set({ isDeleted: true }).where(eq(streams.id, id));
     return true;
   }
@@ -533,6 +541,22 @@ export class DatabaseStorage implements IStorage {
     );
     if (!existing) return false;
     
+    // Cascade soft-delete to all child deliverables
+    const childDeliverables = await db.select().from(deliverables).where(
+      and(eq(deliverables.solutionId, id), eq(deliverables.userId, userId))
+    );
+    for (const deliverable of childDeliverables) {
+      await this.deleteDeliverable(userId, deliverable.id);
+    }
+    
+    // Cascade soft-delete to all actions directly under this solution (unassigned to deliverables)
+    const childActions = await db.select().from(actions).where(
+      and(eq(actions.solutionId, id), eq(actions.userId, userId))
+    );
+    for (const action of childActions) {
+      await this.deleteAction(userId, action.id);
+    }
+    
     await db.update(solutions).set({ isDeleted: true }).where(eq(solutions.id, id));
     await this.updateStreamMilestone(existing.streamId, userId);
     return true;
@@ -639,6 +663,14 @@ export class DatabaseStorage implements IStorage {
       and(eq(deliverables.id, id), eq(deliverables.userId, userId))
     );
     if (!existing) return false;
+    
+    // Cascade soft-delete to all child actions under this deliverable
+    const childActions = await db.select().from(actions).where(
+      and(eq(actions.deliverableId, id), eq(actions.userId, userId))
+    );
+    for (const action of childActions) {
+      await this.deleteAction(userId, action.id);
+    }
     
     await db.update(deliverables).set({ isDeleted: true }).where(eq(deliverables.id, id));
     return true;
@@ -763,6 +795,14 @@ export class DatabaseStorage implements IStorage {
       and(eq(actions.id, id), eq(actions.userId, userId))
     );
     if (!existing) return false;
+    
+    // Cascade soft-delete to all child steps under this action
+    const childSteps = await db.select().from(steps).where(
+      and(eq(steps.actionId, id), eq(steps.userId, userId))
+    );
+    for (const step of childSteps) {
+      await db.update(steps).set({ isDeleted: true }).where(eq(steps.id, step.id));
+    }
     
     await db.update(actions).set({ isDeleted: true }).where(eq(actions.id, id));
     return true;
