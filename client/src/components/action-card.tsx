@@ -1,13 +1,13 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { StatusBadge } from "@/components/status-badge";
 import { ProgressBar } from "@/components/progress-bar";
-import { Calendar, GripVertical, Pencil, MessageSquare } from "lucide-react";
+import { Calendar, GripVertical, MessageSquare } from "lucide-react";
 import { format } from "date-fns";
 import { useTeamMembers } from "@/hooks/use-suggestions";
+import { useMode } from "@/lib/mode-context";
 import type { ActionWithLastComment } from "@shared/schema";
 
 interface ActionCardProps {
@@ -28,6 +28,7 @@ export function ActionCard({
   showDragHandle = false,
 }: ActionCardProps) {
   const teamMembers = useTeamMembers();
+  const { isEditMode } = useMode();
   const isOverdue =
     action.dueDate &&
     new Date(action.dueDate) < new Date() &&
@@ -42,17 +43,20 @@ export function ActionCard({
     return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
   };
 
-  const handleEdit = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onEdit?.();
+  const handleCardClick = () => {
+    if (isEditMode) {
+      onEdit?.();
+    } else {
+      onClick?.();
+    }
   };
 
   return (
     <Card
       className={`p-3 space-y-2 cursor-pointer hover-elevate active-elevate-2 transition-all group ${
         isDragging ? "shadow-xl scale-105 opacity-90" : ""
-      }`}
-      onClick={onClick}
+      } ${isEditMode ? "border-2 border-dashed border-primary" : ""}`}
+      onClick={handleCardClick}
       data-testid={`card-action-${action.id}`}
     >
       <div className="flex items-start gap-2">
@@ -71,15 +75,6 @@ export function ActionCard({
             </p>
           )}
         </div>
-        <Button
-          size="icon"
-          variant="ghost"
-          className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-          onClick={handleEdit}
-          data-testid={`button-edit-action-${action.id}`}
-        >
-          <Pencil className="h-3 w-3" />
-        </Button>
       </div>
 
       <div className="flex items-center gap-2 text-xs flex-wrap">
@@ -142,21 +137,6 @@ export function ActionCard({
                 +{action.owners.length - 3}
               </AvatarFallback>
             </Avatar>
-          )}
-        </div>
-      )}
-
-      {action.labels.length > 0 && (
-        <div className="flex items-center gap-1 flex-wrap">
-          {action.labels.slice(0, 2).map((label) => (
-            <Badge key={label} variant="outline" className="text-xs px-1.5 py-0">
-              {label}
-            </Badge>
-          ))}
-          {action.labels.length > 2 && (
-            <span className="text-xs text-muted-foreground">
-              +{action.labels.length - 2}
-            </span>
           )}
         </div>
       )}

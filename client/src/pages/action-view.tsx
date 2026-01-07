@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { ListChecks, Plus, Calendar, User, Clock, Pencil, MessageSquare, Send, Loader2 } from "lucide-react";
+import { ListChecks, Plus, Calendar, User, Clock, MessageSquare, Send, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ import { EditStepDialog } from "@/components/edit-step-dialog";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
+import { useMode } from "@/lib/mode-context";
 import { format } from "date-fns";
 import type { ActionWithLastComment, Step, ActionStatusType, Comment } from "@shared/schema";
 import { ActionStatus } from "@shared/schema";
@@ -31,6 +32,7 @@ interface ActionViewProps {
 export function ActionView({ streamId, solutionId, actionId }: ActionViewProps) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { isEditMode } = useMode();
   const [editingAction, setEditingAction] = useState(false);
   const [editFocusField, setEditFocusField] = useState<EditActionFocusField>(null);
   const [editingStep, setEditingStep] = useState<Step | null>(null);
@@ -238,25 +240,17 @@ export function ActionView({ streamId, solutionId, actionId }: ActionViewProps) 
 
   return (
     <div className="p-6 space-y-6">
-      <Card className="p-6 space-y-4">
+      <Card 
+        className={`p-6 space-y-4 ${isEditMode ? "border-2 border-dashed border-primary cursor-pointer hover-elevate" : ""}`}
+        onClick={isEditMode ? () => setEditingAction(true) : undefined}
+      >
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
-            <div className="flex items-center gap-2">
-              <div>
-                <span className="text-[10px] uppercase tracking-widest font-semibold text-primary">Action</span>
-                <h1 className="text-xl font-semibold" data-testid="text-action-title">
-                  {action.name}
-                </h1>
-              </div>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-7 w-7"
-                onClick={() => setEditingAction(true)}
-                data-testid="button-edit-action"
-              >
-                <Pencil className="h-4 w-4" />
-              </Button>
+            <div>
+              <span className="text-[10px] uppercase tracking-widest font-semibold text-primary">Action</span>
+              <h1 className="text-xl font-semibold" data-testid="text-action-title">
+                {action.name}
+              </h1>
             </div>
             {action.description && (
               <p className="text-sm text-muted-foreground mt-1">{action.description}</p>
