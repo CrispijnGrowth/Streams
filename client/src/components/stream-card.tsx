@@ -1,10 +1,13 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { MomentumBadge } from "@/components/status-badge";
 import { ProgressBar } from "@/components/progress-bar";
 import { Calendar, Pencil } from "lucide-react";
 import { format } from "date-fns";
+import { useTeamMembers } from "@/hooks/use-suggestions";
 import type { StreamWithProgress, MomentumStatusType } from "@shared/schema";
 
 interface StreamCardProps {
@@ -16,10 +19,21 @@ interface StreamCardProps {
 }
 
 export function StreamCard({ stream, onClick, onEdit, onMomentumClick, showDescription = true }: StreamCardProps) {
+  const teamMembers = useTeamMembers();
+  
   const isOverdue =
     stream.computedMilestoneDate &&
     new Date(stream.computedMilestoneDate) < new Date() &&
     stream.progress < 100;
+  
+  const getOwnerInfo = (ownerName: string) => {
+    const member = teamMembers.find((m) => m.name === ownerName);
+    return member;
+  };
+  
+  const getInitials = (name: string) => {
+    return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+  };
 
   const handleEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -77,6 +91,38 @@ export function StreamCard({ stream, onClick, onEdit, onMomentumClick, showDescr
               <span className="font-mono">
                 {format(new Date(stream.computedMilestoneDate), "MMM d")}
               </span>
+            </div>
+          )}
+          {stream.owners && stream.owners.length > 0 && (
+            <div className="flex items-center -space-x-1 ml-auto">
+              {stream.owners.slice(0, 3).map((owner) => {
+                const info = getOwnerInfo(owner);
+                return (
+                  <Tooltip key={owner}>
+                    <TooltipTrigger asChild>
+                      <Avatar className="h-6 w-6 border-2 border-background">
+                        {info?.photoUrl ? (
+                          <AvatarImage src={info.photoUrl} alt={owner} />
+                        ) : null}
+                        <AvatarFallback className="bg-primary/10 text-primary text-[10px]">
+                          {getInitials(owner)}
+                        </AvatarFallback>
+                      </Avatar>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="font-medium">{owner}</p>
+                      {info?.role && <p className="text-xs text-muted-foreground">{info.role}</p>}
+                    </TooltipContent>
+                  </Tooltip>
+                );
+              })}
+              {stream.owners.length > 3 && (
+                <Avatar className="h-6 w-6 border-2 border-background">
+                  <AvatarFallback className="bg-muted text-muted-foreground text-[10px]">
+                    +{stream.owners.length - 3}
+                  </AvatarFallback>
+                </Avatar>
+              )}
             </div>
           )}
         </div>

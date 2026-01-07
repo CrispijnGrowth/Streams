@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { useAuth, getSessionHeaders } from "@/lib/auth-context";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient } from "@/lib/queryClient";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -9,9 +9,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Check, UserPlus, Shield, Upload, FileSpreadsheet, AlertCircle } from "lucide-react";
-import type { User } from "@shared/schema";
+import { Loader2, Check, UserPlus, Shield, Upload, FileSpreadsheet, AlertCircle, Users, Plus, Trash2, Pencil, X } from "lucide-react";
+import type { User, TeamMember } from "@shared/schema";
 
 interface ImportPreview {
   [sheetName: string]: {
@@ -36,12 +38,23 @@ export function SettingsPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [importPreview, setImportPreview] = useState<ImportPreview | null>(null);
   const [importStats, setImportStats] = useState<ImportStats | null>(null);
+  
+  const [isAddingMember, setIsAddingMember] = useState(false);
+  const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
+  const [newMemberName, setNewMemberName] = useState("");
+  const [newMemberRole, setNewMemberRole] = useState("");
+  const [newMemberPhotoUrl, setNewMemberPhotoUrl] = useState("");
 
   const isAdmin = user?.role === "admin";
 
   const { data: pendingUsers = [], isLoading: loadingPending } = useQuery<User[]>({
     queryKey: ["/api/admin/pending-users"],
     enabled: isAdmin && !!sessionId,
+  });
+  
+  const { data: teamMembers = [], isLoading: loadingTeamMembers } = useQuery<TeamMember[]>({
+    queryKey: ["/api/team-members"],
+    enabled: !!sessionId,
   });
 
   const preferenceMutation = useMutation({
@@ -127,6 +140,50 @@ export function SettingsPage() {
       toast({ title: "Failed to import data", variant: "destructive" });
     },
   });
+  
+  const createMemberMutation = useMutation({
+    mutationFn: async (data: { name: string; role?: string; photoUrl?: string }) => {
+      return apiRequest("POST", "/api/team-members", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/team-members"] });
+      setIsAddingMember(false);
+      setNewMemberName("");
+      setNewMemberRole("");
+      setNewMemberPhotoUrl("");
+      toast({ title: "Team member added" });
+    },
+    onError: () => {
+      toast({ title: "Failed to add team member", variant: "destructive" });
+    },
+  });
+  
+  const updateMemberMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: { name?: string; role?: string; photoUrl?: string } }) => {
+      return apiRequest("PATCH", `/api/team-members/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/team-members"] });
+      setEditingMember(null);
+      toast({ title: "Team member updated" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update team member", variant: "destructive" });
+    },
+  });
+  
+  const deleteMemberMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("DELETE", `/api/team-members/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/team-members"] });
+      toast({ title: "Team member removed" });
+    },
+    onError: () => {
+      toast({ title: "Failed to remove team member", variant: "destructive" });
+    },
+  });
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -150,6 +207,47 @@ export function SettingsPage() {
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
+  };
+  
+  const handleAddMember = () => {
+    if (!newMemberName.trim()) return;
+    createMemberMutation.mutate({
+      name: newMemberName.trim(),
+      role: newMemberRole.trim() || undefined,
+      photoUrl: newMemberPhotoUrl.trim() || undefined,
+    });
+  };
+  
+  const handleUpdateMember = () => {
+    if (!editingMember || !newMemberName.trim()) return;
+    updateMemberMutation.mutate({
+      id: editingMember.id,
+      data: {
+        name: newMemberName.trim(),
+        role: newMemberRole.trim() || undefined,
+        photoUrl: newMemberPhotoUrl.trim() || undefined,
+      },
+    });
+  };
+  
+  const startEditMember = (member: TeamMember) => {
+    setEditingMember(member);
+    setNewMemberName(member.name);
+    setNewMemberRole(member.role || "");
+    setNewMemberPhotoUrl(member.photoUrl || "");
+    setIsAddingMember(false);
+  };
+  
+  const cancelMemberEdit = () => {
+    setEditingMember(null);
+    setIsAddingMember(false);
+    setNewMemberName("");
+    setNewMemberRole("");
+    setNewMemberPhotoUrl("");
+  };
+  
+  const getInitials = (name: string) => {
+    return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
   };
 
   if (!user) return null;
@@ -236,6 +334,204 @@ export function SettingsPage() {
               </SelectContent>
             </Select>
           </div>
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Team Members
+          </CardTitle>
+          <CardDescription>
+            Manage team members who can be assigned as owners
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {loadingTeamMembers ? (
+            <div className="flex justify-center py-4">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <>
+              {teamMembers.length === 0 && !isAddingMember && (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  No team members yet. Add your first team member below.
+                </p>
+              )}
+              
+              <div className="space-y-2">
+                {teamMembers.map((member) => (
+                  editingMember?.id === member.id ? (
+                    <div key={member.id} className="p-3 bg-muted rounded-md space-y-3">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-10 w-10">
+                          {newMemberPhotoUrl ? (
+                            <AvatarImage src={newMemberPhotoUrl} alt={newMemberName} />
+                          ) : null}
+                          <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                            {getInitials(newMemberName || "?")}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 space-y-2">
+                          <Input
+                            value={newMemberName}
+                            onChange={(e) => setNewMemberName(e.target.value)}
+                            placeholder="Name"
+                            data-testid="input-edit-member-name"
+                          />
+                          <Input
+                            value={newMemberRole}
+                            onChange={(e) => setNewMemberRole(e.target.value)}
+                            placeholder="Role (e.g. Developer)"
+                            data-testid="input-edit-member-role"
+                          />
+                          <Input
+                            value={newMemberPhotoUrl}
+                            onChange={(e) => setNewMemberPhotoUrl(e.target.value)}
+                            placeholder="Photo URL (optional)"
+                            data-testid="input-edit-member-photo"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          onClick={handleUpdateMember}
+                          disabled={updateMemberMutation.isPending || !newMemberName.trim()}
+                          data-testid="button-save-member"
+                        >
+                          {updateMemberMutation.isPending ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <>
+                              <Check className="h-4 w-4 mr-1" />
+                              Save
+                            </>
+                          )}
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={cancelMemberEdit}>
+                          <X className="h-4 w-4 mr-1" />
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      key={member.id}
+                      className="flex items-center justify-between gap-4 p-3 bg-muted rounded-md"
+                      data-testid={`team-member-${member.id}`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-10 w-10">
+                          {member.photoUrl ? (
+                            <AvatarImage src={member.photoUrl} alt={member.name} />
+                          ) : null}
+                          <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                            {getInitials(member.name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="font-medium">{member.name}</p>
+                          {member.role && (
+                            <p className="text-sm text-muted-foreground">{member.role}</p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => startEditMember(member)}
+                          data-testid={`button-edit-member-${member.id}`}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => deleteMemberMutation.mutate(member.id)}
+                          disabled={deleteMemberMutation.isPending}
+                          data-testid={`button-delete-member-${member.id}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )
+                ))}
+              </div>
+              
+              {isAddingMember ? (
+                <div className="p-3 border rounded-md space-y-3">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-10 w-10">
+                      {newMemberPhotoUrl ? (
+                        <AvatarImage src={newMemberPhotoUrl} alt={newMemberName} />
+                      ) : null}
+                      <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                        {newMemberName ? getInitials(newMemberName) : "?"}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 space-y-2">
+                      <Input
+                        value={newMemberName}
+                        onChange={(e) => setNewMemberName(e.target.value)}
+                        placeholder="Name"
+                        autoFocus
+                        data-testid="input-new-member-name"
+                      />
+                      <Input
+                        value={newMemberRole}
+                        onChange={(e) => setNewMemberRole(e.target.value)}
+                        placeholder="Role (e.g. Developer)"
+                        data-testid="input-new-member-role"
+                      />
+                      <Input
+                        value={newMemberPhotoUrl}
+                        onChange={(e) => setNewMemberPhotoUrl(e.target.value)}
+                        placeholder="Photo URL (optional)"
+                        data-testid="input-new-member-photo"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      onClick={handleAddMember}
+                      disabled={createMemberMutation.isPending || !newMemberName.trim()}
+                      data-testid="button-add-member"
+                    >
+                      {createMemberMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <>
+                          <Plus className="h-4 w-4 mr-1" />
+                          Add
+                        </>
+                      )}
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={cancelMemberEdit}>
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    cancelMemberEdit();
+                    setIsAddingMember(true);
+                  }}
+                  className="w-full"
+                  data-testid="button-show-add-member"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Team Member
+                </Button>
+              )}
+            </>
+          )}
         </CardContent>
       </Card>
 

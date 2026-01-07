@@ -95,7 +95,15 @@ Progress is computed automatically by rolling up completion percentages from ste
 - **Methods**: `storage.seedExampleData(userId)` and `storage.hasExampleData(userId)` for one-time seeding
 - **Trigger Points**: Called in `/api/admin/approve/:userId` and `/api/auth/login` routes
 
+### Team Members System
+- **Team Members Table**: `team_members` table with id, userId, name, role, photoUrl, ordinal, isDeleted fields
+- **Management UI**: Settings page includes Team Members section for adding/editing/deleting team members
+- **Owner Selection**: Forms for Stream/Solution/Action use team member names as owner suggestions
+- **Avatar Display**: Stream, Solution, and Action cards display owner avatars with tooltips showing name and role
+- **Key Hook**: `useTeamMembers()` in `client/src/hooks/use-suggestions.ts` fetches team members for current user
+
 ### Recent Changes
+- 2026-01-07: Added Team Members system - manage team members with photos and roles, displayed as avatars on cards
 - 2026-01-04: Added example data seeding system with three pre-populated streams for new users
 - 2026-01-04: Added new Deliverable entity between Solution and Action - actions can now be grouped by deliverable in Kanban view with fluorescent row borders
 - 2026-01-04: Renamed "Deliverable" to "Solution" throughout the application - Solutions are now milestones within Streams

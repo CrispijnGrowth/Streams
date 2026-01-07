@@ -1,10 +1,13 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { StatusBadge } from "@/components/status-badge";
 import { ProgressBar } from "@/components/progress-bar";
-import { Calendar, User, GripVertical, Pencil, MessageSquare } from "lucide-react";
+import { Calendar, GripVertical, Pencil, MessageSquare } from "lucide-react";
 import { format } from "date-fns";
+import { useTeamMembers } from "@/hooks/use-suggestions";
 import type { ActionWithLastComment } from "@shared/schema";
 
 interface ActionCardProps {
@@ -24,11 +27,20 @@ export function ActionCard({
   isDragging = false,
   showDragHandle = false,
 }: ActionCardProps) {
+  const teamMembers = useTeamMembers();
   const isOverdue =
     action.dueDate &&
     new Date(action.dueDate) < new Date() &&
     action.status !== "Done" &&
     action.status !== "Archive";
+  
+  const getOwnerInfo = (ownerName: string) => {
+    return teamMembers.find((m) => m.name === ownerName);
+  };
+  
+  const getInitials = (name: string) => {
+    return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+  };
 
   const handleEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -102,9 +114,35 @@ export function ActionCard({
       )}
 
       {action.owners.length > 0 && (
-        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-          <User className="h-3 w-3" />
-          <span className="truncate">{action.owners.join(", ")}</span>
+        <div className="flex items-center -space-x-1">
+          {action.owners.slice(0, 3).map((owner) => {
+            const info = getOwnerInfo(owner);
+            return (
+              <Tooltip key={owner}>
+                <TooltipTrigger asChild>
+                  <Avatar className="h-5 w-5 border-2 border-background">
+                    {info?.photoUrl ? (
+                      <AvatarImage src={info.photoUrl} alt={owner} />
+                    ) : null}
+                    <AvatarFallback className="bg-primary/10 text-primary text-[9px]">
+                      {getInitials(owner)}
+                    </AvatarFallback>
+                  </Avatar>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="font-medium">{owner}</p>
+                  {info?.role && <p className="text-xs text-muted-foreground">{info.role}</p>}
+                </TooltipContent>
+              </Tooltip>
+            );
+          })}
+          {action.owners.length > 3 && (
+            <Avatar className="h-5 w-5 border-2 border-background">
+              <AvatarFallback className="bg-muted text-muted-foreground text-[9px]">
+                +{action.owners.length - 3}
+              </AvatarFallback>
+            </Avatar>
+          )}
         </div>
       )}
 

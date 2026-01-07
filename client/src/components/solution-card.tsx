@@ -1,9 +1,12 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ProgressBar } from "@/components/progress-bar";
 import { Calendar, Pencil, MessageSquare } from "lucide-react";
 import { format } from "date-fns";
+import { useTeamMembers } from "@/hooks/use-suggestions";
 import type { SolutionWithBreakdownAndComment, DeliverableBreakdown, ActionStatusType, DeliverableBorderColorType } from "@shared/schema";
 import { SolutionStatus, ActionStatus } from "@shared/schema";
 
@@ -46,11 +49,20 @@ export function SolutionCard({
   showDescription = true,
   isDragging = false,
 }: SolutionCardProps) {
+  const teamMembers = useTeamMembers();
   const isOnHold = solution.status === SolutionStatus.ON_HOLD;
   const isOverdue =
     solution.milestoneDate &&
     new Date(solution.milestoneDate) < new Date() &&
     !isOnHold;
+  
+  const getOwnerInfo = (ownerName: string) => {
+    return teamMembers.find((m) => m.name === ownerName);
+  };
+  
+  const getInitials = (name: string) => {
+    return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+  };
 
   const handleEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -112,6 +124,38 @@ export function SolutionCard({
           <span className="text-xs text-muted-foreground">{solution.deliverableCount}D</span>
         )}
         <span className="text-xs text-muted-foreground">{solution.actionCount}A</span>
+        {solution.owners && solution.owners.length > 0 && (
+          <div className="flex items-center -space-x-1">
+            {solution.owners.slice(0, 2).map((owner) => {
+              const info = getOwnerInfo(owner);
+              return (
+                <Tooltip key={owner}>
+                  <TooltipTrigger asChild>
+                    <Avatar className="h-5 w-5 border-2 border-background">
+                      {info?.photoUrl ? (
+                        <AvatarImage src={info.photoUrl} alt={owner} />
+                      ) : null}
+                      <AvatarFallback className="bg-primary/10 text-primary text-[9px]">
+                        {getInitials(owner)}
+                      </AvatarFallback>
+                    </Avatar>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="font-medium">{owner}</p>
+                    {info?.role && <p className="text-xs text-muted-foreground">{info.role}</p>}
+                  </TooltipContent>
+                </Tooltip>
+              );
+            })}
+            {solution.owners.length > 2 && (
+              <Avatar className="h-5 w-5 border-2 border-background">
+                <AvatarFallback className="bg-muted text-muted-foreground text-[9px]">
+                  +{solution.owners.length - 2}
+                </AvatarFallback>
+              </Avatar>
+            )}
+          </div>
+        )}
       </div>
 
       {solution.deliverableBreakdown && solution.deliverableBreakdown.length > 0 && (
