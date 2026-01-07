@@ -139,11 +139,11 @@ function TopNav() {
 
   return (
     <nav className="flex items-center gap-4">
-      <Link href="/">
+      <Link href="/" className="flex items-center">
         <img 
           src={resolvedTheme === "dark" ? logoWhite : logoBlack} 
           alt="Streams" 
-          className="h-6 w-auto"
+          className="h-5 w-auto"
           data-testid="logo-main"
         />
       </Link>
