@@ -358,61 +358,89 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-auto p-6 relative z-0">
         <div className="space-y-6">
-          <div className="flex items-center justify-between gap-4 pb-3 border-b flex-wrap">
-            <div className="flex items-center gap-3">
-              <div>
-                <span className="text-[10px] uppercase tracking-widest font-semibold text-primary">Solution</span>
+          <div 
+            className={`space-y-3 pb-4 border-b pt-2 ${isEditMode ? "border-2 border-dashed border-primary rounded-md p-4 cursor-pointer hover-elevate" : ""}`}
+            onClick={isEditMode ? () => setEditingSolution(true) : undefined}
+          >
+            <span className="text-[10px] uppercase tracking-widest font-semibold text-primary">Solution</span>
+            
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-3 flex-wrap">
                 <h1 className="text-lg font-semibold" data-testid="text-solution-name">{solution.name}</h1>
               </div>
-              <Button
-                size="sm"
-                variant={solution.status === SolutionStatus.ON_HOLD ? "secondary" : "outline"}
-                onClick={() => {
-                  const newStatus = solution.status === SolutionStatus.ON_HOLD 
-                    ? SolutionStatus.IN_PROGRESS 
-                    : SolutionStatus.ON_HOLD;
-                  updateSolutionStatus.mutate(newStatus);
-                }}
-                data-testid="button-toggle-solution-status"
-              >
-                {solution.status === SolutionStatus.ON_HOLD ? "On Hold" : "In Progress"}
-              </Button>
-              {isEditMode && (
+              
+              <div className="flex items-center gap-3 flex-wrap">
                 <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-7 w-7"
-                  onClick={() => setEditingSolution(true)}
-                  data-testid="button-edit-solution"
+                  size="sm"
+                  variant={solution.status === SolutionStatus.ON_HOLD ? "secondary" : "outline"}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const newStatus = solution.status === SolutionStatus.ON_HOLD 
+                      ? SolutionStatus.IN_PROGRESS 
+                      : SolutionStatus.ON_HOLD;
+                    updateSolutionStatus.mutate(newStatus);
+                  }}
+                  data-testid="button-toggle-solution-status"
                 >
-                  <Pencil className="h-4 w-4" />
+                  {solution.status === SolutionStatus.ON_HOLD ? "On Hold" : "In Progress"}
                 </Button>
-              )}
+                {solution.milestoneDate && (
+                  <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                    <Calendar className="w-4 h-4" />
+                    <span>{new Date(solution.milestoneDate).toLocaleDateString('en-GB')}</span>
+                  </div>
+                )}
+                {solution.owners && solution.owners.length > 0 && (
+                  <div className="flex items-center -space-x-1.5">
+                    {solution.owners.slice(0, 5).map((owner) => {
+                      const info = getOwnerInfo(owner);
+                      return (
+                        <Tooltip key={owner}>
+                          <TooltipTrigger asChild>
+                            <Avatar className="h-7 w-7 border-2 border-background">
+                              {info?.photoUrl ? (
+                                <AvatarImage src={info.photoUrl} alt={owner} />
+                              ) : null}
+                              <AvatarFallback className="bg-primary/10 text-primary text-[10px]">
+                                {getInitials(owner)}
+                              </AvatarFallback>
+                            </Avatar>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="font-medium">{owner}</p>
+                            {info?.role && <p className="text-xs text-muted-foreground">{info.role}</p>}
+                          </TooltipContent>
+                        </Tooltip>
+                      );
+                    })}
+                    {solution.owners.length > 5 && (
+                      <Avatar className="h-7 w-7 border-2 border-background">
+                        <AvatarFallback className="bg-muted text-muted-foreground text-[10px]">
+                          +{solution.owners.length - 5}
+                        </AvatarFallback>
+                      </Avatar>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
-              {solution.milestoneDate && (
-                <div className="flex items-center gap-1.5">
-                  <Calendar className="w-4 h-4" />
-                  <span>{new Date(solution.milestoneDate).toLocaleDateString()}</span>
-                </div>
-              )}
-              {solution.owners && solution.owners.length > 0 && (
-                <div className="flex items-center gap-1.5">
-                  <Users className="w-4 h-4" />
-                  <span>{solution.owners.join(", ")}</span>
-                </div>
-              )}
-              {solution.labels && solution.labels.length > 0 && (
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <Tag className="w-4 h-4" />
-                  {solution.labels.map((label) => (
-                    <Badge key={label} variant="secondary" className="text-xs">
-                      {label}
-                    </Badge>
-                  ))}
-                </div>
-              )}
-            </div>
+
+            {showDescriptions && solution.description && (
+              <p className="text-sm text-muted-foreground max-w-3xl" data-testid="text-solution-description">
+                {solution.description}
+              </p>
+            )}
+
+            {solution.labels && solution.labels.length > 0 && (
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <Tag className="w-4 h-4 text-muted-foreground" />
+                {solution.labels.map((label) => (
+                  <Badge key={label} variant="secondary" className="text-xs">
+                    {label}
+                  </Badge>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="space-y-3">
