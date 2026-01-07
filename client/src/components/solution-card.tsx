@@ -1,13 +1,13 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ProgressBar } from "@/components/progress-bar";
-import { Calendar, Pencil, MessageSquare } from "lucide-react";
+import { Calendar, MessageSquare } from "lucide-react";
 import { format } from "date-fns";
 import { useTeamMembers } from "@/hooks/use-suggestions";
-import type { SolutionWithBreakdownAndComment, DeliverableBreakdown, ActionStatusType, DeliverableBorderColorType } from "@shared/schema";
+import { useMode } from "@/lib/mode-context";
+import type { SolutionWithBreakdownAndComment, ActionStatusType, DeliverableBorderColorType } from "@shared/schema";
 import { SolutionStatus, ActionStatus } from "@shared/schema";
 
 interface SolutionCardProps {
@@ -50,6 +50,7 @@ export function SolutionCard({
   isDragging = false,
 }: SolutionCardProps) {
   const teamMembers = useTeamMembers();
+  const { isEditMode } = useMode();
   const isOnHold = solution.status === SolutionStatus.ON_HOLD;
   const isOverdue =
     solution.milestoneDate &&
@@ -64,82 +65,80 @@ export function SolutionCard({
     return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
   };
 
-  const handleEdit = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onEdit?.();
+  const handleCardClick = () => {
+    if (isEditMode) {
+      onEdit?.();
+    } else {
+      onClick?.();
+    }
   };
+
+  const primaryOwner = solution.owners?.[0];
+  const primaryOwnerInfo = primaryOwner ? getOwnerInfo(primaryOwner) : undefined;
+  const additionalOwners = solution.owners?.slice(1) || [];
 
   return (
     <Card
-      className={`p-2.5 space-y-1.5 cursor-pointer hover-elevate active-elevate-2 transition-all group ${
+      className={`p-2.5 cursor-pointer hover-elevate active-elevate-2 transition-all group ${
         isDragging ? "shadow-xl scale-105 opacity-90" : ""
-      } ${isOnHold ? "opacity-60 grayscale" : ""}`}
-      onClick={onClick}
+      } ${isOnHold ? "opacity-60 grayscale" : ""} ${
+        isEditMode 
+          ? "border-2 border-dashed border-primary" 
+          : ""
+      }`}
+      onClick={handleCardClick}
       data-testid={`card-solution-${solution.id}`}
     >
-      <div className="flex items-start justify-between gap-3">
-        <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium" data-testid={`text-solution-key-${solution.id}`}>
-          {solution.displayKey}
-        </span>
-        {solution.owners && solution.owners.length > 0 && (() => {
-          const primaryOwner = solution.owners[0];
-          const info = getOwnerInfo(primaryOwner);
-          return (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Avatar className="h-10 w-10 border-2 border-background shrink-0">
-                  {info?.photoUrl ? (
-                    <AvatarImage src={info.photoUrl} alt={primaryOwner} className="object-cover" />
-                  ) : null}
-                  <AvatarFallback className="bg-primary/10 text-primary text-sm">
-                    {getInitials(primaryOwner)}
-                  </AvatarFallback>
-                </Avatar>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p className="font-medium">{primaryOwner}</p>
-                {info?.role && <p className="text-xs text-muted-foreground">{info.role}</p>}
-              </TooltipContent>
-            </Tooltip>
-          );
-        })()}
-      </div>
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5 flex-1 min-w-0">
-          <h4 className="font-medium text-sm truncate" data-testid={`text-solution-name-${solution.id}`}>
+      <div className="relative pr-12">
+        {primaryOwner && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Avatar className="absolute top-0 right-0 h-10 w-10 border-2 border-background">
+                {primaryOwnerInfo?.photoUrl ? (
+                  <AvatarImage src={primaryOwnerInfo.photoUrl} alt={primaryOwner} className="object-cover" />
+                ) : null}
+                <AvatarFallback className="bg-primary/10 text-primary text-sm">
+                  {getInitials(primaryOwner)}
+                </AvatarFallback>
+              </Avatar>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p className="font-medium">{primaryOwner}</p>
+              {primaryOwnerInfo?.role && <p className="text-xs text-muted-foreground">{primaryOwnerInfo.role}</p>}
+            </TooltipContent>
+          </Tooltip>
+        )}
+
+        <div className="space-y-0.5">
+          <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium" data-testid={`text-solution-key-${solution.id}`}>
+            {solution.displayKey}
+          </span>
+          <h4 className="font-medium text-sm" data-testid={`text-solution-name-${solution.id}`}>
             {solution.name}
           </h4>
         </div>
-        <div className="flex items-center gap-1 shrink-0">
-          {solution.milestoneDate && (
-            <div
-              className={`flex items-center gap-1 text-xs ${isOnHold ? "text-muted-foreground" : isOverdue ? "text-status-blocked" : "text-muted-foreground"}`}
-            >
-              <Calendar className="h-3 w-3" />
-              <span className="font-mono">
-                {format(new Date(solution.milestoneDate), "MMM d")}
-              </span>
-            </div>
-          )}
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
-            onClick={handleEdit}
-            data-testid={`button-edit-solution-${solution.id}`}
+      </div>
+
+      <div className="flex items-center gap-2 mt-1.5">
+        {solution.milestoneDate && (
+          <div
+            className={`flex items-center gap-1 text-xs ${isOnHold ? "text-muted-foreground" : isOverdue ? "text-status-blocked" : "text-muted-foreground"}`}
           >
-            <Pencil className="h-3 w-3" />
-          </Button>
-        </div>
+            <Calendar className="h-3 w-3" />
+            <span className="font-mono">
+              {format(new Date(solution.milestoneDate), "MMM d")}
+            </span>
+          </div>
+        )}
       </div>
 
       {showDescription && solution.description && (
-        <p className="text-xs text-muted-foreground line-clamp-1">
+        <p className="text-xs text-muted-foreground line-clamp-1 mt-1">
           {solution.description}
         </p>
       )}
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 mt-1.5">
         <div className="flex-1">
           <ProgressBar value={solution.progress} size="sm" showLabel={false} muted={isOnHold} />
         </div>
@@ -148,9 +147,9 @@ export function SolutionCard({
           <span className="text-xs text-muted-foreground">{solution.deliverableCount}D</span>
         )}
         <span className="text-xs text-muted-foreground">{solution.actionCount}A</span>
-        {solution.owners && solution.owners.length > 1 && (
+        {additionalOwners.length > 0 && (
           <div className="flex items-center -space-x-1">
-            {solution.owners.slice(1, 3).map((owner) => {
+            {additionalOwners.slice(0, 2).map((owner) => {
               const info = getOwnerInfo(owner);
               return (
                 <Tooltip key={owner}>
@@ -171,10 +170,10 @@ export function SolutionCard({
                 </Tooltip>
               );
             })}
-            {solution.owners.length > 3 && (
+            {additionalOwners.length > 2 && (
               <Avatar className="h-5 w-5 border-2 border-background">
                 <AvatarFallback className="bg-muted text-muted-foreground text-[9px]">
-                  +{solution.owners.length - 3}
+                  +{additionalOwners.length - 2}
                 </AvatarFallback>
               </Avatar>
             )}
@@ -183,7 +182,7 @@ export function SolutionCard({
       </div>
 
       {solution.deliverableBreakdown && solution.deliverableBreakdown.length > 0 && (
-        <div className="space-y-1.5 pt-1 border-t border-border/50">
+        <div className="space-y-1.5 pt-1 mt-1.5 border-t border-border/50">
           {solution.deliverableBreakdown.map((deliverable) => {
             const borderColor = `hsl(${borderColorMap[deliverable.borderColor] || "var(--deliverable-cyan)"})`;
             return (
@@ -219,7 +218,7 @@ export function SolutionCard({
       )}
 
       {solution.labels.length > 0 && (
-        <div className="flex items-center gap-1.5 flex-wrap">
+        <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
           {solution.labels.slice(0, 2).map((label) => (
             <Badge key={label} variant="secondary" className="text-xs py-0 h-5">
               {label}
@@ -232,7 +231,7 @@ export function SolutionCard({
       )}
 
       {solution.lastComment && (
-        <div className="flex items-start gap-1.5 pt-1 border-t border-border/50">
+        <div className="flex items-start gap-1.5 pt-1 mt-1.5 border-t border-border/50">
           <MessageSquare className="h-3 w-3 text-muted-foreground shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
             <p className="text-xs text-muted-foreground line-clamp-2">
