@@ -17,6 +17,9 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Layers, LayoutGrid, Trash2, Search, LogOut, Settings, Loader2, Pencil, Play } from "lucide-react";
+import { useTheme } from "@/lib/theme-provider";
+import logoWhite from "@assets/Streams_Logo_White_1767805031570.png";
+import logoBlack from "@assets/Streams_Logo_Black_1767805053205.png";
 import { StreamsOverview } from "@/pages/streams-overview";
 import { StreamView } from "@/pages/stream-view";
 import { SolutionView } from "@/pages/solution-view";
@@ -132,42 +135,42 @@ function Router({ showDescriptions }: { showDescriptions: boolean }) {
 
 function TopNav() {
   const [location] = useLocation();
+  const { resolvedTheme } = useTheme();
 
   return (
-    <nav className="flex items-center gap-1">
+    <nav className="flex items-center gap-4">
       <Link href="/">
-        <Button
-          variant={location === "/" ? "secondary" : "ghost"}
-          size="sm"
-          className="gap-2"
-          data-testid="nav-streams"
-        >
-          <Layers className="h-4 w-4" />
-          <span>Streams</span>
-        </Button>
+        <img 
+          src={resolvedTheme === "dark" ? logoWhite : logoBlack} 
+          alt="Streams" 
+          className="h-6 w-auto"
+          data-testid="logo-main"
+        />
       </Link>
-      <Link href="/kanban">
-        <Button
-          variant={location === "/kanban" ? "secondary" : "ghost"}
-          size="sm"
-          className="gap-2"
-          data-testid="nav-kanban"
-        >
-          <LayoutGrid className="h-4 w-4" />
-          <span>Kanban</span>
-        </Button>
-      </Link>
-      <Link href="/recycle-bin">
-        <Button
-          variant={location === "/recycle-bin" ? "secondary" : "ghost"}
-          size="sm"
-          className="gap-2"
-          data-testid="nav-recycle-bin"
-        >
-          <Trash2 className="h-4 w-4" />
-          <span>Recycle Bin</span>
-        </Button>
-      </Link>
+      <div className="flex items-center gap-1">
+        <Link href="/kanban">
+          <Button
+            variant={location === "/kanban" ? "secondary" : "ghost"}
+            size="sm"
+            className="gap-2"
+            data-testid="nav-kanban"
+          >
+            <LayoutGrid className="h-4 w-4" />
+            <span>Kanban</span>
+          </Button>
+        </Link>
+        <Link href="/recycle-bin">
+          <Button
+            variant={location === "/recycle-bin" ? "secondary" : "ghost"}
+            size="sm"
+            className="gap-2"
+            data-testid="nav-recycle-bin"
+          >
+            <Trash2 className="h-4 w-4" />
+            <span>Recycle Bin</span>
+          </Button>
+        </Link>
+      </div>
     </nav>
   );
 }
