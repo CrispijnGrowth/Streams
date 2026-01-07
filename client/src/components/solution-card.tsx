@@ -70,6 +70,9 @@ export function SolutionCard({
           <h4 className="font-medium text-sm truncate" data-testid={`text-solution-name-${solution.id}`}>
             {solution.name}
           </h4>
+          <span className="text-xs text-muted-foreground font-mono shrink-0" data-testid={`text-solution-key-${solution.id}`}>
+            {solution.key}
+          </span>
         </div>
         <div className="flex items-center gap-1 shrink-0">
           {solution.milestoneDate && (

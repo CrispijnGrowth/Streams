@@ -66,6 +66,9 @@ export function StreamCard({ stream, onClick, onEdit, onMomentumClick, showDescr
             onClick={onMomentumClick ? handleMomentumClick : undefined}
             clickable={!!onMomentumClick}
           />
+          <span className="text-xs text-muted-foreground font-mono" data-testid={`text-stream-key-${stream.id}`}>
+            {stream.key}
+          </span>
           {stream.computedMilestoneDate && (
             <div
               className={`flex items-center gap-1 text-xs ${isOverdue ? "text-status-blocked" : "text-muted-foreground"}`}
