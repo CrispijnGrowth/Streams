@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useCallback } from "react";
+import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Layers, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
@@ -20,6 +20,7 @@ import {
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
+import { useMode } from "@/lib/mode-context";
 import type { StreamWithProgress, Stream, MomentumStatusType } from "@shared/schema";
 
 type SortField = "ordinal" | "name" | "date" | "progress";
@@ -39,6 +40,7 @@ const sortLabels: Record<SortField, string> = {
 export function StreamsOverview({ showDescriptions }: StreamsOverviewProps) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { setAutoEditForEmptyState } = useMode();
   const [editingStream, setEditingStream] = useState<Stream | null>(null);
   const [sortField, setSortField] = useState<SortField>("ordinal");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
@@ -52,6 +54,13 @@ export function StreamsOverview({ showDescriptions }: StreamsOverviewProps) {
   const { data: streams, isLoading: streamsLoading } = useQuery<StreamWithProgress[]>({
     queryKey: ["/api/streams"],
   });
+
+  useEffect(() => {
+    if (!streamsLoading && streams !== undefined) {
+      const activeStreams = streams.filter((s) => !s.isDeleted);
+      setAutoEditForEmptyState(activeStreams.length === 0);
+    }
+  }, [streams, streamsLoading, setAutoEditForEmptyState]);
 
   useKeyboardShortcuts([
     {

@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { CheckSquare, Users, Tag, Calendar, Pencil } from "lucide-react";
@@ -27,7 +27,7 @@ interface SolutionViewProps {
 export function SolutionView({ streamId, solutionId, showDescriptions }: SolutionViewProps) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { isEditMode } = useMode();
+  const { isEditMode, setAutoEditForEmptyState } = useMode();
   const [editingSolution, setEditingSolution] = useState(false);
   const [editingAction, setEditingAction] = useState<Action | null>(null);
   const [editingDeliverable, setEditingDeliverable] = useState<Deliverable | null>(null);
@@ -45,6 +45,13 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
   const { data: deliverables, isLoading: deliverablesLoading } = useQuery<Deliverable[]>({
     queryKey: ["/api/solutions", solutionId, "deliverables"],
   });
+
+  useEffect(() => {
+    if (!actionsLoading && actions !== undefined) {
+      const activeActions = actions.filter((a) => !a.isDeleted);
+      setAutoEditForEmptyState(activeActions.length === 0);
+    }
+  }, [actions, actionsLoading, setAutoEditForEmptyState]);
 
   const deleteSolution = useMutation({
     mutationFn: async () => {

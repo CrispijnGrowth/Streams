@@ -102,7 +102,16 @@ Progress is computed automatically by rolling up completion percentages from ste
 - **Avatar Display**: Stream, Solution, and Action cards display owner avatars with tooltips showing name and role
 - **Key Hook**: `useTeamMembers()` in `client/src/hooks/use-suggestions.ts` fetches team members for current user
 
+### Edit/Operate Mode System
+- **Mode Toggle**: Header contains Edit/Operate mode toggle button
+- **Operate Mode** (default): Clicking cards navigates to detail view
+- **Edit Mode**: Clicking cards opens edit dialog, cards show dashed primary border
+- **Auto-Edit for Empty States**: When a page has no data (no streams, solutions, or actions), mode automatically switches to Edit so users can clearly see where to add items
+- **Key File**: `client/src/lib/mode-context.tsx` - ModeProvider with setAutoEditForEmptyState API
+
 ### Recent Changes
+- 2026-01-07: Added auto-edit mode for empty states - pages switch to Edit mode when no data exists
+- 2026-01-07: Improved multi-owner display - all owners now shown as smaller stacked avatars in top-right corner
 - 2026-01-07: Added Team Members system - manage team members with photos and roles, displayed as avatars on cards
 - 2026-01-04: Added example data seeding system with three pre-populated streams for new users
 - 2026-01-04: Added new Deliverable entity between Solution and Action - actions can now be grouped by deliverable in Kanban view with fluorescent row borders

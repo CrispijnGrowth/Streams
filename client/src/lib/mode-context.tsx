@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from "react";
 
 export type UIMode = "operate" | "edit";
 
@@ -8,6 +8,7 @@ interface ModeContextValue {
   toggleMode: () => void;
   isEditMode: boolean;
   isOperateMode: boolean;
+  setAutoEditForEmptyState: (isEmpty: boolean) => void;
 }
 
 const ModeContext = createContext<ModeContextValue | undefined>(undefined);
@@ -15,27 +16,50 @@ const ModeContext = createContext<ModeContextValue | undefined>(undefined);
 const STORAGE_KEY = "streams-ui-mode";
 
 export function ModeProvider({ children }: { children: ReactNode }) {
-  const [mode, setModeState] = useState<UIMode>(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored === "edit" || stored === "operate") {
-        return stored;
-      }
-    }
-    return "operate";
-  });
+  const [mode, setModeState] = useState<UIMode>("operate");
+  const [isAutoEdit, setIsAutoEdit] = useState(false);
+  const userPreferenceRef = useRef<UIMode>("operate");
+  const hasHydratedRef = useRef(false);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, mode);
-  }, [mode]);
+    if (typeof window !== "undefined" && !hasHydratedRef.current) {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored === "edit" || stored === "operate") {
+        userPreferenceRef.current = stored;
+        setModeState(stored);
+      }
+      hasHydratedRef.current = true;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (hasHydratedRef.current && !isAutoEdit) {
+      localStorage.setItem(STORAGE_KEY, mode);
+      userPreferenceRef.current = mode;
+    }
+  }, [mode, isAutoEdit]);
 
   const setMode = useCallback((newMode: UIMode) => {
+    setIsAutoEdit(false);
     setModeState(newMode);
   }, []);
 
   const toggleMode = useCallback(() => {
+    setIsAutoEdit(false);
     setModeState((prev) => (prev === "operate" ? "edit" : "operate"));
   }, []);
+
+  const setAutoEditForEmptyState = useCallback((isEmpty: boolean) => {
+    if (isEmpty) {
+      setIsAutoEdit(true);
+      setModeState("edit");
+    } else {
+      if (isAutoEdit) {
+        setIsAutoEdit(false);
+        setModeState(userPreferenceRef.current);
+      }
+    }
+  }, [isAutoEdit]);
 
   return (
     <ModeContext.Provider
@@ -45,6 +69,7 @@ export function ModeProvider({ children }: { children: ReactNode }) {
         toggleMode,
         isEditMode: mode === "edit",
         isOperateMode: mode === "operate",
+        setAutoEditForEmptyState,
       }}
     >
       {children}

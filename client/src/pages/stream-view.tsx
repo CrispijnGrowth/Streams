@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Package, Users, Tag, Calendar, Activity, Pencil } from "lucide-react";
@@ -26,7 +26,7 @@ interface StreamViewProps {
 export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { isEditMode } = useMode();
+  const { isEditMode, setAutoEditForEmptyState } = useMode();
   const [editingStream, setEditingStream] = useState(false);
   const [editFocusField, setEditFocusField] = useState<EditStreamFocusField>(null);
   const [editingSolution, setEditingSolution] = useState<Solution | null>(null);
@@ -39,6 +39,13 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
   const { data: solutions, isLoading: solutionsLoading } = useQuery<SolutionWithBreakdownAndComment[]>({
     queryKey: ["/api/streams", streamId, "solutions"],
   });
+
+  useEffect(() => {
+    if (!solutionsLoading && solutions !== undefined) {
+      const activeSolutions = solutions.filter((s) => !s.isDeleted);
+      setAutoEditForEmptyState(activeSolutions.length === 0);
+    }
+  }, [solutions, solutionsLoading, setAutoEditForEmptyState]);
 
   const deleteStream = useMutation({
     mutationFn: async () => {
