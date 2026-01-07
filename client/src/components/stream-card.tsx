@@ -60,9 +60,33 @@ export function StreamCard({ stream, onClick, onEdit, onMomentumClick, showDescr
       data-testid={`card-stream-${stream.id}`}
     >
       <div className="space-y-1">
-        <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium" data-testid={`text-stream-key-${stream.id}`}>
-          {stream.displayKey}
-        </span>
+        <div className="flex items-start justify-between gap-3">
+          <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium" data-testid={`text-stream-key-${stream.id}`}>
+            {stream.displayKey}
+          </span>
+          {stream.owners && stream.owners.length > 0 && (() => {
+            const primaryOwner = stream.owners[0];
+            const info = getOwnerInfo(primaryOwner);
+            return (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Avatar className="h-12 w-12 border-2 border-background shrink-0">
+                    {info?.photoUrl ? (
+                      <AvatarImage src={info.photoUrl} alt={primaryOwner} className="object-cover" />
+                    ) : null}
+                    <AvatarFallback className="bg-primary/10 text-primary text-base">
+                      {getInitials(primaryOwner)}
+                    </AvatarFallback>
+                  </Avatar>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="font-medium">{primaryOwner}</p>
+                  {info?.role && <p className="text-xs text-muted-foreground">{info.role}</p>}
+                </TooltipContent>
+              </Tooltip>
+            );
+          })()}
+        </div>
         <div className="flex items-center justify-between gap-2">
           <h3 className="font-semibold text-base truncate flex-1" data-testid={`text-stream-name-${stream.id}`}>
             {stream.name}
@@ -93,9 +117,9 @@ export function StreamCard({ stream, onClick, onEdit, onMomentumClick, showDescr
               </span>
             </div>
           )}
-          {stream.owners && stream.owners.length > 0 && (
+          {stream.owners && stream.owners.length > 1 && (
             <div className="flex items-center -space-x-1 ml-auto">
-              {stream.owners.slice(0, 3).map((owner) => {
+              {stream.owners.slice(1, 4).map((owner) => {
                 const info = getOwnerInfo(owner);
                 return (
                   <Tooltip key={owner}>
@@ -116,10 +140,10 @@ export function StreamCard({ stream, onClick, onEdit, onMomentumClick, showDescr
                   </Tooltip>
                 );
               })}
-              {stream.owners.length > 3 && (
+              {stream.owners.length > 4 && (
                 <Avatar className="h-6 w-6 border-2 border-background">
                   <AvatarFallback className="bg-muted text-muted-foreground text-[10px]">
-                    +{stream.owners.length - 3}
+                    +{stream.owners.length - 4}
                   </AvatarFallback>
                 </Avatar>
               )}

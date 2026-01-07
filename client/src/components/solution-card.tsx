@@ -77,9 +77,33 @@ export function SolutionCard({
       onClick={onClick}
       data-testid={`card-solution-${solution.id}`}
     >
-      <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium" data-testid={`text-solution-key-${solution.id}`}>
-        {solution.displayKey}
-      </span>
+      <div className="flex items-start justify-between gap-3">
+        <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium" data-testid={`text-solution-key-${solution.id}`}>
+          {solution.displayKey}
+        </span>
+        {solution.owners && solution.owners.length > 0 && (() => {
+          const primaryOwner = solution.owners[0];
+          const info = getOwnerInfo(primaryOwner);
+          return (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Avatar className="h-10 w-10 border-2 border-background shrink-0">
+                  {info?.photoUrl ? (
+                    <AvatarImage src={info.photoUrl} alt={primaryOwner} className="object-cover" />
+                  ) : null}
+                  <AvatarFallback className="bg-primary/10 text-primary text-sm">
+                    {getInitials(primaryOwner)}
+                  </AvatarFallback>
+                </Avatar>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="font-medium">{primaryOwner}</p>
+                {info?.role && <p className="text-xs text-muted-foreground">{info.role}</p>}
+              </TooltipContent>
+            </Tooltip>
+          );
+        })()}
+      </div>
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 flex-1 min-w-0">
           <h4 className="font-medium text-sm truncate" data-testid={`text-solution-name-${solution.id}`}>
@@ -124,9 +148,9 @@ export function SolutionCard({
           <span className="text-xs text-muted-foreground">{solution.deliverableCount}D</span>
         )}
         <span className="text-xs text-muted-foreground">{solution.actionCount}A</span>
-        {solution.owners && solution.owners.length > 0 && (
+        {solution.owners && solution.owners.length > 1 && (
           <div className="flex items-center -space-x-1">
-            {solution.owners.slice(0, 2).map((owner) => {
+            {solution.owners.slice(1, 3).map((owner) => {
               const info = getOwnerInfo(owner);
               return (
                 <Tooltip key={owner}>
@@ -147,10 +171,10 @@ export function SolutionCard({
                 </Tooltip>
               );
             })}
-            {solution.owners.length > 2 && (
+            {solution.owners.length > 3 && (
               <Avatar className="h-5 w-5 border-2 border-background">
                 <AvatarFallback className="bg-muted text-muted-foreground text-[9px]">
-                  +{solution.owners.length - 2}
+                  +{solution.owners.length - 3}
                 </AvatarFallback>
               </Avatar>
             )}
