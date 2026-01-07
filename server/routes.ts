@@ -2,6 +2,8 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import multer from "multer";
 import XLSX from "xlsx";
+import path from "path";
+import fs from "fs";
 import { storage } from "./storage";
 import { authStorage, generateMagicLinkUrl } from "./auth";
 import { sendMagicLinkEmail, sendNewUserNotification, sendApprovalEmail } from "./email";
@@ -21,7 +23,10 @@ import {
   SolutionStatus,
 } from "@shared/schema";
 
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+});
 
 declare global {
   namespace Express {
@@ -946,6 +951,39 @@ export async function registerRoutes(
     } catch (error) {
       console.error("[Import] Execute error:", error);
       res.status(500).json({ error: "Failed to import data" });
+    }
+  });
+
+  // Team Member Photo Upload
+  app.post("/api/upload/team-photo", authMiddleware, upload.single("photo"), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+      const buf = req.file.buffer;
+      let ext = ".jpg";
+      if (buf[0] === 0xFF && buf[1] === 0xD8 && buf[2] === 0xFF) {
+        ext = ".jpg";
+      } else if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47) {
+        ext = ".png";
+      } else if (buf[0] === 0x47 && buf[1] === 0x49 && buf[2] === 0x46) {
+        ext = ".gif";
+      } else if (buf[0] === 0x52 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x46 && buf[8] === 0x57 && buf[9] === 0x45 && buf[10] === 0x42 && buf[11] === 0x50) {
+        ext = ".webp";
+      } else {
+        return res.status(400).json({ error: "Invalid image file" });
+      }
+      const filename = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}${ext}`;
+      const uploadDir = path.join(process.cwd(), "client", "public", "uploads");
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+      const filePath = path.join(uploadDir, filename);
+      fs.writeFileSync(filePath, buf);
+      res.json({ url: `/uploads/${filename}` });
+    } catch (error) {
+      console.error("[Upload] Photo upload error:", error);
+      res.status(500).json({ error: "Failed to upload photo" });
     }
   });
 

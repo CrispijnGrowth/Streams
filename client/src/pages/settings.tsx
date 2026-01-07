@@ -44,6 +44,9 @@ export function SettingsPage() {
   const [newMemberName, setNewMemberName] = useState("");
   const [newMemberRole, setNewMemberRole] = useState("");
   const [newMemberPhotoUrl, setNewMemberPhotoUrl] = useState("");
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const editPhotoInputRef = useRef<HTMLInputElement>(null);
+  const addPhotoInputRef = useRef<HTMLInputElement>(null);
 
   const isAdmin = user?.role === "admin";
 
@@ -246,6 +249,29 @@ export function SettingsPage() {
     setNewMemberPhotoUrl("");
   };
   
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>, inputRef: React.RefObject<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingPhoto(true);
+    try {
+      const formData = new FormData();
+      formData.append("photo", file);
+      const res = await fetch("/api/upload/team-photo", {
+        method: "POST",
+        headers: getSessionHeaders(),
+        body: formData,
+      });
+      if (!res.ok) throw new Error("Upload failed");
+      const { url } = await res.json();
+      setNewMemberPhotoUrl(url);
+    } catch {
+      toast({ title: "Failed to upload photo", variant: "destructive" });
+    } finally {
+      setIsUploadingPhoto(false);
+      if (inputRef.current) inputRef.current.value = "";
+    }
+  };
+  
   const getInitials = (name: string) => {
     return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
   };
@@ -386,12 +412,29 @@ export function SettingsPage() {
                             placeholder="Role (e.g. Developer)"
                             data-testid="input-edit-member-role"
                           />
-                          <Input
-                            value={newMemberPhotoUrl}
-                            onChange={(e) => setNewMemberPhotoUrl(e.target.value)}
-                            placeholder="Photo URL (optional)"
-                            data-testid="input-edit-member-photo"
+                          <input
+                            ref={editPhotoInputRef}
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handlePhotoUpload(e, editPhotoInputRef)}
+                            className="hidden"
+                            data-testid="input-edit-member-photo-file"
                           />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => editPhotoInputRef.current?.click()}
+                            disabled={isUploadingPhoto}
+                            data-testid="button-edit-member-photo"
+                          >
+                            {isUploadingPhoto ? (
+                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            ) : (
+                              <Upload className="h-4 w-4 mr-2" />
+                            )}
+                            {newMemberPhotoUrl ? "Change Photo" : "Upload Photo"}
+                          </Button>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -487,12 +530,29 @@ export function SettingsPage() {
                         placeholder="Role (e.g. Developer)"
                         data-testid="input-new-member-role"
                       />
-                      <Input
-                        value={newMemberPhotoUrl}
-                        onChange={(e) => setNewMemberPhotoUrl(e.target.value)}
-                        placeholder="Photo URL (optional)"
-                        data-testid="input-new-member-photo"
+                      <input
+                        ref={addPhotoInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handlePhotoUpload(e, addPhotoInputRef)}
+                        className="hidden"
+                        data-testid="input-new-member-photo-file"
                       />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => addPhotoInputRef.current?.click()}
+                        disabled={isUploadingPhoto}
+                        data-testid="button-new-member-photo"
+                      >
+                        {isUploadingPhoto ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        ) : (
+                          <Upload className="h-4 w-4 mr-2" />
+                        )}
+                        {newMemberPhotoUrl ? "Change Photo" : "Upload Photo"}
+                      </Button>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
