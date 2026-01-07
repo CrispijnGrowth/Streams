@@ -66,7 +66,7 @@ export function SolutionCard({
       data-testid={`card-solution-${solution.id}`}
     >
       <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium" data-testid={`text-solution-key-${solution.id}`}>
-        {solution.key}
+        {solution.displayKey}
       </span>
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 flex-1 min-w-0">

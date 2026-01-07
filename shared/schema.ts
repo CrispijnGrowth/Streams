@@ -370,6 +370,7 @@ export interface StreamWithProgress extends Stream {
   blockedCount: number;
   delegatedCount: number;
   inProgressSolutions: InProgressSolutionInfo[];
+  displayKey: string;
 }
 
 export interface SolutionWithProgress extends Solution {
@@ -379,6 +380,7 @@ export interface SolutionWithProgress extends Solution {
   doingCount: number;
   blockedCount: number;
   delegatedCount: number;
+  displayKey: string;
 }
 
 export interface ActiveActionInfo {

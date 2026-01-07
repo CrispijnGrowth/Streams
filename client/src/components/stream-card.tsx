@@ -47,7 +47,7 @@ export function StreamCard({ stream, onClick, onEdit, onMomentumClick, showDescr
     >
       <div className="space-y-1">
         <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium" data-testid={`text-stream-key-${stream.id}`}>
-          {stream.key}
+          {stream.displayKey}
         </span>
         <div className="flex items-center justify-between gap-2">
           <h3 className="font-semibold text-base truncate flex-1" data-testid={`text-stream-name-${stream.id}`}>

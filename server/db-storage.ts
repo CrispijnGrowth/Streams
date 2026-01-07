@@ -220,7 +220,11 @@ export class DatabaseStorage implements IStorage {
       and(eq(streams.userId, userId), eq(streams.isDeleted, false))
     );
     
+    // Sort by ordinal to ensure consistent display key numbering
+    rows.sort((a, b) => a.ordinal - b.ordinal);
+    
     const result: StreamWithProgress[] = [];
+    let displayIndex = 1;
     for (const row of rows) {
       const stream = mapStreamFromDb(row);
       const streamSolutions = await db.select().from(solutions).where(
@@ -277,7 +281,9 @@ export class DatabaseStorage implements IStorage {
         blockedCount,
         delegatedCount,
         inProgressSolutions,
+        displayKey: `Stream ${displayIndex}`,
       });
+      displayIndex++;
     }
     
     return result;
@@ -379,11 +385,36 @@ export class DatabaseStorage implements IStorage {
       and(eq(solutions.userId, userId), eq(solutions.isDeleted, false))
     );
     
-    const result: SolutionWithProgress[] = [];
+    // Group by streamId and sort by ordinal within each stream
+    const byStream = new Map<string, typeof rows>();
     for (const row of rows) {
-      const sol = mapSolutionFromDb(row);
-      const stats = await this.computeSolutionProgress(sol.id, userId);
-      result.push({ ...sol, ...stats });
+      const group = byStream.get(row.streamId) || [];
+      group.push(row);
+      byStream.set(row.streamId, group);
+    }
+    
+    // Get stream ordinals for consistent ordering
+    const streamRows = await db.select().from(streams).where(
+      and(eq(streams.userId, userId), eq(streams.isDeleted, false))
+    );
+    const streamOrdinalMap = new Map(streamRows.map(s => [s.id, s.ordinal]));
+    
+    // Sort stream groups by stream ordinal for consistent global ordering
+    const sortedStreamIds = Array.from(byStream.keys()).sort((a, b) => {
+      return (streamOrdinalMap.get(a) || 0) - (streamOrdinalMap.get(b) || 0);
+    });
+    
+    const result: SolutionWithProgress[] = [];
+    for (const streamId of sortedStreamIds) {
+      const streamRows = byStream.get(streamId)!;
+      streamRows.sort((a, b) => a.ordinal - b.ordinal);
+      let displayIndex = 1;
+      for (const row of streamRows) {
+        const sol = mapSolutionFromDb(row);
+        const stats = await this.computeSolutionProgress(sol.id, userId);
+        result.push({ ...sol, ...stats, displayKey: `Solution ${displayIndex}` });
+        displayIndex++;
+      }
     }
     return result;
   }
@@ -393,11 +424,16 @@ export class DatabaseStorage implements IStorage {
       and(eq(solutions.streamId, streamId), eq(solutions.userId, userId), eq(solutions.isDeleted, false))
     );
     
+    // Sort by ordinal to ensure consistent display key numbering
+    rows.sort((a, b) => a.ordinal - b.ordinal);
+    
     const result: SolutionWithProgress[] = [];
+    let displayIndex = 1;
     for (const row of rows) {
       const sol = mapSolutionFromDb(row);
       const stats = await this.computeSolutionProgress(sol.id, userId);
-      result.push({ ...sol, ...stats });
+      result.push({ ...sol, ...stats, displayKey: `Solution ${displayIndex}` });
+      displayIndex++;
     }
     return result;
   }
@@ -407,8 +443,12 @@ export class DatabaseStorage implements IStorage {
       and(eq(solutions.streamId, streamId), eq(solutions.userId, userId), eq(solutions.isDeleted, false))
     );
     
+    // Sort by ordinal to ensure consistent display key numbering
+    rows.sort((a, b) => a.ordinal - b.ordinal);
+    
     const activeStatuses = [ActionStatus.EXECUTING, ActionStatus.BLOCKED, ActionStatus.DELEGATED];
     const results: SolutionWithBreakdownAndComment[] = [];
+    let displayIndex = 1;
     
     for (const row of rows) {
       const sol = mapSolutionFromDb(row);
@@ -459,7 +499,8 @@ export class DatabaseStorage implements IStorage {
       
       const lastComment = await this.getLastComment(userId, CommentEntityType.SOLUTION, sol.id);
       
-      results.push({ ...sol, ...stats, deliverableBreakdown, lastComment });
+      results.push({ ...sol, ...stats, deliverableBreakdown, lastComment, displayKey: `Solution ${displayIndex}` });
+      displayIndex++;
     }
     
     return results;
