@@ -55,9 +55,8 @@ export function StreamCard({ stream, onClick, onEdit, onMomentumClick, showDescr
     onMomentumClick(nextStatus[stream.momentumStatus]);
   };
 
-  const primaryOwner = stream.owners?.[0];
-  const primaryOwnerInfo = primaryOwner ? getOwnerInfo(primaryOwner) : undefined;
-  const additionalOwners = stream.owners?.slice(1) || [];
+  const owners = stream.owners || [];
+  const hasMultipleOwners = owners.length > 1;
 
   return (
     <Card
@@ -69,24 +68,43 @@ export function StreamCard({ stream, onClick, onEdit, onMomentumClick, showDescr
       onClick={handleCardClick}
       data-testid={`card-stream-${stream.id}`}
     >
-      <div className="relative pr-14">
-        {primaryOwner && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Avatar className="absolute top-0 right-0 h-12 w-12 border-2 border-background">
-                {primaryOwnerInfo?.photoUrl ? (
-                  <AvatarImage src={primaryOwnerInfo.photoUrl} alt={primaryOwner} className="object-cover" />
-                ) : null}
-                <AvatarFallback className="bg-primary/10 text-primary text-base">
-                  {getInitials(primaryOwner)}
+      <div className={`relative ${hasMultipleOwners ? "pr-16" : "pr-14"}`}>
+        {owners.length > 0 && (
+          <div className="absolute top-0 right-0 flex items-center -space-x-2">
+            {owners.slice(0, 4).map((owner, index) => {
+              const ownerInfo = getOwnerInfo(owner);
+              const avatarSize = hasMultipleOwners ? "h-8 w-8" : "h-12 w-12";
+              const textSize = hasMultipleOwners ? "text-xs" : "text-base";
+              return (
+                <Tooltip key={owner}>
+                  <TooltipTrigger asChild>
+                    <Avatar 
+                      className={`${avatarSize} border-2 border-background`}
+                      style={{ zIndex: 10 - index }}
+                    >
+                      {ownerInfo?.photoUrl ? (
+                        <AvatarImage src={ownerInfo.photoUrl} alt={owner} className="object-cover" />
+                      ) : null}
+                      <AvatarFallback className={`bg-primary/10 text-primary ${textSize}`}>
+                        {getInitials(owner)}
+                      </AvatarFallback>
+                    </Avatar>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="font-medium">{owner}</p>
+                    {ownerInfo?.role && <p className="text-xs text-muted-foreground">{ownerInfo.role}</p>}
+                  </TooltipContent>
+                </Tooltip>
+              );
+            })}
+            {owners.length > 4 && (
+              <Avatar className="h-8 w-8 border-2 border-background" style={{ zIndex: 5 }}>
+                <AvatarFallback className="bg-muted text-muted-foreground text-xs">
+                  +{owners.length - 4}
                 </AvatarFallback>
               </Avatar>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p className="font-medium">{primaryOwner}</p>
-              {primaryOwnerInfo?.role && <p className="text-xs text-muted-foreground">{primaryOwnerInfo.role}</p>}
-            </TooltipContent>
-          </Tooltip>
+            )}
+          </div>
         )}
 
         <div className="space-y-1">
@@ -113,38 +131,6 @@ export function StreamCard({ stream, onClick, onEdit, onMomentumClick, showDescr
             <span className="font-mono">
               {format(new Date(stream.computedMilestoneDate), "MMM d")}
             </span>
-          </div>
-        )}
-        {additionalOwners.length > 0 && (
-          <div className="flex items-center -space-x-1 ml-auto">
-            {additionalOwners.slice(0, 3).map((owner) => {
-              const info = getOwnerInfo(owner);
-              return (
-                <Tooltip key={owner}>
-                  <TooltipTrigger asChild>
-                    <Avatar className="h-6 w-6 border-2 border-background">
-                      {info?.photoUrl ? (
-                        <AvatarImage src={info.photoUrl} alt={owner} />
-                      ) : null}
-                      <AvatarFallback className="bg-primary/10 text-primary text-[10px]">
-                        {getInitials(owner)}
-                      </AvatarFallback>
-                    </Avatar>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="font-medium">{owner}</p>
-                    {info?.role && <p className="text-xs text-muted-foreground">{info.role}</p>}
-                  </TooltipContent>
-                </Tooltip>
-              );
-            })}
-            {additionalOwners.length > 3 && (
-              <Avatar className="h-6 w-6 border-2 border-background">
-                <AvatarFallback className="bg-muted text-muted-foreground text-[10px]">
-                  +{additionalOwners.length - 3}
-                </AvatarFallback>
-              </Avatar>
-            )}
           </div>
         )}
       </div>

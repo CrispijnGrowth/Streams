@@ -73,9 +73,8 @@ export function SolutionCard({
     }
   };
 
-  const primaryOwner = solution.owners?.[0];
-  const primaryOwnerInfo = primaryOwner ? getOwnerInfo(primaryOwner) : undefined;
-  const additionalOwners = solution.owners?.slice(1) || [];
+  const owners = solution.owners || [];
+  const hasMultipleOwners = owners.length > 1;
 
   return (
     <Card
@@ -89,24 +88,43 @@ export function SolutionCard({
       onClick={handleCardClick}
       data-testid={`card-solution-${solution.id}`}
     >
-      <div className="relative pr-12">
-        {primaryOwner && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Avatar className="absolute top-0 right-0 h-10 w-10 border-2 border-background">
-                {primaryOwnerInfo?.photoUrl ? (
-                  <AvatarImage src={primaryOwnerInfo.photoUrl} alt={primaryOwner} className="object-cover" />
-                ) : null}
-                <AvatarFallback className="bg-primary/10 text-primary text-sm">
-                  {getInitials(primaryOwner)}
+      <div className={`relative ${hasMultipleOwners ? "pr-14" : "pr-12"}`}>
+        {owners.length > 0 && (
+          <div className="absolute top-0 right-0 flex items-center -space-x-2">
+            {owners.slice(0, 3).map((owner, index) => {
+              const ownerInfo = getOwnerInfo(owner);
+              const avatarSize = hasMultipleOwners ? "h-7 w-7" : "h-10 w-10";
+              const textSize = hasMultipleOwners ? "text-[10px]" : "text-sm";
+              return (
+                <Tooltip key={owner}>
+                  <TooltipTrigger asChild>
+                    <Avatar 
+                      className={`${avatarSize} border-2 border-background`}
+                      style={{ zIndex: 10 - index }}
+                    >
+                      {ownerInfo?.photoUrl ? (
+                        <AvatarImage src={ownerInfo.photoUrl} alt={owner} className="object-cover" />
+                      ) : null}
+                      <AvatarFallback className={`bg-primary/10 text-primary ${textSize}`}>
+                        {getInitials(owner)}
+                      </AvatarFallback>
+                    </Avatar>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="font-medium">{owner}</p>
+                    {ownerInfo?.role && <p className="text-xs text-muted-foreground">{ownerInfo.role}</p>}
+                  </TooltipContent>
+                </Tooltip>
+              );
+            })}
+            {owners.length > 3 && (
+              <Avatar className="h-7 w-7 border-2 border-background" style={{ zIndex: 5 }}>
+                <AvatarFallback className="bg-muted text-muted-foreground text-[10px]">
+                  +{owners.length - 3}
                 </AvatarFallback>
               </Avatar>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p className="font-medium">{primaryOwner}</p>
-              {primaryOwnerInfo?.role && <p className="text-xs text-muted-foreground">{primaryOwnerInfo.role}</p>}
-            </TooltipContent>
-          </Tooltip>
+            )}
+          </div>
         )}
 
         <div className="space-y-0.5">
@@ -147,38 +165,6 @@ export function SolutionCard({
           <span className="text-xs text-muted-foreground">{solution.deliverableCount}D</span>
         )}
         <span className="text-xs text-muted-foreground">{solution.actionCount}A</span>
-        {additionalOwners.length > 0 && (
-          <div className="flex items-center -space-x-1">
-            {additionalOwners.slice(0, 2).map((owner) => {
-              const info = getOwnerInfo(owner);
-              return (
-                <Tooltip key={owner}>
-                  <TooltipTrigger asChild>
-                    <Avatar className="h-5 w-5 border-2 border-background">
-                      {info?.photoUrl ? (
-                        <AvatarImage src={info.photoUrl} alt={owner} />
-                      ) : null}
-                      <AvatarFallback className="bg-primary/10 text-primary text-[9px]">
-                        {getInitials(owner)}
-                      </AvatarFallback>
-                    </Avatar>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="font-medium">{owner}</p>
-                    {info?.role && <p className="text-xs text-muted-foreground">{info.role}</p>}
-                  </TooltipContent>
-                </Tooltip>
-              );
-            })}
-            {additionalOwners.length > 2 && (
-              <Avatar className="h-5 w-5 border-2 border-background">
-                <AvatarFallback className="bg-muted text-muted-foreground text-[9px]">
-                  +{additionalOwners.length - 2}
-                </AvatarFallback>
-              </Avatar>
-            )}
-          </div>
-        )}
       </div>
 
       {solution.deliverableBreakdown && solution.deliverableBreakdown.length > 0 && (
