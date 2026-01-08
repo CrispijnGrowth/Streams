@@ -2,6 +2,7 @@ import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Layers, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { ClassNavigator } from "@/components/class-navigator";
 import { Timeline } from "@/components/timeline";
 import { StreamCard } from "@/components/stream-card";
 import { QuickAddForm, QuickAddFormRef } from "@/components/quick-add-form";
@@ -254,10 +255,7 @@ export function StreamsOverview({ showDescriptions }: StreamsOverviewProps) {
       <div className="flex-1 overflow-auto p-6">
         <div className="space-y-4">
           <div className="flex items-center justify-between gap-4 flex-wrap">
-            <div>
-              <span className="text-[10px] uppercase tracking-widest font-semibold text-primary">Portfolio</span>
-              <h2 className="text-lg font-semibold">All Streams</h2>
-            </div>
+            <ClassNavigator currentLevel="portfolio" />
             <span className="text-sm text-muted-foreground">
               {filteredAndSortedStreams.length} of {streams?.filter((s) => !s.isDeleted).length || 0} stream{(streams?.filter((s) => !s.isDeleted).length || 0) !== 1 ? "s" : ""}
             </span>

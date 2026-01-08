@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
-import { Switch, Route, useLocation, useRoute, Link, Redirect } from "wouter";
+import { Switch, Route, useLocation, Link, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider, useQuery } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/lib/theme-provider";
@@ -9,14 +9,13 @@ import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { ModeProvider, useMode } from "@/lib/mode-context";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { DescriptionsToggle } from "@/components/descriptions-toggle";
-import { BreadcrumbNav } from "@/components/breadcrumb-nav";
 import { GlobalSearch } from "@/components/global-search";
 import { PageTransition } from "@/components/page-transition";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Layers, LayoutGrid, Trash2, Search, LogOut, Settings, Loader2, Pencil, Play } from "lucide-react";
+import { LayoutGrid, Trash2, Search, LogOut, Settings, Loader2, Pencil, Play } from "lucide-react";
 import { useTheme } from "@/lib/theme-provider";
 import logoWhite from "@assets/Streams_Logo_White_1767805031570.png";
 import logoBlack from "@assets/Streams_Logo_Black_1767805053205.png";
@@ -31,66 +30,6 @@ import { LoginPage } from "@/pages/login";
 import { AuthVerifyPage } from "@/pages/auth-verify";
 import { ResetPasswordPage } from "@/pages/reset-password";
 import NotFound from "@/pages/not-found";
-import type { Stream, Solution, Action } from "@shared/schema";
-
-function useBreadcrumbs() {
-  const [location, setLocation] = useLocation();
-  const [, streamParams] = useRoute("/stream/:streamId");
-  const [, solutionParams] = useRoute("/stream/:streamId/solution/:solutionId");
-  const [, actionParams] = useRoute("/stream/:streamId/solution/:solutionId/action/:actionId");
-
-  const streamId = streamParams?.streamId || solutionParams?.streamId || actionParams?.streamId;
-  const solutionId = solutionParams?.solutionId || actionParams?.solutionId;
-  const actionId = actionParams?.actionId;
-
-  const { data: stream } = useQuery<Stream>({
-    queryKey: ["/api/streams", streamId],
-    enabled: !!streamId,
-  });
-
-  const { data: solution } = useQuery<Solution>({
-    queryKey: ["/api/solutions", solutionId],
-    enabled: !!solutionId,
-  });
-
-  const { data: action } = useQuery<Action>({
-    queryKey: ["/api/actions", actionId],
-    enabled: !!actionId,
-  });
-
-  const items: { label: string; href?: string }[] = [];
-
-  if (stream) {
-    items.push({
-      label: stream.name,
-      href: actionId || solutionId ? `/stream/${streamId}` : undefined,
-    });
-  }
-
-  if (solution) {
-    items.push({
-      label: solution.name,
-      href: actionId ? `/stream/${streamId}/solution/${solutionId}` : undefined,
-    });
-  }
-
-  if (action) {
-    items.push({ label: action.name });
-  }
-
-  const handleUpLevel = useCallback(() => {
-    if (actionId && solutionId && streamId) {
-      setLocation(`/stream/${streamId}/solution/${solutionId}`);
-    } else if (solutionId && streamId) {
-      setLocation(`/stream/${streamId}`);
-    } else if (streamId) {
-      setLocation("/");
-    }
-  }, [actionId, solutionId, streamId, setLocation]);
-
-  return { items, onUpLevel: items.length > 1 ? handleUpLevel : undefined };
-}
-
 function Router({ showDescriptions }: { showDescriptions: boolean }) {
   return (
     <Switch>
@@ -259,7 +198,6 @@ function AppContent() {
   });
   const [searchOpen, setSearchOpen] = useState(false);
 
-  const { items, onUpLevel } = useBreadcrumbs();
 
   const handleToggleDescriptions = useCallback(() => {
     setShowDescriptions((prev) => {
@@ -315,12 +253,6 @@ function AppContent() {
       <header className="flex items-center justify-between gap-4 px-4 py-2 border-b bg-muted sticky top-0 z-50">
         <div className="flex items-center gap-4">
           <TopNav />
-          {items.length > 0 && (
-            <>
-              <div className="h-4 w-px bg-border" />
-              <BreadcrumbNav items={items} onUpLevel={onUpLevel} />
-            </>
-          )}
         </div>
         <div className="flex items-center gap-2">
           <ModeToggle />

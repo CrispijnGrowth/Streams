@@ -2,6 +2,7 @@ import { useState, useRef, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { ListChecks, Plus, Calendar, User, Clock, MessageSquare, Send, Loader2 } from "lucide-react";
+import { ClassNavigator } from "@/components/class-navigator";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -247,7 +248,7 @@ export function ActionView({ streamId, solutionId, actionId }: ActionViewProps) 
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
             <div>
-              <span className="text-[10px] uppercase tracking-widest font-semibold text-primary">Action</span>
+              <ClassNavigator currentLevel="action" streamId={streamId} solutionId={solutionId} actionId={actionId} />
               <h1 className="text-xl font-semibold" data-testid="text-action-title">
                 {action.name}
               </h1>

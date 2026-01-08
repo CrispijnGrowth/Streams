@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Package, Tag, Calendar, Activity } from "lucide-react";
+import { ClassNavigator } from "@/components/class-navigator";
 import { Timeline } from "@/components/timeline";
 import { SolutionCard } from "@/components/solution-card";
 import { QuickAddForm, QuickAddFormRef } from "@/components/quick-add-form";
@@ -271,7 +272,7 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
             className={`space-y-3 pb-4 border-b pt-2 ${isEditMode ? "border-2 border-dashed border-primary rounded-md p-4 cursor-pointer hover-elevate" : ""}`}
             onClick={isEditMode ? () => setEditingStream(true) : undefined}
           >
-            <span className="text-[10px] uppercase tracking-widest font-semibold text-primary">Stream</span>
+            <ClassNavigator currentLevel="stream" streamId={streamId} />
             
             <div className="flex items-center justify-between gap-4 flex-wrap">
               <div className="flex items-center gap-3 flex-wrap">
