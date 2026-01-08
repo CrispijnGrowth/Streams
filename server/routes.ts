@@ -683,6 +683,34 @@ export async function registerRoutes(
     }
   });
 
+  app.patch("/api/comments/:id", authMiddleware, async (req, res) => {
+    try {
+      const { content } = req.body;
+      if (!content || typeof content !== "string") {
+        return res.status(400).json({ error: "Content is required" });
+      }
+      const updated = await storage.updateComment(req.userId!, req.params.id, content);
+      if (!updated) {
+        return res.status(404).json({ error: "Comment not found" });
+      }
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update comment" });
+    }
+  });
+
+  app.delete("/api/comments/:id", authMiddleware, async (req, res) => {
+    try {
+      const deleted = await storage.deleteComment(req.userId!, req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ error: "Comment not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete comment" });
+    }
+  });
+
   app.get("/api/recycle-bin", authMiddleware, async (req, res) => {
     try {
       const deletedItems = await storage.getDeletedItems(req.userId!);
