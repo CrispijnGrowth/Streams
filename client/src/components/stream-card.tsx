@@ -130,9 +130,15 @@ export function StreamCard({ stream, onClick, onEdit, onMomentumClick, showDescr
         />
         {stream.computedMilestoneDate && (
           <div
-            className={`flex items-center gap-1 text-xs ${isOverdue ? "text-status-blocked" : "text-muted-foreground"}`}
+            className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-sm font-medium ${
+              isOnHold 
+                ? "bg-muted text-muted-foreground" 
+                : isOverdue 
+                  ? "bg-status-blocked/10 text-status-blocked" 
+                  : "bg-primary/10 text-primary"
+            }`}
           >
-            <Calendar className="h-3 w-3" />
+            <Calendar className="h-4 w-4" />
             <span className="font-mono">
               {format(new Date(stream.computedMilestoneDate), "MMM d")}
             </span>

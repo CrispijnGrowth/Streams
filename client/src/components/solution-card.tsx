@@ -137,18 +137,22 @@ export function SolutionCard({
         </div>
       </div>
 
-      <div className="flex items-center gap-2 mt-1.5">
-        {solution.milestoneDate && (
-          <div
-            className={`flex items-center gap-1 text-xs ${isOnHold ? "text-muted-foreground" : isOverdue ? "text-status-blocked" : "text-muted-foreground"}`}
-          >
-            <Calendar className="h-3 w-3" />
-            <span className="font-mono">
-              {format(new Date(solution.milestoneDate), "MMM d")}
-            </span>
-          </div>
-        )}
-      </div>
+      {solution.milestoneDate && (
+        <div
+          className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md mt-1.5 text-sm font-medium ${
+            isOnHold 
+              ? "bg-muted text-muted-foreground" 
+              : isOverdue 
+                ? "bg-status-blocked/10 text-status-blocked" 
+                : "bg-primary/10 text-primary"
+          }`}
+        >
+          <Calendar className="h-4 w-4" />
+          <span className="font-mono">
+            {format(new Date(solution.milestoneDate), "MMM d")}
+          </span>
+        </div>
+      )}
 
       {showDescription && solution.description && (
         <p className="text-xs text-muted-foreground line-clamp-1 mt-1">
@@ -161,10 +165,6 @@ export function SolutionCard({
           <ProgressBar value={solution.progress} size="sm" showLabel={false} muted={isOnHold} />
         </div>
         <span className="text-xs font-mono text-muted-foreground">{Math.round(solution.progress)}%</span>
-        {solution.deliverableCount > 0 && (
-          <span className="text-xs text-muted-foreground">{solution.deliverableCount}D</span>
-        )}
-        <span className="text-xs text-muted-foreground">{solution.actionCount}A</span>
       </div>
 
       {solution.deliverableBreakdown && solution.deliverableBreakdown.length > 0 && (
