@@ -334,6 +334,7 @@ export async function registerRoutes(
       }
       res.json(stream);
     } catch (error) {
+      console.error("Failed to update stream:", error);
       res.status(500).json({ error: "Failed to update stream" });
     }
   });
