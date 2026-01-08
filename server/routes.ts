@@ -877,7 +877,7 @@ export async function registerRoutes(
       const streamsData = parseSheet<{
         stream_key: string;
         stream_name: string;
-        description?: string;
+        stream_description?: string;
         phases?: string;
         owners?: string;
         labels?: string;
@@ -886,7 +886,7 @@ export async function registerRoutes(
       for (const row of streamsData) {
         const streamData = {
           name: row.stream_name,
-          description: row.description || undefined,
+          description: row.stream_description || undefined,
           phases: row.phases?.split(";").map(p => p.trim()).filter(Boolean) || [],
           owners: row.owners?.split(";").map(o => o.trim()).filter(Boolean) || [],
           labels: row.labels?.split(";").map(l => l.trim()).filter(Boolean) || [],
@@ -911,7 +911,7 @@ export async function registerRoutes(
         solution_key: string;
         solution_name: string;
         stream_key: string;
-        description?: string;
+        solution_description?: string;
         owners?: string;
         labels?: string;
       }>("Solutions");
@@ -923,7 +923,7 @@ export async function registerRoutes(
         const solutionData = {
           streamId,
           name: row.solution_name,
-          description: row.description || undefined,
+          description: row.solution_description || undefined,
           status: SolutionStatus.IN_PROGRESS,
           phases: [] as string[],
           owners: row.owners?.split(";").map(o => o.trim()).filter(Boolean) || [],
@@ -950,7 +950,7 @@ export async function registerRoutes(
         deliverable_name: string;
         solution_key: string;
         stream_key: string;
-        description?: string;
+        deliverable_description?: string;
         milestone_date?: number;
         phases?: string;
         owners?: string;
@@ -965,7 +965,7 @@ export async function registerRoutes(
           solutionId,
           streamId,
           name: row.deliverable_name,
-          description: row.description || undefined,
+          description: row.deliverable_description || undefined,
           borderColor: "cyan",
           isMilestoneLinked: true,
           dueDate: row.milestone_date ? excelDateToJS(row.milestone_date).toISOString() : undefined,
@@ -993,7 +993,7 @@ export async function registerRoutes(
         deliverable_key: string;
         solution_key: string;
         stream_key: string;
-        description?: string;
+        action_description?: string;
         status?: string;
         due_date?: number;
         effort?: number;
@@ -1021,7 +1021,7 @@ export async function registerRoutes(
           streamId,
           deliverableId: deliverableId || undefined,
           name: row.action_name,
-          description: row.description || undefined,
+          description: row.action_description || undefined,
           status: statusMap[row.status || "Backlog"] || ActionStatus.BACKLOG,
           dueDate: row.due_date ? excelDateToJS(row.due_date).toISOString() : undefined,
           effort: row.effort || undefined,
