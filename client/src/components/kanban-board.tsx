@@ -260,8 +260,8 @@ function DeliverableRow({
                   <Tooltip key={owner}>
                     <TooltipTrigger asChild>
                       <Avatar className="h-6 w-6 border-2 border-background">
-                        {info?.photoUrl ? (
-                          <AvatarImage src={info.photoUrl} alt={owner} />
+                        {(info?.photoData || info?.photoUrl) ? (
+                          <AvatarImage src={info.photoData || info.photoUrl || ""} alt={owner} />
                         ) : null}
                         <AvatarFallback className="bg-primary/10 text-primary text-[9px]">
                           {getInitials(owner)}
@@ -392,8 +392,8 @@ function DeliverableRow({
                     <Tooltip key={owner}>
                       <TooltipTrigger asChild>
                         <Avatar className="h-5 w-5 border-2 border-background">
-                          {info?.photoUrl ? (
-                            <AvatarImage src={info.photoUrl} alt={owner} />
+                          {(info?.photoData || info?.photoUrl) ? (
+                            <AvatarImage src={info.photoData || info.photoUrl || ""} alt={owner} />
                           ) : null}
                           <AvatarFallback className="bg-primary/10 text-primary text-[8px]">
                             {getInitials(owner)}

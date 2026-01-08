@@ -118,6 +118,7 @@ export const teamMembers = pgTable("team_members", {
   name: text("name").notNull(),
   role: text("role"),
   photoUrl: text("photo_url"),
+  photoData: text("photo_data"),
   ordinal: integer("ordinal").notNull(),
   isDeleted: boolean("is_deleted").notNull().default(false),
 });
@@ -320,6 +321,7 @@ export interface TeamMember {
   name: string;
   role?: string;
   photoUrl?: string;
+  photoData?: string;
   ordinal: number;
   isDeleted: boolean;
 }
@@ -388,6 +390,7 @@ export const insertTeamMemberSchema = z.object({
   name: z.string().min(1, "Name is required"),
   role: z.string().optional(),
   photoUrl: z.string().optional(),
+  photoData: z.string().optional(),
 });
 
 export type InsertStream = z.infer<typeof insertStreamSchema>;

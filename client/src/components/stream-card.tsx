@@ -87,8 +87,8 @@ export function StreamCard({ stream, onClick, onEdit, onMomentumClick, showDescr
                       className={`${avatarSize} border-2 border-background`}
                       style={{ zIndex: 10 - index }}
                     >
-                      {ownerInfo?.photoUrl ? (
-                        <AvatarImage src={ownerInfo.photoUrl} alt={owner} className="object-cover" />
+                      {(ownerInfo?.photoData || ownerInfo?.photoUrl) ? (
+                        <AvatarImage src={ownerInfo.photoData || ownerInfo.photoUrl || ""} alt={owner} className="object-cover" />
                       ) : null}
                       <AvatarFallback className={`bg-primary/10 text-primary ${textSize}`}>
                         {getInitials(owner)}

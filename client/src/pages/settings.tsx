@@ -48,7 +48,7 @@ export function SettingsPage() {
   const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
   const [newMemberName, setNewMemberName] = useState("");
   const [newMemberRole, setNewMemberRole] = useState("");
-  const [newMemberPhotoUrl, setNewMemberPhotoUrl] = useState("");
+  const [newMemberPhotoData, setNewMemberPhotoData] = useState("");
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const editPhotoInputRef = useRef<HTMLInputElement>(null);
   const addPhotoInputRef = useRef<HTMLInputElement>(null);
@@ -153,7 +153,7 @@ export function SettingsPage() {
   });
   
   const createMemberMutation = useMutation({
-    mutationFn: async (data: { name: string; role?: string; photoUrl?: string }) => {
+    mutationFn: async (data: { name: string; role?: string; photoData?: string }) => {
       return apiRequest("POST", "/api/team-members", data);
     },
     onSuccess: () => {
@@ -161,7 +161,7 @@ export function SettingsPage() {
       setIsAddingMember(false);
       setNewMemberName("");
       setNewMemberRole("");
-      setNewMemberPhotoUrl("");
+      setNewMemberPhotoData("");
       toast({ title: "Team member added" });
     },
     onError: () => {
@@ -170,7 +170,7 @@ export function SettingsPage() {
   });
   
   const updateMemberMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: { name?: string; role?: string; photoUrl?: string } }) => {
+    mutationFn: async ({ id, data }: { id: string; data: { name?: string; role?: string; photoData?: string } }) => {
       return apiRequest("PATCH", `/api/team-members/${id}`, data);
     },
     onSuccess: () => {
@@ -225,7 +225,7 @@ export function SettingsPage() {
     createMemberMutation.mutate({
       name: newMemberName.trim(),
       role: newMemberRole.trim() || undefined,
-      photoUrl: newMemberPhotoUrl.trim() || undefined,
+      photoData: newMemberPhotoData || undefined,
     });
   };
   
@@ -236,7 +236,7 @@ export function SettingsPage() {
       data: {
         name: newMemberName.trim(),
         role: newMemberRole.trim() || undefined,
-        photoUrl: newMemberPhotoUrl.trim() || undefined,
+        photoData: newMemberPhotoData || undefined,
       },
     });
   };
@@ -245,7 +245,7 @@ export function SettingsPage() {
     setEditingMember(member);
     setNewMemberName(member.name);
     setNewMemberRole(member.role || "");
-    setNewMemberPhotoUrl(member.photoUrl || "");
+    setNewMemberPhotoData(member.photoData || member.photoUrl || "");
     setIsAddingMember(false);
   };
   
@@ -254,7 +254,7 @@ export function SettingsPage() {
     setIsAddingMember(false);
     setNewMemberName("");
     setNewMemberRole("");
-    setNewMemberPhotoUrl("");
+    setNewMemberPhotoData("");
   };
   
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>, inputRef: React.RefObject<HTMLInputElement>) => {
@@ -262,31 +262,22 @@ export function SettingsPage() {
     if (!file) return;
     setIsUploadingPhoto(true);
     try {
-      const urlRes = await fetch("/api/uploads/request-url", {
+      const formData = new FormData();
+      formData.append("photo", file);
+      
+      const res = await fetch("/api/upload/team-photo", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...getSessionHeaders(),
-        },
-        body: JSON.stringify({
-          name: file.name,
-          size: file.size,
-          contentType: file.type,
-        }),
+        headers: getSessionHeaders(),
+        body: formData,
       });
-      if (!urlRes.ok) throw new Error("Failed to get upload URL");
-      const { uploadURL, objectPath } = await urlRes.json();
-      
-      const uploadRes = await fetch(uploadURL, {
-        method: "PUT",
-        body: file,
-        headers: { "Content-Type": file.type },
-      });
-      if (!uploadRes.ok) throw new Error("Upload failed");
-      
-      setNewMemberPhotoUrl(objectPath);
-    } catch {
-      toast({ title: "Failed to upload photo", variant: "destructive" });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Upload failed");
+      }
+      const { photoData } = await res.json();
+      setNewMemberPhotoData(photoData);
+    } catch (err) {
+      toast({ title: err instanceof Error ? err.message : "Failed to upload photo", variant: "destructive" });
     } finally {
       setIsUploadingPhoto(false);
       if (inputRef.current) inputRef.current.value = "";
@@ -413,8 +404,8 @@ export function SettingsPage() {
                     <div key={member.id} className="p-3 bg-muted rounded-md space-y-3">
                       <div className="flex items-center gap-3">
                         <Avatar className="h-10 w-10">
-                          {newMemberPhotoUrl ? (
-                            <AvatarImage src={newMemberPhotoUrl} alt={newMemberName} />
+                          {newMemberPhotoData ? (
+                            <AvatarImage src={newMemberPhotoData} alt={newMemberName} />
                           ) : null}
                           <AvatarFallback className="bg-primary/10 text-primary text-xs">
                             {getInitials(newMemberName || "?")}
@@ -454,7 +445,7 @@ export function SettingsPage() {
                             ) : (
                               <Upload className="h-4 w-4 mr-2" />
                             )}
-                            {newMemberPhotoUrl ? "Change Photo" : "Upload Photo"}
+                            {newMemberPhotoData ? "Change Photo" : "Upload Photo"}
                           </Button>
                         </div>
                       </div>
@@ -488,8 +479,8 @@ export function SettingsPage() {
                     >
                       <div className="flex items-center gap-3">
                         <Avatar className="h-10 w-10">
-                          {member.photoUrl ? (
-                            <AvatarImage src={member.photoUrl} alt={member.name} />
+                          {(member.photoData || member.photoUrl) ? (
+                            <AvatarImage src={member.photoData || member.photoUrl || ""} alt={member.name} />
                           ) : null}
                           <AvatarFallback className="bg-primary/10 text-primary text-xs">
                             {getInitials(member.name)}
@@ -530,8 +521,8 @@ export function SettingsPage() {
                 <div className="p-3 border rounded-md space-y-3">
                   <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10">
-                      {newMemberPhotoUrl ? (
-                        <AvatarImage src={newMemberPhotoUrl} alt={newMemberName} />
+                      {newMemberPhotoData ? (
+                        <AvatarImage src={newMemberPhotoData} alt={newMemberName} />
                       ) : null}
                       <AvatarFallback className="bg-primary/10 text-primary text-xs">
                         {newMemberName ? getInitials(newMemberName) : "?"}
@@ -572,7 +563,7 @@ export function SettingsPage() {
                         ) : (
                           <Upload className="h-4 w-4 mr-2" />
                         )}
-                        {newMemberPhotoUrl ? "Change Photo" : "Upload Photo"}
+                        {newMemberPhotoData ? "Change Photo" : "Upload Photo"}
                       </Button>
                     </div>
                   </div>

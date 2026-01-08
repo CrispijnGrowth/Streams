@@ -157,6 +157,7 @@ function mapTeamMemberFromDb(row: any): TeamMember {
     name: row.name,
     role: row.role || undefined,
     photoUrl: row.photoUrl || undefined,
+    photoData: row.photoData || undefined,
     ordinal: row.ordinal,
     isDeleted: row.isDeleted,
   };
@@ -1293,6 +1294,7 @@ export class DatabaseStorage implements IStorage {
       name: data.name,
       role: data.role || null,
       photoUrl: data.photoUrl || null,
+      photoData: data.photoData || null,
       ordinal,
       isDeleted: false,
     };
@@ -1311,6 +1313,7 @@ export class DatabaseStorage implements IStorage {
     if (data.name !== undefined) updateData.name = data.name;
     if (data.role !== undefined) updateData.role = data.role || null;
     if (data.photoUrl !== undefined) updateData.photoUrl = data.photoUrl || null;
+    if (data.photoData !== undefined) updateData.photoData = data.photoData || null;
     
     await db.update(teamMembers).set(updateData).where(eq(teamMembers.id, id));
     

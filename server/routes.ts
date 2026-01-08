@@ -1099,63 +1099,38 @@ export async function registerRoutes(
     }
   });
 
-  // Team Member Photo Upload - uses Object Storage
+  // Team Member Photo Upload - stores as base64 data URI (portable across platforms)
   app.post("/api/upload/team-photo", authMiddleware, upload.single("photo"), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: "No file uploaded" });
       }
       const buf = req.file.buffer;
-      let ext = ".jpg";
-      let contentType = "image/jpeg";
+      
+      // Validate file size (max 500KB for avatars)
+      if (buf.length > 500 * 1024) {
+        return res.status(400).json({ error: "Image too large (max 500KB)" });
+      }
+      
+      // Detect image type from magic bytes
+      let mimeType = "image/jpeg";
       if (buf[0] === 0xFF && buf[1] === 0xD8 && buf[2] === 0xFF) {
-        ext = ".jpg";
-        contentType = "image/jpeg";
+        mimeType = "image/jpeg";
       } else if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47) {
-        ext = ".png";
-        contentType = "image/png";
+        mimeType = "image/png";
       } else if (buf[0] === 0x47 && buf[1] === 0x49 && buf[2] === 0x46) {
-        ext = ".gif";
-        contentType = "image/gif";
+        mimeType = "image/gif";
       } else if (buf[0] === 0x52 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x46 && buf[8] === 0x57 && buf[9] === 0x45 && buf[10] === 0x42 && buf[11] === 0x50) {
-        ext = ".webp";
-        contentType = "image/webp";
+        mimeType = "image/webp";
       } else {
-        return res.status(400).json({ error: "Invalid image file" });
+        return res.status(400).json({ error: "Invalid image file (supported: jpg, png, gif, webp)" });
       }
       
-      const filename = `team-photos/${Date.now()}-${Math.random().toString(36).substring(2, 8)}${ext}`;
+      // Convert to base64 data URI
+      const base64 = buf.toString("base64");
+      const dataUri = `data:${mimeType};base64,${base64}`;
       
-      const objectStorageService = new ObjectStorageService();
-      const publicPaths = objectStorageService.getPublicObjectSearchPaths();
-      
-      if (publicPaths.length === 0) {
-        console.error("[Upload] No public object storage paths configured");
-        return res.status(500).json({ error: "Object storage not configured" });
-      }
-      
-      const publicPath = publicPaths[0];
-      const fullPath = `${publicPath}/${filename}`;
-      
-      const pathParts = fullPath.split("/").filter(p => p);
-      if (pathParts.length < 2) {
-        return res.status(500).json({ error: "Invalid storage path" });
-      }
-      
-      const bucketName = pathParts[0];
-      const objectName = pathParts.slice(1).join("/");
-      
-      const bucket = objectStorageClient.bucket(bucketName);
-      const file = bucket.file(objectName);
-      
-      await file.save(buf, {
-        contentType,
-        metadata: {
-          cacheControl: "public, max-age=31536000",
-        },
-      });
-      
-      res.json({ url: `/public/${filename}` });
+      res.json({ photoData: dataUri });
     } catch (error) {
       console.error("[Upload] Photo upload error:", error);
       res.status(500).json({ error: "Failed to upload photo" });

@@ -325,8 +325,8 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
                         <Tooltip key={owner}>
                           <TooltipTrigger asChild>
                             <Avatar className="h-10 w-10 border-2 border-background">
-                              {info?.photoUrl ? (
-                                <AvatarImage src={info.photoUrl} alt={owner} />
+                              {(info?.photoData || info?.photoUrl) ? (
+                                <AvatarImage src={info.photoData || info.photoUrl || ""} alt={owner} />
                               ) : null}
                               <AvatarFallback className="bg-primary/10 text-primary text-xs">
                                 {getInitials(owner)}
