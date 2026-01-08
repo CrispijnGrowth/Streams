@@ -1238,6 +1238,24 @@ export class DatabaseStorage implements IStorage {
     return mapCommentFromDb(newComment);
   }
 
+  async updateComment(userId: string, id: string, content: string): Promise<Comment | undefined> {
+    const rows = await db.select().from(comments).where(and(eq(comments.id, id), eq(comments.userId, userId)));
+    if (rows.length === 0) return undefined;
+    
+    await db.update(comments).set({ content }).where(and(eq(comments.id, id), eq(comments.userId, userId)));
+    
+    const updated = await db.select().from(comments).where(eq(comments.id, id));
+    return updated.length > 0 ? mapCommentFromDb(updated[0]) : undefined;
+  }
+
+  async deleteComment(userId: string, id: string): Promise<boolean> {
+    const rows = await db.select().from(comments).where(and(eq(comments.id, id), eq(comments.userId, userId)));
+    if (rows.length === 0) return false;
+    
+    await db.delete(comments).where(and(eq(comments.id, id), eq(comments.userId, userId)));
+    return true;
+  }
+
   async getTeamMembers(userId: string): Promise<TeamMember[]> {
     const rows = await db.select().from(teamMembers).where(
       and(eq(teamMembers.userId, userId), eq(teamMembers.isDeleted, false))

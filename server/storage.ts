@@ -85,6 +85,8 @@ export interface IStorage {
   getComments(userId: string, entityType: CommentEntityTypeValue, entityId: string): Promise<Comment[]>;
   getLastComment(userId: string, entityType: CommentEntityTypeValue, entityId: string): Promise<Comment | undefined>;
   createComment(userId: string, data: InsertComment): Promise<Comment>;
+  updateComment(userId: string, id: string, content: string): Promise<Comment | undefined>;
+  deleteComment(userId: string, id: string): Promise<boolean>;
 
   getTeamMembers(userId: string): Promise<TeamMember[]>;
   getTeamMember(userId: string, id: string): Promise<TeamMember | undefined>;
@@ -1163,6 +1165,21 @@ export class MemStorage implements IStorage {
     };
     this.comments.set(id, comment);
     return comment;
+  }
+
+  async updateComment(userId: string, id: string, content: string): Promise<Comment | undefined> {
+    const comment = this.comments.get(id);
+    if (!comment || comment.userId !== userId) return undefined;
+    const updated = { ...comment, content };
+    this.comments.set(id, updated);
+    return updated;
+  }
+
+  async deleteComment(userId: string, id: string): Promise<boolean> {
+    const comment = this.comments.get(id);
+    if (!comment || comment.userId !== userId) return false;
+    this.comments.delete(id);
+    return true;
   }
 
   async getTeamMembers(userId: string): Promise<TeamMember[]> {
