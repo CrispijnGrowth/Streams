@@ -96,10 +96,11 @@ Progress is computed automatically by rolling up completion percentages from ste
 - **Trigger Points**: Called in `/api/admin/approve/:userId` and `/api/auth/login` routes
 
 ### Team Members System
-- **Team Members Table**: `team_members` table with id, userId, name, role, photoUrl, ordinal, isDeleted fields
+- **Team Members Table**: `team_members` table with id, userId, name, role, photoUrl, photoData, ordinal, isDeleted fields
+- **Photo Storage**: Uses portable base64 data URIs stored in `photoData` column (max ~500KB per photo after base64 encoding). No external object storage required - works uniformly across Replit dev, Azure production, and any other platform
 - **Management UI**: Settings page includes Team Members section for adding/editing/deleting team members
 - **Owner Selection**: Forms for Stream/Solution/Action use team member names as owner suggestions
-- **Avatar Display**: Stream, Solution, and Action cards display owner avatars with tooltips showing name and role
+- **Avatar Display**: Stream, Solution, and Action cards display owner avatars (uses photoData as primary source, photoUrl as legacy fallback)
 - **Key Hook**: `useTeamMembers()` in `client/src/hooks/use-suggestions.ts` fetches team members for current user
 
 ### Edit/Operate Mode System
@@ -118,6 +119,7 @@ Progress is computed automatically by rolling up completion percentages from ste
 - **Stats Display**: Shows counts for both created and updated records after import
 
 ### Recent Changes
+- 2026-01-08: Replaced object storage with portable database photo storage - team member photos now stored as base64 data URIs in PostgreSQL (photoData column), works uniformly across all deployment platforms
 - 2026-01-08: Added update mode for Excel import - can now update existing records by matching names
 - 2026-01-07: Added auto-edit mode for empty states - pages switch to Edit mode when no data exists
 - 2026-01-07: Improved multi-owner display - all owners now shown as smaller stacked avatars in top-right corner
