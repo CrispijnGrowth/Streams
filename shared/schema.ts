@@ -41,6 +41,8 @@ export const solutions = pgTable("solutions", {
   owners: text("owners").array().notNull().default([]),
   labels: text("labels").array().notNull().default([]),
   status: text("status").notNull().default("In Progress"),
+  momentumStatus: text("momentum_status").notNull().default("Active"),
+  lastMovementAt: text("last_movement_at"),
   ordinal: integer("ordinal").notNull(),
   isDeleted: boolean("is_deleted").notNull().default(false),
 });
@@ -239,6 +241,8 @@ export interface Solution {
   owners: string[];
   labels: string[];
   status: SolutionStatusType;
+  momentumStatus: MomentumStatusType;
+  lastMovementAt?: string;
   ordinal: number;
   isDeleted: boolean;
 }
