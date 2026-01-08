@@ -22,6 +22,7 @@ import {
   type ActionWithProgress,
   type ActionWithLastComment,
   type CommentEntityTypeValue,
+  type MomentumStatusType,
   ActionStatus,
   MomentumStatus,
   SolutionStatus,
@@ -278,7 +279,7 @@ export class MemStorage implements IStorage {
     return stream;
   }
 
-  async updateStream(userId: string, id: string, data: Partial<InsertStream>): Promise<Stream | undefined> {
+  async updateStream(userId: string, id: string, data: Partial<InsertStream> & { momentumStatus?: string; lastMovementAt?: string }): Promise<Stream | undefined> {
     const stream = this.streams.get(id);
     if (!stream || stream.userId !== userId || stream.isDeleted) return undefined;
     const updated: Stream = {
@@ -288,7 +289,9 @@ export class MemStorage implements IStorage {
       phases: data.phases ?? stream.phases,
       owners: data.owners ?? stream.owners,
       labels: data.labels ?? stream.labels,
-      status: data.status ?? stream.status,
+      status: data.status ?? stream.status ?? SolutionStatus.IN_PROGRESS,
+      momentumStatus: (data.momentumStatus as MomentumStatusType) ?? stream.momentumStatus,
+      lastMovementAt: data.lastMovementAt ?? stream.lastMovementAt,
     };
     this.streams.set(id, updated);
     return updated;
