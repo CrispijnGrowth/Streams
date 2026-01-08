@@ -659,7 +659,7 @@ export async function registerRoutes(
   app.get("/api/comments/:entityType/:entityId", authMiddleware, async (req, res) => {
     try {
       const { entityType, entityId } = req.params;
-      if (!["solution", "deliverable", "action"].includes(entityType)) {
+      if (!["solution", "deliverable", "action", "step"].includes(entityType)) {
         return res.status(400).json({ error: "Invalid entity type" });
       }
       const comments = await storage.getComments(req.userId!, entityType as any, entityId);

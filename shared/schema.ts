@@ -289,6 +289,7 @@ export const CommentEntityType = {
   SOLUTION: "solution",
   DELIVERABLE: "deliverable",
   ACTION: "action",
+  STEP: "step",
 } as const;
 
 export type CommentEntityTypeValue = (typeof CommentEntityType)[keyof typeof CommentEntityType];

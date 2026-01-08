@@ -1,12 +1,14 @@
 import { useState, useRef, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { ListChecks, Plus, Calendar, User, Clock, MessageSquare, Send, Loader2 } from "lucide-react";
+import { ListChecks, Calendar, Tag, MessageSquare, Send, Loader2 } from "lucide-react";
 import { ClassNavigator } from "@/components/class-navigator";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { StepList } from "@/components/step-list";
 import { QuickAddForm, QuickAddFormRef } from "@/components/quick-add-form";
 import { EmptyState } from "@/components/empty-state";
@@ -20,6 +22,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { useMode } from "@/lib/mode-context";
+import { useTeamMembers } from "@/hooks/use-suggestions";
 import { format } from "date-fns";
 import type { ActionWithLastComment, Step, ActionStatusType, Comment } from "@shared/schema";
 import { ActionStatus } from "@shared/schema";
@@ -34,11 +37,20 @@ export function ActionView({ streamId, solutionId, actionId }: ActionViewProps) 
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { isEditMode } = useMode();
+  const teamMembers = useTeamMembers();
   const [editingAction, setEditingAction] = useState(false);
   const [editFocusField, setEditFocusField] = useState<EditActionFocusField>(null);
   const [editingStep, setEditingStep] = useState<Step | null>(null);
   const [newComment, setNewComment] = useState("");
   const quickAddRef = useRef<QuickAddFormRef>(null);
+
+  const getOwnerInfo = (ownerName: string) => {
+    return teamMembers.find((m) => m.name === ownerName);
+  };
+
+  const getInitials = (name: string) => {
+    return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+  };
 
   const { data: action, isLoading: actionLoading } = useQuery<ActionWithLastComment>({
     queryKey: ["/api/actions", actionId],
@@ -241,60 +253,81 @@ export function ActionView({ streamId, solutionId, actionId }: ActionViewProps) 
 
   return (
     <div className="p-6 space-y-6">
-      <Card 
-        className={`p-6 space-y-4 ${isEditMode ? "border-2 border-dashed border-primary cursor-pointer hover-elevate" : ""}`}
+      <div 
+        className={`space-y-3 pb-4 border-b pt-2 ${isEditMode ? "border-2 border-dashed border-primary rounded-md p-4 cursor-pointer hover-elevate" : ""}`}
         onClick={isEditMode ? () => setEditingAction(true) : undefined}
       >
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1">
-            <div>
-              <ClassNavigator currentLevel="action" streamId={streamId} solutionId={solutionId} actionId={actionId} />
-              <h1 className="text-xl font-semibold" data-testid="text-action-title">
-                {action.name}
-              </h1>
-            </div>
-            {action.description && (
-              <p className="text-sm text-muted-foreground mt-1">{action.description}</p>
+        <ClassNavigator currentLevel="action" streamId={streamId} solutionId={solutionId} actionId={actionId} />
+        
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-lg font-semibold" data-testid="text-action-title">{action.name}</h1>
+            <StatusBadge status={action.status} />
+          </div>
+          
+          <div className="flex items-center gap-4 flex-wrap">
+            {action.dueDate && (
+              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-md ${isOverdue ? "bg-status-blocked/10 border border-status-blocked/20" : "bg-primary/10 border border-primary/20"}`}>
+                <Calendar className={`w-5 h-5 ${isOverdue ? "text-status-blocked" : "text-primary"}`} />
+                <span className={`font-semibold ${isOverdue ? "text-status-blocked" : "text-primary"}`}>
+                  {new Date(action.dueDate).toLocaleDateString('en-GB')}
+                </span>
+                {isOverdue && <span className="font-medium text-status-blocked text-xs ml-1">Overdue</span>}
+              </div>
+            )}
+            {action.owners && action.owners.length > 0 && (
+              <div className="flex items-center -space-x-2">
+                {action.owners.slice(0, 5).map((owner) => {
+                  const info = getOwnerInfo(owner);
+                  return (
+                    <Tooltip key={owner}>
+                      <TooltipTrigger asChild>
+                        <Avatar className="h-10 w-10 border-2 border-background">
+                          {info?.photoUrl ? (
+                            <AvatarImage src={info.photoUrl} alt={owner} />
+                          ) : null}
+                          <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                            {getInitials(owner)}
+                          </AvatarFallback>
+                        </Avatar>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="font-medium">{owner}</p>
+                        {info?.role && <p className="text-xs text-muted-foreground">{info.role}</p>}
+                      </TooltipContent>
+                    </Tooltip>
+                  );
+                })}
+                {action.owners.length > 5 && (
+                  <Avatar className="h-10 w-10 border-2 border-background">
+                    <AvatarFallback className="bg-muted text-muted-foreground text-xs">
+                      +{action.owners.length - 5}
+                    </AvatarFallback>
+                  </Avatar>
+                )}
+              </div>
             )}
           </div>
-          <StatusBadge status={action.status} />
         </div>
 
-        <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
-          {action.dueDate && (
-            <div className={`flex items-center gap-1 ${isOverdue ? "text-status-blocked" : ""}`}>
-              <Calendar className="h-4 w-4" />
-              <span className="font-mono">
-                {format(new Date(action.dueDate), "MMM d, yyyy")}
-              </span>
-              {isOverdue && <span className="font-medium ml-1">Overdue</span>}
-            </div>
-          )}
-          {action.effort && (
-            <div className="flex items-center gap-1">
-              <Clock className="h-4 w-4" />
-              <span>{action.effort} hours</span>
-            </div>
-          )}
-          {action.owners.length > 0 && (
-            <div className="flex items-center gap-1">
-              <User className="h-4 w-4" />
-              <span>{action.owners.join(", ")}</span>
-            </div>
-          )}
-        </div>
+        {action.description && (
+          <p className="text-sm text-muted-foreground max-w-3xl" data-testid="text-action-description">
+            {action.description}
+          </p>
+        )}
 
-        {action.labels.length > 0 && (
-          <div className="flex items-center gap-1 flex-wrap">
+        {action.labels && action.labels.length > 0 && (
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <Tag className="w-4 h-4 text-muted-foreground" />
             {action.labels.map((label) => (
-              <Badge key={label} variant="outline" className="text-xs">
+              <Badge key={label} variant="secondary" className="text-xs">
                 {label}
               </Badge>
             ))}
           </div>
         )}
 
-        <div className="space-y-2">
+        <div className="space-y-2 pt-2">
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">Progress</span>
             <span className="font-mono">
@@ -303,7 +336,7 @@ export function ActionView({ streamId, solutionId, actionId }: ActionViewProps) 
           </div>
           <ProgressBar value={action.progress} />
         </div>
-      </Card>
+      </div>
 
       <div className="space-y-4">
         <h2 className="text-lg font-semibold flex items-center gap-2">
