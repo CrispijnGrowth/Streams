@@ -22,6 +22,7 @@ import {
   MomentumStatus,
   SolutionStatus,
 } from "@shared/schema";
+import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
@@ -1034,6 +1035,8 @@ export async function registerRoutes(
       res.status(500).json({ error: "Failed to delete team member" });
     }
   });
+
+  registerObjectStorageRoutes(app);
 
   return httpServer;
 }

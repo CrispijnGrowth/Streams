@@ -254,16 +254,29 @@ export function SettingsPage() {
     if (!file) return;
     setIsUploadingPhoto(true);
     try {
-      const formData = new FormData();
-      formData.append("photo", file);
-      const res = await fetch("/api/upload/team-photo", {
+      const urlRes = await fetch("/api/uploads/request-url", {
         method: "POST",
-        headers: getSessionHeaders(),
-        body: formData,
+        headers: {
+          "Content-Type": "application/json",
+          ...getSessionHeaders(),
+        },
+        body: JSON.stringify({
+          name: file.name,
+          size: file.size,
+          contentType: file.type,
+        }),
       });
-      if (!res.ok) throw new Error("Upload failed");
-      const { url } = await res.json();
-      setNewMemberPhotoUrl(url);
+      if (!urlRes.ok) throw new Error("Failed to get upload URL");
+      const { uploadURL, objectPath } = await urlRes.json();
+      
+      const uploadRes = await fetch(uploadURL, {
+        method: "PUT",
+        body: file,
+        headers: { "Content-Type": file.type },
+      });
+      if (!uploadRes.ok) throw new Error("Upload failed");
+      
+      setNewMemberPhotoUrl(objectPath);
     } catch {
       toast({ title: "Failed to upload photo", variant: "destructive" });
     } finally {
