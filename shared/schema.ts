@@ -21,6 +21,7 @@ export const streams = pgTable("streams", {
   phases: text("phases").array().notNull().default([]),
   owners: text("owners").array().notNull().default([]),
   labels: text("labels").array().notNull().default([]),
+  status: text("status").notNull().default("In Progress"),
   momentumStatus: text("momentum_status").notNull().default("Active"),
   computedMilestoneDate: text("computed_milestone_date"),
   lastMovementAt: text("last_movement_at"),
@@ -211,6 +212,7 @@ export interface Stream {
   phases: string[];
   owners: string[];
   labels: string[];
+  status: SolutionStatusType;
   momentumStatus: MomentumStatusType;
   computedMilestoneDate?: string;
   lastMovementAt?: string;

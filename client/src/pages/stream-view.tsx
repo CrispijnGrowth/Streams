@@ -18,7 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { useMode } from "@/lib/mode-context";
 import { useTeamMembers } from "@/hooks/use-suggestions";
-import type { Stream, SolutionWithBreakdownAndComment, Solution, MomentumStatusType } from "@shared/schema";
+import type { Stream, SolutionWithBreakdownAndComment, Solution, MomentumStatusType, SolutionStatusType } from "@shared/schema";
 import { SolutionStatus } from "@shared/schema";
 
 interface StreamViewProps {
@@ -96,6 +96,18 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
     updateMomentum.mutate(nextStatus[stream.momentumStatus as MomentumStatusType]);
   };
 
+  const updateStreamStatus = useMutation({
+    mutationFn: async (status: SolutionStatusType) => {
+      return apiRequest("PATCH", `/api/streams/${streamId}`, { status });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/streams", streamId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
+    },
+    onError: () => {
+      toast({ title: "Failed to update status", variant: "destructive" });
+    },
+  });
   
   const openEditWithFocus = useCallback((focus: EditStreamFocusField) => {
     if (stream) {
@@ -281,25 +293,39 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
                 )}
               </div>
               
-              <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-4 flex-wrap">
                 {stream.computedMilestoneDate && (
-                  <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                    <Calendar className="w-4 h-4" />
-                    <span>{new Date(stream.computedMilestoneDate).toLocaleDateString('en-GB')}</span>
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-primary/10 border border-primary/20">
+                    <Calendar className="w-5 h-5 text-primary" />
+                    <span className="font-semibold text-primary">{new Date(stream.computedMilestoneDate).toLocaleDateString('en-GB')}</span>
                   </div>
                 )}
+                <Button
+                  size="sm"
+                  variant={(stream.status || "In Progress") === SolutionStatus.ON_HOLD ? "secondary" : "outline"}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const newStatus = (stream.status || "In Progress") === SolutionStatus.ON_HOLD 
+                      ? SolutionStatus.IN_PROGRESS 
+                      : SolutionStatus.ON_HOLD;
+                    updateStreamStatus.mutate(newStatus);
+                  }}
+                  data-testid="button-toggle-stream-status"
+                >
+                  {(stream.status || "In Progress") === SolutionStatus.ON_HOLD ? "On Hold" : "In Progress"}
+                </Button>
                 {stream.owners && stream.owners.length > 0 && (
-                  <div className="flex items-center -space-x-1.5">
+                  <div className="flex items-center -space-x-2">
                     {stream.owners.slice(0, 5).map((owner) => {
                       const info = getOwnerInfo(owner);
                       return (
                         <Tooltip key={owner}>
                           <TooltipTrigger asChild>
-                            <Avatar className="h-7 w-7 border-2 border-background">
+                            <Avatar className="h-10 w-10 border-2 border-background">
                               {info?.photoUrl ? (
                                 <AvatarImage src={info.photoUrl} alt={owner} />
                               ) : null}
-                              <AvatarFallback className="bg-primary/10 text-primary text-[10px]">
+                              <AvatarFallback className="bg-primary/10 text-primary text-xs">
                                 {getInitials(owner)}
                               </AvatarFallback>
                             </Avatar>
@@ -312,8 +338,8 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
                       );
                     })}
                     {stream.owners.length > 5 && (
-                      <Avatar className="h-7 w-7 border-2 border-background">
-                        <AvatarFallback className="bg-muted text-muted-foreground text-[10px]">
+                      <Avatar className="h-10 w-10 border-2 border-background">
+                        <AvatarFallback className="bg-muted text-muted-foreground text-xs">
                           +{stream.owners.length - 5}
                         </AvatarFallback>
                       </Avatar>

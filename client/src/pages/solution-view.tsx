@@ -369,7 +369,13 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
                 <h1 className="text-lg font-semibold" data-testid="text-solution-name">{solution.name}</h1>
               </div>
               
-              <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-4 flex-wrap">
+                {solution.milestoneDate && (
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-primary/10 border border-primary/20">
+                    <Calendar className="w-5 h-5 text-primary" />
+                    <span className="font-semibold text-primary">{new Date(solution.milestoneDate).toLocaleDateString('en-GB')}</span>
+                  </div>
+                )}
                 <Button
                   size="sm"
                   variant={solution.status === SolutionStatus.ON_HOLD ? "secondary" : "outline"}
@@ -384,24 +390,18 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
                 >
                   {solution.status === SolutionStatus.ON_HOLD ? "On Hold" : "In Progress"}
                 </Button>
-                {solution.milestoneDate && (
-                  <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                    <Calendar className="w-4 h-4" />
-                    <span>{new Date(solution.milestoneDate).toLocaleDateString('en-GB')}</span>
-                  </div>
-                )}
                 {solution.owners && solution.owners.length > 0 && (
-                  <div className="flex items-center -space-x-1.5">
+                  <div className="flex items-center -space-x-2">
                     {solution.owners.slice(0, 5).map((owner) => {
                       const info = getOwnerInfo(owner);
                       return (
                         <Tooltip key={owner}>
                           <TooltipTrigger asChild>
-                            <Avatar className="h-7 w-7 border-2 border-background">
+                            <Avatar className="h-10 w-10 border-2 border-background">
                               {info?.photoUrl ? (
                                 <AvatarImage src={info.photoUrl} alt={owner} />
                               ) : null}
-                              <AvatarFallback className="bg-primary/10 text-primary text-[10px]">
+                              <AvatarFallback className="bg-primary/10 text-primary text-xs">
                                 {getInitials(owner)}
                               </AvatarFallback>
                             </Avatar>
@@ -414,8 +414,8 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
                       );
                     })}
                     {solution.owners.length > 5 && (
-                      <Avatar className="h-7 w-7 border-2 border-background">
-                        <AvatarFallback className="bg-muted text-muted-foreground text-[10px]">
+                      <Avatar className="h-10 w-10 border-2 border-background">
+                        <AvatarFallback className="bg-muted text-muted-foreground text-xs">
                           +{solution.owners.length - 5}
                         </AvatarFallback>
                       </Avatar>
