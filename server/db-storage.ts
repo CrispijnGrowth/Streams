@@ -55,6 +55,7 @@ function mapStreamFromDb(row: any): Stream {
     phases: row.phases || [],
     owners: row.owners || [],
     labels: row.labels || [],
+    status: row.status || SolutionStatus.IN_PROGRESS,
     momentumStatus: row.momentumStatus as any,
     computedMilestoneDate: row.computedMilestoneDate || undefined,
     lastMovementAt: row.lastMovementAt || undefined,
@@ -325,6 +326,7 @@ export class DatabaseStorage implements IStorage {
       phases: data.phases || [],
       owners: data.owners || [],
       labels: data.labels || [],
+      status: data.status || SolutionStatus.IN_PROGRESS,
       momentumStatus: MomentumStatus.ACTIVE,
       computedMilestoneDate: null,
       lastMovementAt: new Date().toISOString(),
@@ -348,6 +350,7 @@ export class DatabaseStorage implements IStorage {
     if (data.phases !== undefined) updateData.phases = data.phases;
     if (data.owners !== undefined) updateData.owners = data.owners;
     if (data.labels !== undefined) updateData.labels = data.labels;
+    if (data.status !== undefined) updateData.status = data.status;
     if (data.momentumStatus !== undefined) updateData.momentumStatus = data.momentumStatus;
     if (data.isDeleted !== undefined) updateData.isDeleted = data.isDeleted;
     if (data.lastMovementAt !== undefined) updateData.lastMovementAt = data.lastMovementAt;
