@@ -368,7 +368,7 @@ export const insertStepSchema = z.object({
 });
 
 export const insertCommentSchema = z.object({
-  entityType: z.enum(["solution", "deliverable", "action"]),
+  entityType: z.enum(["solution", "deliverable", "action", "step"]),
   entityId: z.string().min(1, "Entity ID is required"),
   content: z.string().min(1, "Comment content is required"),
 });
