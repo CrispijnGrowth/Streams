@@ -1,9 +1,9 @@
 import { randomUUID, randomBytes, createHash } from "crypto";
 import bcrypt from "bcrypt";
 import type { User, MagicLinkToken, Session, InsertUser } from "@shared/schema";
-import { UserRole, users } from "@shared/schema";
+import { UserRole, users, sessions } from "@shared/schema";
 import { db } from "./db";
-import { eq, ilike } from "drizzle-orm";
+import { eq, ilike, lt } from "drizzle-orm";
 
 const MAGIC_LINK_TTL_MS = 10 * 60 * 1000;
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -12,7 +12,6 @@ const BCRYPT_ROUNDS = 12;
 
 class AuthStorage {
   private magicTokens: Map<string, MagicLinkToken> = new Map();
-  private sessions: Map<string, Session> = new Map();
 
   private dbUserToUser(dbUser: typeof users.$inferSelect): User {
     const createdAt = dbUser.createdAt instanceof Date 
@@ -149,23 +148,30 @@ class AuthStorage {
       expiresAt: new Date(Date.now() + SESSION_TTL_MS).toISOString(),
       createdAt: new Date().toISOString(),
     };
-    this.sessions.set(id, session);
+    await db.insert(sessions).values(session);
     return session;
   }
 
   async getSession(sessionId: string): Promise<Session | undefined> {
-    const session = this.sessions.get(sessionId);
-    if (session && new Date(session.expiresAt) > new Date()) {
+    const result = await db.select().from(sessions).where(eq(sessions.id, sessionId)).limit(1);
+    if (result.length === 0) return undefined;
+    const session = result[0];
+    if (new Date(session.expiresAt) > new Date()) {
       return session;
     }
-    if (session) {
-      this.sessions.delete(sessionId);
-    }
+    await db.delete(sessions).where(eq(sessions.id, sessionId));
     return undefined;
   }
 
   async deleteSession(sessionId: string): Promise<boolean> {
-    return this.sessions.delete(sessionId);
+    const result = await db.delete(sessions).where(eq(sessions.id, sessionId)).returning();
+    return result.length > 0;
+  }
+
+  async cleanupExpiredSessions(): Promise<number> {
+    const now = new Date().toISOString();
+    const result = await db.delete(sessions).where(lt(sessions.expiresAt, now)).returning();
+    return result.length;
   }
 }
 

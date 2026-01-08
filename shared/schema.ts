@@ -103,6 +103,13 @@ export const comments = pgTable("comments", {
   createdAt: text("created_at").notNull(),
 });
 
+export const sessions = pgTable("sessions", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  expiresAt: text("expires_at").notNull(),
+  createdAt: text("created_at").notNull(),
+});
+
 export const teamMembers = pgTable("team_members", {
   id: text("id").primaryKey(),
   userId: text("user_id").notNull(),
