@@ -22,6 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { useMode } from "@/lib/mode-context";
 import type { StreamWithProgress, Stream, MomentumStatusType } from "@shared/schema";
+import { SolutionStatus } from "@shared/schema";
 
 type SortField = "ordinal" | "name" | "date" | "progress";
 type SortDirection = "asc" | "desc";
@@ -124,6 +125,12 @@ export function StreamsOverview({ showDescriptions }: StreamsOverviewProps) {
     });
 
     return filtered.sort((a, b) => {
+      const aOnHold = a.status === SolutionStatus.ON_HOLD;
+      const bOnHold = b.status === SolutionStatus.ON_HOLD;
+      if (aOnHold !== bOnHold) {
+        return aOnHold ? 1 : -1;
+      }
+      
       let comparison = 0;
       switch (sortField) {
         case "name":

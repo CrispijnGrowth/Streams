@@ -8,6 +8,7 @@ import { format } from "date-fns";
 import { useTeamMembers } from "@/hooks/use-suggestions";
 import { useMode } from "@/lib/mode-context";
 import type { StreamWithProgress, MomentumStatusType } from "@shared/schema";
+import { SolutionStatus } from "@shared/schema";
 
 interface StreamCardProps {
   stream: StreamWithProgress;
@@ -20,11 +21,13 @@ interface StreamCardProps {
 export function StreamCard({ stream, onClick, onEdit, onMomentumClick, showDescription = true }: StreamCardProps) {
   const teamMembers = useTeamMembers();
   const { isEditMode } = useMode();
+  const isOnHold = stream.status === SolutionStatus.ON_HOLD;
   
   const isOverdue =
     stream.computedMilestoneDate &&
     new Date(stream.computedMilestoneDate) < new Date() &&
-    stream.progress < 100;
+    stream.progress < 100 &&
+    !isOnHold;
   
   const getOwnerInfo = (ownerName: string) => {
     const member = teamMembers.find((m) => m.name === ownerName);
@@ -60,7 +63,9 @@ export function StreamCard({ stream, onClick, onEdit, onMomentumClick, showDescr
 
   return (
     <Card
-      className={`p-4 cursor-pointer hover-elevate active-elevate-2 transition-shadow group shadow-sm ${
+      className={`p-4 cursor-pointer hover-elevate active-elevate-2 transition-all group shadow-sm ${
+        isOnHold ? "opacity-60 grayscale" : ""
+      } ${
         isEditMode 
           ? "border-2 border-dashed border-primary" 
           : "border-2 border-[#0066FF]"
@@ -156,7 +161,7 @@ export function StreamCard({ stream, onClick, onEdit, onMomentumClick, showDescr
             </div>
             <div className="flex items-center gap-2">
               <div className="flex-1">
-                <ProgressBar value={sol.progress} size="sm" showLabel={false} variant="stream" />
+                <ProgressBar value={sol.progress} size="sm" showLabel={false} variant="stream" muted={isOnHold} />
               </div>
               <span className="text-xs font-mono text-muted-foreground shrink-0">
                 {Math.round(sol.progress)}%
