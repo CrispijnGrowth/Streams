@@ -69,10 +69,19 @@ export function ActionCard({
           <h4 className="font-medium text-sm truncate" data-testid={`text-action-name-${action.id}`}>
             {action.name}
           </h4>
-          {showDescription && action.description && (
-            <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
-              {action.description}
-            </p>
+          {showDescription && (
+            action.lastComment ? (
+              <div className="flex items-start gap-1 mt-0.5">
+                <MessageSquare className="h-3 w-3 text-muted-foreground shrink-0 mt-0.5" />
+                <p className="text-xs text-muted-foreground line-clamp-2">
+                  {action.lastComment.content}
+                </p>
+              </div>
+            ) : action.description ? (
+              <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
+                {action.description}
+              </p>
+            ) : null
           )}
         </div>
       </div>

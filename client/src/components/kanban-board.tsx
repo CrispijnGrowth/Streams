@@ -24,9 +24,15 @@ import { useMode } from "@/lib/mode-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Plus, GripVertical, Calendar, Clock, User } from "lucide-react";
+import { Plus, GripVertical, Calendar, Clock, User, Tag, X } from "lucide-react";
 import { format } from "date-fns";
+import { useTeamMembers } from "@/hooks/use-suggestions";
 
 const borderColorMap: Record<DeliverableBorderColorType, string> = {
   cyan: "var(--deliverable-cyan)",
@@ -204,6 +210,85 @@ function DeliverableRow({
     : "hsl(var(--deliverable-border))";
   
   const effectiveMilestoneDate = deliverable?.isMilestoneLinked ? parentMilestoneDate : null;
+  const teamMembers = useTeamMembers();
+  const [popoverOpen, setPopoverOpen] = useState(false);
+  
+  const getOwnerInfo = (ownerName: string) => {
+    return teamMembers.find((m) => m.name === ownerName);
+  };
+  
+  const getInitials = (name: string) => {
+    return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+  };
+
+  const deliverableInfoContent = deliverable && (
+    <div className="space-y-3 min-w-[240px]">
+      <div className="space-y-1">
+        <h4 className="font-semibold text-sm">{deliverable.name}</h4>
+        {deliverable.description && (
+          <p className="text-xs text-muted-foreground">{deliverable.description}</p>
+        )}
+      </div>
+      
+      <div className="space-y-2 text-xs">
+        {effectiveMilestoneDate && (
+          <div className="flex items-center gap-2">
+            <Calendar className="h-3.5 w-3.5 text-primary" />
+            <span className="font-medium">Milestone:</span>
+            <span className="bg-primary/10 text-primary px-2 py-0.5 rounded font-mono">
+              {format(new Date(effectiveMilestoneDate), "MMM d, yyyy")}
+            </span>
+          </div>
+        )}
+        {deliverable.dueDate && (
+          <div className="flex items-center gap-2">
+            <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="text-muted-foreground">Due:</span>
+            <span className="text-muted-foreground font-mono">
+              {format(new Date(deliverable.dueDate), "MMM d, yyyy")}
+            </span>
+          </div>
+        )}
+        
+        {deliverable.owners && deliverable.owners.length > 0 && (
+          <div className="flex items-center gap-2 pt-1">
+            <User className="h-3.5 w-3.5 text-muted-foreground" />
+            <div className="flex items-center -space-x-1">
+              {deliverable.owners.slice(0, 4).map((owner) => {
+                const info = getOwnerInfo(owner);
+                return (
+                  <Tooltip key={owner}>
+                    <TooltipTrigger asChild>
+                      <Avatar className="h-6 w-6 border-2 border-background">
+                        {info?.photoUrl ? (
+                          <AvatarImage src={info.photoUrl} alt={owner} />
+                        ) : null}
+                        <AvatarFallback className="bg-primary/10 text-primary text-[9px]">
+                          {getInitials(owner)}
+                        </AvatarFallback>
+                      </Avatar>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="font-medium">{owner}</p>
+                      {info?.role && <p className="text-xs text-muted-foreground">{info.role}</p>}
+                    </TooltipContent>
+                  </Tooltip>
+                );
+              })}
+              {deliverable.owners.length > 4 && (
+                <Avatar className="h-6 w-6 border-2 border-background">
+                  <AvatarFallback className="bg-muted text-muted-foreground text-[9px]">
+                    +{deliverable.owners.length - 4}
+                  </AvatarFallback>
+                </Avatar>
+              )}
+            </div>
+          </div>
+        )}
+        
+      </div>
+    </div>
+  );
   
   return (
     <div 
@@ -231,13 +316,51 @@ function DeliverableRow({
             </div>
           )}
           {deliverable ? (
-            <div 
-              className={`font-medium text-sm text-foreground flex-1 break-words ${isEditMode ? "cursor-pointer hover:underline" : ""}`}
-              title={deliverable.name}
-              onClick={isEditMode && onEditDeliverable ? () => onEditDeliverable(deliverable) : undefined}
-            >
-              {deliverable.name}
-            </div>
+            <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+              <HoverCard openDelay={300} closeDelay={100}>
+                <HoverCardTrigger asChild>
+                  <PopoverTrigger asChild>
+                    <div 
+                      className={`font-medium text-sm text-foreground flex-1 break-words cursor-pointer hover:underline ${isEditMode ? "border-b border-dashed border-primary" : ""}`}
+                      data-testid={`button-deliverable-info-${deliverable.id}`}
+                    >
+                      {deliverable.name}
+                    </div>
+                  </PopoverTrigger>
+                </HoverCardTrigger>
+                <HoverCardContent side="right" align="start" className="w-auto p-4">
+                  {deliverableInfoContent}
+                </HoverCardContent>
+              </HoverCard>
+              <PopoverContent side="right" align="start" className="w-auto p-4">
+                <div className="flex justify-between items-start gap-4 mb-2">
+                  <span className="text-xs text-muted-foreground uppercase tracking-wide">Deliverable</span>
+                  <Button 
+                    size="icon" 
+                    variant="ghost" 
+                    className="h-5 w-5 -mt-1 -mr-1"
+                    onClick={() => setPopoverOpen(false)}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+                {deliverableInfoContent}
+                {isEditMode && onEditDeliverable && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full mt-3"
+                    onClick={() => {
+                      setPopoverOpen(false);
+                      onEditDeliverable(deliverable);
+                    }}
+                    data-testid={`button-edit-deliverable-${deliverable.id}`}
+                  >
+                    Edit Deliverable
+                  </Button>
+                )}
+              </PopoverContent>
+            </Popover>
           ) : (
             <div className="font-medium text-sm text-muted-foreground italic pl-5">
               Ungrouped
@@ -245,23 +368,52 @@ function DeliverableRow({
           )}
         </div>
         {deliverable && (
-          <div className="flex flex-col gap-0.5 pl-5 text-xs text-muted-foreground">
+          <div className="flex flex-col gap-1 pl-5">
             {effectiveMilestoneDate && (
-              <div className="flex items-center gap-1" title="Milestone">
+              <div 
+                className="inline-flex items-center gap-1 bg-primary/10 text-primary px-1.5 py-0.5 rounded text-xs font-medium w-fit" 
+                title="Milestone"
+              >
                 <Calendar className="h-3 w-3" />
-                <span>{format(new Date(effectiveMilestoneDate), "MMM d")}</span>
+                <span className="font-mono">{format(new Date(effectiveMilestoneDate), "MMM d")}</span>
               </div>
             )}
             {deliverable.dueDate && (
-              <div className="flex items-center gap-1" title="Due Date">
+              <div className="flex items-center gap-1 text-xs text-muted-foreground" title="Due Date">
                 <Clock className="h-3 w-3" />
                 <span>{format(new Date(deliverable.dueDate), "MMM d")}</span>
               </div>
             )}
             {deliverable.owners && deliverable.owners.length > 0 && (
-              <div className="flex items-center gap-1 truncate" title={deliverable.owners.join(", ")}>
-                <User className="h-3 w-3 flex-shrink-0" />
-                <span className="truncate">{deliverable.owners.join(", ")}</span>
+              <div className="flex items-center -space-x-1 mt-0.5">
+                {deliverable.owners.slice(0, 3).map((owner) => {
+                  const info = getOwnerInfo(owner);
+                  return (
+                    <Tooltip key={owner}>
+                      <TooltipTrigger asChild>
+                        <Avatar className="h-5 w-5 border-2 border-background">
+                          {info?.photoUrl ? (
+                            <AvatarImage src={info.photoUrl} alt={owner} />
+                          ) : null}
+                          <AvatarFallback className="bg-primary/10 text-primary text-[8px]">
+                            {getInitials(owner)}
+                          </AvatarFallback>
+                        </Avatar>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="font-medium">{owner}</p>
+                        {info?.role && <p className="text-xs text-muted-foreground">{info.role}</p>}
+                      </TooltipContent>
+                    </Tooltip>
+                  );
+                })}
+                {deliverable.owners.length > 3 && (
+                  <Avatar className="h-5 w-5 border-2 border-background">
+                    <AvatarFallback className="bg-muted text-muted-foreground text-[8px]">
+                      +{deliverable.owners.length - 3}
+                    </AvatarFallback>
+                  </Avatar>
+                )}
               </div>
             )}
           </div>
