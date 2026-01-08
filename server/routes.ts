@@ -23,6 +23,7 @@ import {
   SolutionStatus,
 } from "@shared/schema";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
+import { objectStorageClient, ObjectStorageService } from "./replit_integrations/object_storage/objectStorage";
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
@@ -973,7 +974,7 @@ export async function registerRoutes(
     }
   });
 
-  // Team Member Photo Upload
+  // Team Member Photo Upload - uses Object Storage
   app.post("/api/upload/team-photo", authMiddleware, upload.single("photo"), async (req, res) => {
     try {
       if (!req.file) {
@@ -981,25 +982,55 @@ export async function registerRoutes(
       }
       const buf = req.file.buffer;
       let ext = ".jpg";
+      let contentType = "image/jpeg";
       if (buf[0] === 0xFF && buf[1] === 0xD8 && buf[2] === 0xFF) {
         ext = ".jpg";
+        contentType = "image/jpeg";
       } else if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47) {
         ext = ".png";
+        contentType = "image/png";
       } else if (buf[0] === 0x47 && buf[1] === 0x49 && buf[2] === 0x46) {
         ext = ".gif";
+        contentType = "image/gif";
       } else if (buf[0] === 0x52 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x46 && buf[8] === 0x57 && buf[9] === 0x45 && buf[10] === 0x42 && buf[11] === 0x50) {
         ext = ".webp";
+        contentType = "image/webp";
       } else {
         return res.status(400).json({ error: "Invalid image file" });
       }
-      const filename = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}${ext}`;
-      const uploadDir = path.join(process.cwd(), "client", "public", "uploads");
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
+      
+      const filename = `team-photos/${Date.now()}-${Math.random().toString(36).substring(2, 8)}${ext}`;
+      
+      const objectStorageService = new ObjectStorageService();
+      const publicPaths = objectStorageService.getPublicObjectSearchPaths();
+      
+      if (publicPaths.length === 0) {
+        console.error("[Upload] No public object storage paths configured");
+        return res.status(500).json({ error: "Object storage not configured" });
       }
-      const filePath = path.join(uploadDir, filename);
-      fs.writeFileSync(filePath, buf);
-      res.json({ url: `/uploads/${filename}` });
+      
+      const publicPath = publicPaths[0];
+      const fullPath = `${publicPath}/${filename}`;
+      
+      const pathParts = fullPath.split("/").filter(p => p);
+      if (pathParts.length < 2) {
+        return res.status(500).json({ error: "Invalid storage path" });
+      }
+      
+      const bucketName = pathParts[0];
+      const objectName = pathParts.slice(1).join("/");
+      
+      const bucket = objectStorageClient.bucket(bucketName);
+      const file = bucket.file(objectName);
+      
+      await file.save(buf, {
+        contentType,
+        metadata: {
+          cacheControl: "public, max-age=31536000",
+        },
+      });
+      
+      res.json({ url: `/public/${filename}` });
     } catch (error) {
       console.error("[Upload] Photo upload error:", error);
       res.status(500).json({ error: "Failed to upload photo" });
@@ -1054,6 +1085,24 @@ export async function registerRoutes(
   });
 
   registerObjectStorageRoutes(app);
+
+  // Serve public files from object storage
+  app.get("/public/*", async (req, res) => {
+    try {
+      const filePath = req.path.replace(/^\/public\//, "");
+      const objectStorageService = new ObjectStorageService();
+      const objectFile = await objectStorageService.searchPublicObject(filePath);
+      
+      if (!objectFile) {
+        return res.status(404).json({ error: "File not found" });
+      }
+      
+      await objectStorageService.downloadObject(objectFile, res, 86400);
+    } catch (error) {
+      console.error("[Storage] Error serving public file:", error);
+      res.status(500).json({ error: "Failed to serve file" });
+    }
+  });
 
   return httpServer;
 }
