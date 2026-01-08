@@ -12,7 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Check, UserPlus, Shield, Upload, FileSpreadsheet, AlertCircle, Users, Plus, Trash2, Pencil, X } from "lucide-react";
+import { Loader2, Check, UserPlus, Shield, Upload, FileSpreadsheet, AlertCircle, Users, Plus, Trash2, Pencil, X, Download } from "lucide-react";
 import type { User, TeamMember } from "@shared/schema";
 
 interface ImportPreview {
@@ -635,21 +635,44 @@ export function SettingsPage() {
                 <p className="text-sm text-muted-foreground mb-3">
                   Upload an Excel file with sheets: Streams, Solutions, Deliverables, Actions, Steps
                 </p>
-                <Button
-                  variant="outline"
-                  onClick={() => fileInputRef.current?.click()}
-                  data-testid="button-select-file"
-                >
-                  <Upload className="h-4 w-4 mr-2" />
-                  Select Excel File
-                </Button>
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    data-testid="button-select-file"
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Select Excel File
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      const link = document.createElement('a');
+                      link.href = `/api/import/template`;
+                      const headers = getSessionHeaders();
+                      fetch('/api/import/template', { headers })
+                        .then(res => res.blob())
+                        .then(blob => {
+                          const url = window.URL.createObjectURL(blob);
+                          link.href = url;
+                          link.download = 'StreamFlow_Import_Template.xlsx';
+                          link.click();
+                          window.URL.revokeObjectURL(url);
+                        });
+                    }}
+                    data-testid="button-download-template"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Download Template
+                  </Button>
+                </div>
               </div>
               <div className="text-xs text-muted-foreground space-y-1">
                 <p className="font-medium">Expected columns:</p>
-                <p>Streams: stream_key, stream_name, phases, owners, momentumStatus</p>
-                <p>Solutions: solution_key, solution_name, stream_key, owners</p>
-                <p>Deliverables: deliverable_key, deliverable_name, solution_key, milestone_date, owners</p>
-                <p>Actions: action_key, action_name, deliverable_key, solution_key, status, due_date, effort, owners</p>
+                <p>Streams: stream_key, stream_name, description, phases, owners, labels</p>
+                <p>Solutions: solution_key, solution_name, stream_key, description, owners, labels</p>
+                <p>Deliverables: deliverable_key, deliverable_name, solution_key, stream_key, description, milestone_date, owners</p>
+                <p>Actions: action_key, action_name, deliverable_key, solution_key, stream_key, description, status, due_date, effort, owners</p>
                 <p>Steps: step_key, step_name, action_key, is_done, due_date, owner</p>
               </div>
             </div>

@@ -751,6 +751,15 @@ export async function registerRoutes(
     }
   });
 
+  // Excel Import - Download Template
+  app.get("/api/import/template", authMiddleware, (req, res) => {
+    const templatePath = path.join(process.cwd(), "attached_assets", "Streams_Solutions_IMPORT_TEMPLATE_1767869308008.xlsx");
+    if (!fs.existsSync(templatePath)) {
+      return res.status(404).json({ error: "Template file not found" });
+    }
+    res.download(templatePath, "StreamFlow_Import_Template.xlsx");
+  });
+
   // Excel Import - Preview
   app.post("/api/import/preview", authMiddleware, upload.single("file"), async (req, res) => {
     try {
@@ -815,6 +824,7 @@ export async function registerRoutes(
       const streamsData = parseSheet<{
         stream_key: string;
         stream_name: string;
+        description?: string;
         phases?: string;
         owners?: string;
         labels?: string;
@@ -823,6 +833,7 @@ export async function registerRoutes(
       for (const row of streamsData) {
         const stream = await storage.createStream(userId, {
           name: row.stream_name,
+          description: row.description || undefined,
           phases: row.phases?.split(";").map(p => p.trim()).filter(Boolean) || [],
           owners: row.owners?.split(";").map(o => o.trim()).filter(Boolean) || [],
           labels: row.labels?.split(";").map(l => l.trim()).filter(Boolean) || [],
@@ -836,6 +847,7 @@ export async function registerRoutes(
         solution_key: string;
         solution_name: string;
         stream_key: string;
+        description?: string;
         owners?: string;
         labels?: string;
       }>("Solutions");
@@ -846,6 +858,7 @@ export async function registerRoutes(
         const solution = await storage.createSolution(userId, {
           streamId,
           name: row.solution_name,
+          description: row.description || undefined,
           status: SolutionStatus.IN_PROGRESS,
           phases: [],
           owners: row.owners?.split(";").map(o => o.trim()).filter(Boolean) || [],
@@ -861,6 +874,7 @@ export async function registerRoutes(
         deliverable_name: string;
         solution_key: string;
         stream_key: string;
+        description?: string;
         milestone_date?: number;
         phases?: string;
         owners?: string;
@@ -874,6 +888,7 @@ export async function registerRoutes(
           solutionId,
           streamId,
           name: row.deliverable_name,
+          description: row.description || undefined,
           borderColor: "cyan",
           isMilestoneLinked: true,
           dueDate: row.milestone_date ? excelDateToJS(row.milestone_date).toISOString() : undefined,
@@ -890,6 +905,7 @@ export async function registerRoutes(
         deliverable_key: string;
         solution_key: string;
         stream_key: string;
+        description?: string;
         status?: string;
         due_date?: number;
         effort?: number;
@@ -916,6 +932,7 @@ export async function registerRoutes(
           streamId,
           deliverableId: deliverableId || undefined,
           name: row.action_name,
+          description: row.description || undefined,
           status: statusMap[row.status || "Backlog"] || ActionStatus.BACKLOG,
           dueDate: row.due_date ? excelDateToJS(row.due_date).toISOString() : undefined,
           effort: row.effort || undefined,
