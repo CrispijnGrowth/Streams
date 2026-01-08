@@ -187,6 +187,7 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
     description: s.description,
     date: s.milestoneDate,
     progress: s.progress,
+    momentumStatus: s.momentumStatus,
     counts: {
       doing: s.doingCount,
       blocked: s.blockedCount,
