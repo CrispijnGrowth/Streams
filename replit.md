@@ -109,7 +109,16 @@ Progress is computed automatically by rolling up completion percentages from ste
 - **Auto-Edit for Empty States**: When a page has no data (no streams, solutions, or actions), mode automatically switches to Edit so users can clearly see where to add items
 - **Key File**: `client/src/lib/mode-context.tsx` - ModeProvider with setAutoEditForEmptyState API
 
+### Excel Import/Export System
+- **Export**: Download all data (streams, solutions, deliverables, actions, steps) as Excel file with descriptions
+- **Import**: Upload Excel file to create new data - uses template with hierarchical keys for relationships
+- **Update Mode**: Toggle in import UI to update existing records by matching names (within parent hierarchy)
+- **Template Download**: Provides example template with expected column headers for each sheet
+- **Matching Logic**: Streams by name, Solutions by name+stream, Deliverables by name+solution, Actions by name+solution+deliverable
+- **Stats Display**: Shows counts for both created and updated records after import
+
 ### Recent Changes
+- 2026-01-08: Added update mode for Excel import - can now update existing records by matching names
 - 2026-01-07: Added auto-edit mode for empty states - pages switch to Edit mode when no data exists
 - 2026-01-07: Improved multi-owner display - all owners now shown as smaller stacked avatars in top-right corner
 - 2026-01-07: Added Team Members system - manage team members with photos and roles, displayed as avatars on cards
