@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { ListChecks, Calendar, Tag, MessageSquare, Send, Loader2 } from "lucide-react";
+import { ListChecks, Calendar, Tag, MessageSquare, Send, Loader2, Pencil, Trash2, Check, X } from "lucide-react";
 import { ClassNavigator } from "@/components/class-navigator";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -42,6 +42,8 @@ export function ActionView({ streamId, solutionId, actionId }: ActionViewProps) 
   const [editFocusField, setEditFocusField] = useState<EditActionFocusField>(null);
   const [editingStep, setEditingStep] = useState<Step | null>(null);
   const [newComment, setNewComment] = useState("");
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editingCommentContent, setEditingCommentContent] = useState("");
   const quickAddRef = useRef<QuickAddFormRef>(null);
 
   const getOwnerInfo = (ownerName: string) => {
@@ -80,6 +82,38 @@ export function ActionView({ streamId, solutionId, actionId }: ActionViewProps) 
     },
     onError: () => {
       toast({ title: "Failed to add comment", variant: "destructive" });
+    },
+  });
+
+  const updateComment = useMutation({
+    mutationFn: async ({ id, content }: { id: string; content: string }) => {
+      return apiRequest("PATCH", `/api/comments/${id}`, { content });
+    },
+    onSuccess: () => {
+      setEditingCommentId(null);
+      setEditingCommentContent("");
+      queryClient.invalidateQueries({ queryKey: ["/api/comments", "action", actionId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/actions", actionId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
+      toast({ title: "Comment updated" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update comment", variant: "destructive" });
+    },
+  });
+
+  const deleteComment = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("DELETE", `/api/comments/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/comments", "action", actionId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/actions", actionId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
+      toast({ title: "Comment deleted" });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete comment", variant: "destructive" });
     },
   });
 
@@ -350,10 +384,82 @@ export function ActionView({ streamId, solutionId, actionId }: ActionViewProps) 
               <div className="space-y-3 pr-4">
                 {comments.map((comment) => (
                   <div key={comment.id} className="text-sm border-b pb-3 last:border-0">
-                    <p className="text-foreground">{comment.content}</p>
-                    <span className="text-xs text-muted-foreground">
-                      {format(new Date(comment.createdAt), "MMM d, yyyy 'at' h:mm a")}
-                    </span>
+                    {editingCommentId === comment.id ? (
+                      <div className="flex gap-2">
+                        <Input
+                          value={editingCommentContent}
+                          onChange={(e) => setEditingCommentContent(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && editingCommentContent.trim()) {
+                              e.preventDefault();
+                              updateComment.mutate({ id: comment.id, content: editingCommentContent.trim() });
+                            }
+                            if (e.key === "Escape") {
+                              setEditingCommentId(null);
+                              setEditingCommentContent("");
+                            }
+                          }}
+                          className="flex-1"
+                          autoFocus
+                          data-testid={`input-edit-comment-${comment.id}`}
+                        />
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          disabled={!editingCommentContent.trim() || updateComment.isPending}
+                          onClick={() => updateComment.mutate({ id: comment.id, content: editingCommentContent.trim() })}
+                          data-testid={`button-save-comment-${comment.id}`}
+                        >
+                          {updateComment.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => {
+                            setEditingCommentId(null);
+                            setEditingCommentContent("");
+                          }}
+                          data-testid={`button-cancel-edit-comment-${comment.id}`}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="group flex items-start justify-between gap-2">
+                        <div>
+                          <p className="text-foreground">{comment.content}</p>
+                          <span className="text-xs text-muted-foreground">
+                            {format(new Date(comment.createdAt), "MMM d, yyyy 'at' h:mm a")}
+                          </span>
+                        </div>
+                        {isEditMode && (
+                          <div className="flex gap-1">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7"
+                              onClick={() => {
+                                setEditingCommentId(comment.id);
+                                setEditingCommentContent(comment.content);
+                              }}
+                              data-testid={`button-edit-comment-${comment.id}`}
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7 text-destructive"
+                              onClick={() => deleteComment.mutate(comment.id)}
+                              disabled={deleteComment.isPending}
+                              data-testid={`button-delete-comment-${comment.id}`}
+                            >
+                              {deleteComment.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

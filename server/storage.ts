@@ -1169,7 +1169,8 @@ export class MemStorage implements IStorage {
 
   async updateComment(userId: string, id: string, content: string): Promise<Comment | undefined> {
     const comment = this.comments.get(id);
-    if (!comment || comment.userId !== userId) return undefined;
+    if (!comment) return undefined;
+    if (comment.userId !== userId) return undefined;
     const updated = { ...comment, content };
     this.comments.set(id, updated);
     return updated;
@@ -1177,7 +1178,8 @@ export class MemStorage implements IStorage {
 
   async deleteComment(userId: string, id: string): Promise<boolean> {
     const comment = this.comments.get(id);
-    if (!comment || comment.userId !== userId) return false;
+    if (!comment) return false;
+    if (comment.userId !== userId) return false;
     this.comments.delete(id);
     return true;
   }
