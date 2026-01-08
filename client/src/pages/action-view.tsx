@@ -17,7 +17,6 @@ import { ProgressBar } from "@/components/progress-bar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { EditActionDialog, EditActionFocusField } from "@/components/edit-action-dialog";
-import { EditStepDialog } from "@/components/edit-step-dialog";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
@@ -40,7 +39,6 @@ export function ActionView({ streamId, solutionId, actionId }: ActionViewProps) 
   const teamMembers = useTeamMembers();
   const [editingAction, setEditingAction] = useState(false);
   const [editFocusField, setEditFocusField] = useState<EditActionFocusField>(null);
-  const [editingStep, setEditingStep] = useState<Step | null>(null);
   const [newComment, setNewComment] = useState("");
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editingCommentContent, setEditingCommentContent] = useState("");
@@ -514,7 +512,6 @@ export function ActionView({ streamId, solutionId, actionId }: ActionViewProps) 
           <StepList
             steps={steps.filter((s) => !s.isDeleted)}
             onToggle={(stepId, isDone) => toggleStep.mutate({ stepId, isDone })}
-            onEdit={(step) => setEditingStep(step)}
           />
         )}
 
@@ -537,11 +534,6 @@ export function ActionView({ streamId, solutionId, actionId }: ActionViewProps) 
         initialFocus={editFocusField}
       />
 
-      <EditStepDialog
-        step={editingStep}
-        open={editingStep !== null}
-        onOpenChange={(open) => !open && setEditingStep(null)}
-      />
     </div>
   );
 }
