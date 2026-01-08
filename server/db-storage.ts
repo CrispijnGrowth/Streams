@@ -77,6 +77,8 @@ function mapSolutionFromDb(row: any): Solution {
     owners: row.owners || [],
     labels: row.labels || [],
     status: row.status as any,
+    momentumStatus: (row.momentumStatus as any) || MomentumStatus.ACTIVE,
+    lastMovementAt: row.lastMovementAt || undefined,
     ordinal: row.ordinal,
     isDeleted: row.isDeleted,
   };
@@ -557,6 +559,8 @@ export class DatabaseStorage implements IStorage {
       owners: data.owners || [],
       labels: data.labels || [],
       status: (data.status as any) || SolutionStatus.IN_PROGRESS,
+      momentumStatus: MomentumStatus.ACTIVE,
+      lastMovementAt: new Date().toISOString(),
       ordinal,
       isDeleted: false,
     };
@@ -567,7 +571,7 @@ export class DatabaseStorage implements IStorage {
     return mapSolutionFromDb(newSolution);
   }
 
-  async updateSolution(userId: string, id: string, data: Partial<InsertSolution & { isDeleted?: boolean }>): Promise<Solution | undefined> {
+  async updateSolution(userId: string, id: string, data: Partial<InsertSolution & { isDeleted?: boolean; lastMovementAt?: string; momentumStatus?: string }>): Promise<Solution | undefined> {
     const [existing] = await db.select().from(solutions).where(
       and(eq(solutions.id, id), eq(solutions.userId, userId))
     );
@@ -581,6 +585,8 @@ export class DatabaseStorage implements IStorage {
     if (data.owners !== undefined) updateData.owners = data.owners;
     if (data.labels !== undefined) updateData.labels = data.labels;
     if (data.status !== undefined) updateData.status = data.status;
+    if (data.momentumStatus !== undefined) updateData.momentumStatus = data.momentumStatus;
+    if (data.lastMovementAt !== undefined) updateData.lastMovementAt = data.lastMovementAt;
     if (data.isDeleted !== undefined) updateData.isDeleted = data.isDeleted;
     
     await db.update(solutions).set(updateData).where(eq(solutions.id, id));
@@ -692,6 +698,7 @@ export class DatabaseStorage implements IStorage {
     
     await db.insert(deliverables).values(newDeliverable);
     await db.update(streams).set({ lastMovementAt: new Date().toISOString(), momentumStatus: MomentumStatus.ACTIVE }).where(eq(streams.id, data.streamId));
+    await db.update(solutions).set({ lastMovementAt: new Date().toISOString(), momentumStatus: MomentumStatus.ACTIVE }).where(eq(solutions.id, data.solutionId));
     return mapDeliverableFromDb(newDeliverable);
   }
 
@@ -819,6 +826,7 @@ export class DatabaseStorage implements IStorage {
     await db.insert(actions).values(newAction);
     
     await db.update(streams).set({ lastMovementAt: new Date().toISOString(), momentumStatus: MomentumStatus.ACTIVE }).where(eq(streams.id, data.streamId));
+    await db.update(solutions).set({ lastMovementAt: new Date().toISOString(), momentumStatus: MomentumStatus.ACTIVE }).where(eq(solutions.id, data.solutionId));
     
     return mapActionFromDb(newAction);
   }
@@ -844,6 +852,7 @@ export class DatabaseStorage implements IStorage {
     await db.update(actions).set(updateData).where(eq(actions.id, id));
     
     await db.update(streams).set({ lastMovementAt: new Date().toISOString(), momentumStatus: MomentumStatus.ACTIVE }).where(eq(streams.id, existing.streamId));
+    await db.update(solutions).set({ lastMovementAt: new Date().toISOString(), momentumStatus: MomentumStatus.ACTIVE }).where(eq(solutions.id, existing.solutionId));
     
     const [updated] = await db.select().from(actions).where(eq(actions.id, id));
     return updated ? mapActionFromDb(updated) : undefined;
@@ -919,6 +928,7 @@ export class DatabaseStorage implements IStorage {
     
     await db.insert(steps).values(newStep);
     await db.update(streams).set({ lastMovementAt: new Date().toISOString(), momentumStatus: MomentumStatus.ACTIVE }).where(eq(streams.id, parentAction.streamId));
+    await db.update(solutions).set({ lastMovementAt: new Date().toISOString(), momentumStatus: MomentumStatus.ACTIVE }).where(eq(solutions.id, parentAction.solutionId));
     return mapStepFromDb(newStep);
   }
 
@@ -942,6 +952,7 @@ export class DatabaseStorage implements IStorage {
       const [parentAction] = await db.select().from(actions).where(eq(actions.id, existing.actionId));
       if (parentAction) {
         await db.update(streams).set({ lastMovementAt: new Date().toISOString(), momentumStatus: MomentumStatus.ACTIVE }).where(eq(streams.id, parentAction.streamId));
+        await db.update(solutions).set({ lastMovementAt: new Date().toISOString(), momentumStatus: MomentumStatus.ACTIVE }).where(eq(solutions.id, parentAction.solutionId));
       }
     }
     
