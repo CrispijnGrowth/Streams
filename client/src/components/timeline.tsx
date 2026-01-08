@@ -39,6 +39,7 @@ interface TimelineItem {
   parentName?: string;
   borderColor?: string;
   drivingSolutionName?: string;
+  isOnHold?: boolean;
 }
 
 interface TimelineProps {
@@ -112,6 +113,7 @@ function DraggableTimelineBall({ item, position, onClick, isDraggable = true, en
         itemType={item.type}
         parentName={item.parentName}
         drivingSolutionName={item.drivingSolutionName}
+        isOnHold={item.isOnHold}
       />
     </div>
   );
@@ -155,6 +157,7 @@ function DraggableUndatedBall({ item, isDraggable = true, onClick, enterAnimatio
         progress={item.progress}
         counts={item.counts}
         isNoDate
+        isOnHold={item.isOnHold}
         size="sm"
         onClick={isDragging ? undefined : onClick}
         enterAnimation={isDragging ? undefined : enterAnimation}
@@ -562,6 +565,7 @@ export function Timeline({
               itemType={activeItem.type}
               parentName={activeItem.parentName}
               drivingSolutionName={activeItem.drivingSolutionName}
+              isOnHold={activeItem.isOnHold}
             />
           </div>
         )}

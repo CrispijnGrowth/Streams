@@ -193,6 +193,7 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
     },
     type: "solution" as const,
     parentName: stream?.name,
+    isOnHold: s.status === SolutionStatus.ON_HOLD,
   })) || [];
 
   const handleSolutionClick = (solutionId: string) => {

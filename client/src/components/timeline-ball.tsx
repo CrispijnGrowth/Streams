@@ -18,6 +18,7 @@ interface TimelineBallProps {
   momentumStatus?: MomentumStatusType;
   progress?: number;
   isNoDate?: boolean;
+  isOnHold?: boolean;
   onClick?: () => void;
   onDragEnd?: (newDate: string) => void;
   size?: "sm" | "default" | "lg";
@@ -100,6 +101,7 @@ export function TimelineBall({
   momentumStatus,
   progress,
   isNoDate = false,
+  isOnHold = false,
   onClick,
   size = "default",
   counts,
@@ -146,6 +148,9 @@ export function TimelineBall({
   const textSizeClasses = shape === "diamond" ? diamondTextSizeClasses : circleTextSizeClasses;
 
   const getBallColor = () => {
+    if (isOnHold) {
+      return "bg-muted-foreground/50";
+    }
     if (borderColor && fillColorClasses[borderColor]) {
       return fillColorClasses[borderColor];
     }

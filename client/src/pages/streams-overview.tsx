@@ -206,6 +206,7 @@ export function StreamsOverview({ showDescriptions }: StreamsOverviewProps) {
       },
       type: "stream" as const,
       drivingSolutionName: drivingSolution?.name,
+      isOnHold: s.status === SolutionStatus.ON_HOLD,
     };
   }) || [];
 
