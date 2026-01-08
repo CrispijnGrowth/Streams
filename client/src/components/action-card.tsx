@@ -149,20 +149,6 @@ export function ActionCard({
           )}
         </div>
       )}
-
-      {action.lastComment && (
-        <div className="flex items-start gap-1.5 pt-1 border-t border-border/50">
-          <MessageSquare className="h-3 w-3 text-muted-foreground shrink-0 mt-0.5" />
-          <div className="flex-1 min-w-0">
-            <p className="text-xs text-muted-foreground line-clamp-2">
-              {action.lastComment.content}
-            </p>
-            <span className="text-[10px] text-muted-foreground/60">
-              {format(new Date(action.lastComment.createdAt), "MMM d, h:mm a")}
-            </span>
-          </div>
-        </div>
-      )}
     </Card>
   );
 }
