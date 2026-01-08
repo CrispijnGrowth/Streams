@@ -137,11 +137,9 @@ function DroppableCell({
         data-testid={`kanban-cell-${status.toLowerCase().replace(/\s/g, "-")}`}
       >
         {items.length === 0 ? (
-          <div className={`h-16 border border-dashed rounded-lg flex items-center justify-center transition-colors ${
+          <div className={`h-16 border border-dashed rounded-lg transition-colors ${
             isOver ? "border-primary/50 bg-primary/5" : "border-border/30"
-          }`}>
-            <span className="text-xs text-muted-foreground/50">Drop here</span>
-          </div>
+          }`} />
         ) : (
           items.map((action) => (
             <SortableActionCard
