@@ -398,17 +398,43 @@ export async function registerRoutes(
 
   app.patch("/api/solutions/:id", authMiddleware, async (req, res) => {
     try {
-      const allowedFields = ["name", "description", "milestoneDate", "phases", "owners", "labels", "status", "isDeleted"];
+      const allowedFields = ["name", "description", "milestoneDate", "phases", "owners", "labels", "status", "momentumStatus", "isDeleted"];
       const validStatuses = ["In Progress", "On Hold"];
+      const validMomentumStatuses = ["Active", "Slowing", "Stalled"];
       const updateData: Record<string, any> = {};
       for (const field of allowedFields) {
         if (req.body[field] !== undefined) {
           if (field === "status" && !validStatuses.includes(req.body[field])) {
             return res.status(400).json({ error: "Invalid status value" });
           }
+          if (field === "momentumStatus" && !validMomentumStatuses.includes(req.body[field])) {
+            return res.status(400).json({ error: "Invalid momentum status value" });
+          }
           updateData[field] = req.body[field];
         }
       }
+      
+      // If momentumStatus is being set, calculate the appropriate lastMovementAt
+      if (req.body.momentumStatus) {
+        const now = new Date();
+        switch (req.body.momentumStatus) {
+          case "Active":
+            // Reset to now (0 days ago)
+            updateData.lastMovementAt = now.toISOString();
+            break;
+          case "Slowing":
+            // Set to 7 days ago (will transition to Stalled after 7 more days)
+            now.setDate(now.getDate() - 7);
+            updateData.lastMovementAt = now.toISOString();
+            break;
+          case "Stalled":
+            // Set to 14 days ago
+            now.setDate(now.getDate() - 14);
+            updateData.lastMovementAt = now.toISOString();
+            break;
+        }
+      }
+      
       const solution = await storage.updateSolution(req.userId!, req.params.id, updateData);
       if (!solution) {
         return res.status(404).json({ error: "Solution not found" });

@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { CheckSquare, Tag, Calendar } from "lucide-react";
+import { CheckSquare, Tag, Calendar, Activity } from "lucide-react";
 import { ClassNavigator } from "@/components/class-navigator";
 import { Timeline } from "@/components/timeline";
 import { KanbanBoard } from "@/components/kanban-board";
@@ -19,7 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { useMode } from "@/lib/mode-context";
 import { useTeamMembers } from "@/hooks/use-suggestions";
-import type { SolutionWithProgress, ActionWithLastComment, Action, Deliverable, ActionStatusType, DeliverableBorderColorType } from "@shared/schema";
+import type { SolutionWithProgress, ActionWithLastComment, Action, Deliverable, ActionStatusType, DeliverableBorderColorType, MomentumStatusType } from "@shared/schema";
 import { SolutionStatus, ActionStatus } from "@shared/schema";
 
 interface SolutionViewProps {
@@ -137,6 +137,38 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
       queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
     },
   });
+
+  const updateMomentum = useMutation({
+    mutationFn: async (momentumStatus: MomentumStatusType) => {
+      return apiRequest("PATCH", `/api/solutions/${solutionId}`, { momentumStatus });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/solutions", solutionId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
+    },
+    onError: () => {
+      toast({ title: "Failed to update momentum status", variant: "destructive" });
+    },
+  });
+
+  const cycleMomentum = () => {
+    if (!solution?.momentumStatus) return;
+    const nextStatus: Record<MomentumStatusType, MomentumStatusType> = {
+      Active: "Slowing",
+      Slowing: "Stalled",
+      Stalled: "Active",
+    };
+    updateMomentum.mutate(nextStatus[solution.momentumStatus as MomentumStatusType]);
+  };
+
+  const getMomentumColor = (status: string) => {
+    switch (status) {
+      case "Active": return "bg-green-500/10 text-green-700 dark:text-green-400";
+      case "Slowing": return "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400";
+      case "Stalled": return "bg-red-500/10 text-red-700 dark:text-red-400";
+      default: return "bg-muted text-muted-foreground";
+    }
+  };
 
   const updateActionOrder = useMutation({
     mutationFn: async ({ actionId, kanbanOrder }: { actionId: string; kanbanOrder: number }) => {
@@ -368,6 +400,22 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
             <div className="flex items-center justify-between gap-4 flex-wrap">
               <div className="flex items-center gap-3 flex-wrap">
                 <h1 className="text-lg font-semibold" data-testid="text-solution-name">{solution.name}</h1>
+                {solution.momentumStatus && (
+                  <Badge 
+                    variant="secondary" 
+                    className={`${getMomentumColor(solution.momentumStatus)} cursor-pointer`}
+                    onClick={(e) => { e.stopPropagation(); cycleMomentum(); }}
+                    data-testid="badge-solution-momentum-status"
+                  >
+                    <Activity className="w-3 h-3 mr-1" />
+                    {solution.momentumStatus}
+                  </Badge>
+                )}
+                {solution.lastMovementAt && (
+                  <span className="text-sm text-muted-foreground">
+                    Last change: {new Date(solution.lastMovementAt).toLocaleDateString('en-GB')}
+                  </span>
+                )}
               </div>
               
               <div className="flex items-center gap-4 flex-wrap">
