@@ -311,21 +311,19 @@ export async function registerRoutes(
       
       // If momentumStatus is being set, calculate the appropriate lastMovementAt
       if (req.body.momentumStatus) {
-        const now = new Date();
+        const now = Date.now();
         switch (req.body.momentumStatus) {
           case "Active":
             // Reset to now (0 days ago)
-            updateData.lastMovementAt = now.toISOString();
+            updateData.lastMovementAt = new Date(now).toISOString();
             break;
           case "Slowing":
             // Set to 7 days ago (will transition to Stalled after 7 more days)
-            now.setDate(now.getDate() - 7);
-            updateData.lastMovementAt = now.toISOString();
+            updateData.lastMovementAt = new Date(now - 7 * 24 * 60 * 60 * 1000).toISOString();
             break;
           case "Stalled":
             // Set to 14 days ago
-            now.setDate(now.getDate() - 14);
-            updateData.lastMovementAt = now.toISOString();
+            updateData.lastMovementAt = new Date(now - 14 * 24 * 60 * 60 * 1000).toISOString();
             break;
         }
       }
@@ -416,21 +414,19 @@ export async function registerRoutes(
       
       // If momentumStatus is being set, calculate the appropriate lastMovementAt
       if (req.body.momentumStatus) {
-        const now = new Date();
+        const now = Date.now();
         switch (req.body.momentumStatus) {
           case "Active":
             // Reset to now (0 days ago)
-            updateData.lastMovementAt = now.toISOString();
+            updateData.lastMovementAt = new Date(now).toISOString();
             break;
           case "Slowing":
             // Set to 7 days ago (will transition to Stalled after 7 more days)
-            now.setDate(now.getDate() - 7);
-            updateData.lastMovementAt = now.toISOString();
+            updateData.lastMovementAt = new Date(now - 7 * 24 * 60 * 60 * 1000).toISOString();
             break;
           case "Stalled":
             // Set to 14 days ago
-            now.setDate(now.getDate() - 14);
-            updateData.lastMovementAt = now.toISOString();
+            updateData.lastMovementAt = new Date(now - 14 * 24 * 60 * 60 * 1000).toISOString();
             break;
         }
       }
