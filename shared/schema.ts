@@ -318,6 +318,7 @@ export const insertStreamSchema = z.object({
   phases: z.array(z.string()).default([]),
   owners: z.array(z.string()).default([]),
   labels: z.array(z.string()).default([]),
+  status: z.nativeEnum(SolutionStatus).optional(),
 });
 
 export const insertSolutionSchema = z.object({

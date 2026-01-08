@@ -269,6 +269,7 @@ export class MemStorage implements IStorage {
       phases: data.phases || [],
       owners: data.owners || [],
       labels: data.labels || [],
+      status: data.status ?? SolutionStatus.IN_PROGRESS,
       momentumStatus: MomentumStatus.ACTIVE,
       ordinal,
       isDeleted: false,
@@ -280,7 +281,15 @@ export class MemStorage implements IStorage {
   async updateStream(userId: string, id: string, data: Partial<InsertStream>): Promise<Stream | undefined> {
     const stream = this.streams.get(id);
     if (!stream || stream.userId !== userId || stream.isDeleted) return undefined;
-    const updated = { ...stream, ...data };
+    const updated: Stream = {
+      ...stream,
+      name: data.name ?? stream.name,
+      description: data.description ?? stream.description,
+      phases: data.phases ?? stream.phases,
+      owners: data.owners ?? stream.owners,
+      labels: data.labels ?? stream.labels,
+      status: data.status ?? stream.status,
+    };
     this.streams.set(id, updated);
     return updated;
   }

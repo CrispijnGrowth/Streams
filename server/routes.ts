@@ -299,7 +299,7 @@ export async function registerRoutes(
 
   app.patch("/api/streams/:id", authMiddleware, async (req, res) => {
     try {
-      const allowedFields = ["name", "description", "phases", "owners", "labels", "momentumStatus"];
+      const allowedFields = ["name", "description", "phases", "owners", "labels", "status", "momentumStatus"];
       const updateData: Record<string, any> = {};
       for (const field of allowedFields) {
         if (req.body[field] !== undefined) {
