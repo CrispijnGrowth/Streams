@@ -29,6 +29,10 @@ interface ImportStats {
   deliverables: number;
   actions: number;
   steps: number;
+  streamsUpdated?: number;
+  solutionsUpdated?: number;
+  deliverablesUpdated?: number;
+  actionsUpdated?: number;
 }
 
 export function SettingsPage() {
@@ -38,6 +42,7 @@ export function SettingsPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [importPreview, setImportPreview] = useState<ImportPreview | null>(null);
   const [importStats, setImportStats] = useState<ImportStats | null>(null);
+  const [updateMode, setUpdateMode] = useState(false);
   
   const [isAddingMember, setIsAddingMember] = useState(false);
   const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
@@ -121,9 +126,10 @@ export function SettingsPage() {
   });
 
   const importMutation = useMutation({
-    mutationFn: async (file: File) => {
+    mutationFn: async ({ file, updateMode }: { file: File; updateMode: boolean }) => {
       const formData = new FormData();
       formData.append("file", file);
+      formData.append("updateMode", String(updateMode));
       const res = await fetch("/api/import/execute", {
         method: "POST",
         headers: getSessionHeaders(),
@@ -136,8 +142,10 @@ export function SettingsPage() {
       setImportStats(data.stats);
       setImportPreview(null);
       setSelectedFile(null);
+      setUpdateMode(false);
       queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
-      toast({ title: "Import completed successfully" });
+      const mode = data.updateMode ? "update" : "import";
+      toast({ title: `Data ${mode} completed successfully` });
     },
     onError: () => {
       toast({ title: "Failed to import data", variant: "destructive" });
@@ -199,7 +207,7 @@ export function SettingsPage() {
 
   const handleImport = () => {
     if (selectedFile) {
-      importMutation.mutate(selectedFile);
+      importMutation.mutate({ file: selectedFile, updateMode });
     }
   };
 
@@ -706,10 +714,29 @@ export function SettingsPage() {
                 ))}
               </div>
 
+              <div className="flex items-center gap-4 p-3 bg-muted rounded-md">
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="update-mode"
+                    checked={updateMode}
+                    onCheckedChange={setUpdateMode}
+                    data-testid="switch-update-mode"
+                  />
+                  <Label htmlFor="update-mode" className="font-medium">Update Mode</Label>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {updateMode 
+                    ? "Match by name and update existing records, or create new if not found" 
+                    : "Create new records only"}
+                </p>
+              </div>
+
               <div className="flex items-center gap-2 p-3 bg-yellow-500/10 rounded-md">
                 <AlertCircle className="h-4 w-4 text-yellow-600 shrink-0" />
                 <p className="text-sm text-yellow-700 dark:text-yellow-400">
-                  This will create new data. Existing data will not be affected.
+                  {updateMode 
+                    ? "Existing items with matching names will be updated. New items will be created."
+                    : "This will create new data. Existing data will not be affected."}
                 </p>
               </div>
 
@@ -722,12 +749,12 @@ export function SettingsPage() {
                   {importMutation.isPending ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Importing...
+                      {updateMode ? "Updating..." : "Importing..."}
                     </>
                   ) : (
                     <>
                       <Upload className="h-4 w-4 mr-2" />
-                      Import Data
+                      {updateMode ? "Update Data" : "Import Data"}
                     </>
                   )}
                 </Button>
@@ -744,28 +771,61 @@ export function SettingsPage() {
                 <Check className="h-5 w-5 text-green-600" />
                 <span className="font-medium text-green-700 dark:text-green-400">Import completed successfully</span>
               </div>
-              <div className="grid grid-cols-5 gap-2">
-                <div className="text-center p-2 bg-muted rounded-md">
-                  <div className="text-lg font-semibold">{importStats.streams}</div>
-                  <div className="text-xs text-muted-foreground">Streams</div>
+              
+              {/* Created stats */}
+              {(importStats.streams > 0 || importStats.solutions > 0 || importStats.deliverables > 0 || importStats.actions > 0 || importStats.steps > 0) && (
+                <div className="space-y-1">
+                  <div className="text-sm font-medium text-muted-foreground">Created</div>
+                  <div className="grid grid-cols-5 gap-2">
+                    <div className="text-center p-2 bg-muted rounded-md">
+                      <div className="text-lg font-semibold">{importStats.streams}</div>
+                      <div className="text-xs text-muted-foreground">Streams</div>
+                    </div>
+                    <div className="text-center p-2 bg-muted rounded-md">
+                      <div className="text-lg font-semibold">{importStats.solutions}</div>
+                      <div className="text-xs text-muted-foreground">Solutions</div>
+                    </div>
+                    <div className="text-center p-2 bg-muted rounded-md">
+                      <div className="text-lg font-semibold">{importStats.deliverables}</div>
+                      <div className="text-xs text-muted-foreground">Deliverables</div>
+                    </div>
+                    <div className="text-center p-2 bg-muted rounded-md">
+                      <div className="text-lg font-semibold">{importStats.actions}</div>
+                      <div className="text-xs text-muted-foreground">Actions</div>
+                    </div>
+                    <div className="text-center p-2 bg-muted rounded-md">
+                      <div className="text-lg font-semibold">{importStats.steps}</div>
+                      <div className="text-xs text-muted-foreground">Steps</div>
+                    </div>
+                  </div>
                 </div>
-                <div className="text-center p-2 bg-muted rounded-md">
-                  <div className="text-lg font-semibold">{importStats.solutions}</div>
-                  <div className="text-xs text-muted-foreground">Solutions</div>
+              )}
+              
+              {/* Updated stats */}
+              {(importStats.streamsUpdated || importStats.solutionsUpdated || importStats.deliverablesUpdated || importStats.actionsUpdated) && (
+                <div className="space-y-1">
+                  <div className="text-sm font-medium text-muted-foreground">Updated</div>
+                  <div className="grid grid-cols-4 gap-2">
+                    <div className="text-center p-2 bg-blue-500/10 rounded-md">
+                      <div className="text-lg font-semibold text-blue-600 dark:text-blue-400">{importStats.streamsUpdated || 0}</div>
+                      <div className="text-xs text-muted-foreground">Streams</div>
+                    </div>
+                    <div className="text-center p-2 bg-blue-500/10 rounded-md">
+                      <div className="text-lg font-semibold text-blue-600 dark:text-blue-400">{importStats.solutionsUpdated || 0}</div>
+                      <div className="text-xs text-muted-foreground">Solutions</div>
+                    </div>
+                    <div className="text-center p-2 bg-blue-500/10 rounded-md">
+                      <div className="text-lg font-semibold text-blue-600 dark:text-blue-400">{importStats.deliverablesUpdated || 0}</div>
+                      <div className="text-xs text-muted-foreground">Deliverables</div>
+                    </div>
+                    <div className="text-center p-2 bg-blue-500/10 rounded-md">
+                      <div className="text-lg font-semibold text-blue-600 dark:text-blue-400">{importStats.actionsUpdated || 0}</div>
+                      <div className="text-xs text-muted-foreground">Actions</div>
+                    </div>
+                  </div>
                 </div>
-                <div className="text-center p-2 bg-muted rounded-md">
-                  <div className="text-lg font-semibold">{importStats.deliverables}</div>
-                  <div className="text-xs text-muted-foreground">Deliverables</div>
-                </div>
-                <div className="text-center p-2 bg-muted rounded-md">
-                  <div className="text-lg font-semibold">{importStats.actions}</div>
-                  <div className="text-xs text-muted-foreground">Actions</div>
-                </div>
-                <div className="text-center p-2 bg-muted rounded-md">
-                  <div className="text-lg font-semibold">{importStats.steps}</div>
-                  <div className="text-xs text-muted-foreground">Steps</div>
-                </div>
-              </div>
+              )}
+              
               <Button variant="outline" onClick={clearImport} data-testid="button-import-another">
                 Import Another File
               </Button>

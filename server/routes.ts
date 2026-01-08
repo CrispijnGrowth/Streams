@@ -829,6 +829,7 @@ export async function registerRoutes(
         return res.status(400).json({ error: "No file uploaded" });
       }
       const userId = req.userId!;
+      const updateMode = req.body.updateMode === "true" || req.body.updateMode === true;
       const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
       
       const excelDateToJS = (serial: number): Date => {
@@ -847,7 +848,30 @@ export async function registerRoutes(
       const deliverableKeyToId = new Map<string, string>();
       const actionKeyToId = new Map<string, string>();
 
-      const stats = { streams: 0, solutions: 0, deliverables: 0, actions: 0, steps: 0 };
+      const stats = { 
+        streams: 0, solutions: 0, deliverables: 0, actions: 0, steps: 0,
+        streamsUpdated: 0, solutionsUpdated: 0, deliverablesUpdated: 0, actionsUpdated: 0
+      };
+
+      // In update mode, load existing data to match by name
+      let existingStreams: { id: string; name: string }[] = [];
+      let existingSolutions: { id: string; name: string; streamId: string }[] = [];
+      let existingDeliverables: { id: string; name: string; solutionId: string }[] = [];
+      let existingActions: { id: string; name: string; solutionId: string; deliverableId?: string | null }[] = [];
+      
+      if (updateMode) {
+        const streams = await storage.getStreams(userId);
+        existingStreams = streams.filter(s => !s.isDeleted).map(s => ({ id: s.id, name: s.name }));
+        
+        const solutions = await storage.getSolutions(userId);
+        existingSolutions = solutions.filter(s => !s.isDeleted).map(s => ({ id: s.id, name: s.name, streamId: s.streamId }));
+        
+        const deliverables = await storage.getDeliverables(userId);
+        existingDeliverables = deliverables.filter(d => !d.isDeleted).map(d => ({ id: d.id, name: d.name, solutionId: d.solutionId }));
+        
+        const actions = await storage.getActions(userId);
+        existingActions = actions.filter(a => !a.isDeleted).map(a => ({ id: a.id, name: a.name, solutionId: a.solutionId, deliverableId: a.deliverableId }));
+      }
 
       // Import Streams
       const streamsData = parseSheet<{
@@ -860,15 +884,26 @@ export async function registerRoutes(
       }>("Streams");
 
       for (const row of streamsData) {
-        const stream = await storage.createStream(userId, {
+        const streamData = {
           name: row.stream_name,
           description: row.description || undefined,
           phases: row.phases?.split(";").map(p => p.trim()).filter(Boolean) || [],
           owners: row.owners?.split(";").map(o => o.trim()).filter(Boolean) || [],
           labels: row.labels?.split(";").map(l => l.trim()).filter(Boolean) || [],
-        });
-        streamKeyToId.set(row.stream_key, stream.id);
-        stats.streams++;
+        };
+        
+        // In update mode, check if stream exists by name
+        const existingStream = updateMode ? existingStreams.find(s => s.name === row.stream_name) : null;
+        
+        if (existingStream) {
+          await storage.updateStream(userId, existingStream.id, streamData);
+          streamKeyToId.set(row.stream_key, existingStream.id);
+          stats.streamsUpdated++;
+        } else {
+          const stream = await storage.createStream(userId, streamData);
+          streamKeyToId.set(row.stream_key, stream.id);
+          stats.streams++;
+        }
       }
 
       // Import Solutions
@@ -884,17 +919,29 @@ export async function registerRoutes(
       for (const row of solutionsData) {
         const streamId = streamKeyToId.get(row.stream_key);
         if (!streamId) continue;
-        const solution = await storage.createSolution(userId, {
+        
+        const solutionData = {
           streamId,
           name: row.solution_name,
           description: row.description || undefined,
           status: SolutionStatus.IN_PROGRESS,
-          phases: [],
+          phases: [] as string[],
           owners: row.owners?.split(";").map(o => o.trim()).filter(Boolean) || [],
           labels: row.labels?.split(";").map(l => l.trim()).filter(Boolean) || [],
-        });
-        solutionKeyToId.set(row.solution_key, solution.id);
-        stats.solutions++;
+        };
+        
+        // In update mode, check if solution exists by name within the same stream
+        const existingSolution = updateMode ? existingSolutions.find(s => s.name === row.solution_name && s.streamId === streamId) : null;
+        
+        if (existingSolution) {
+          await storage.updateSolution(userId, existingSolution.id, solutionData);
+          solutionKeyToId.set(row.solution_key, existingSolution.id);
+          stats.solutionsUpdated++;
+        } else {
+          const solution = await storage.createSolution(userId, solutionData);
+          solutionKeyToId.set(row.solution_key, solution.id);
+          stats.solutions++;
+        }
       }
 
       // Import Deliverables
@@ -913,7 +960,8 @@ export async function registerRoutes(
         const solutionId = solutionKeyToId.get(row.solution_key);
         const streamId = streamKeyToId.get(row.stream_key);
         if (!solutionId || !streamId) continue;
-        const deliverable = await storage.createDeliverable(userId, {
+        
+        const deliverableData = {
           solutionId,
           streamId,
           name: row.deliverable_name,
@@ -922,9 +970,20 @@ export async function registerRoutes(
           isMilestoneLinked: true,
           dueDate: row.milestone_date ? excelDateToJS(row.milestone_date).toISOString() : undefined,
           owners: row.owners?.split(";").map(o => o.trim()).filter(Boolean) || [],
-        });
-        deliverableKeyToId.set(row.deliverable_key, deliverable.id);
-        stats.deliverables++;
+        };
+        
+        // In update mode, check if deliverable exists by name within the same solution
+        const existingDeliverable = updateMode ? existingDeliverables.find(d => d.name === row.deliverable_name && d.solutionId === solutionId) : null;
+        
+        if (existingDeliverable) {
+          await storage.updateDeliverable(userId, existingDeliverable.id, deliverableData);
+          deliverableKeyToId.set(row.deliverable_key, existingDeliverable.id);
+          stats.deliverablesUpdated++;
+        } else {
+          const deliverable = await storage.createDeliverable(userId, deliverableData);
+          deliverableKeyToId.set(row.deliverable_key, deliverable.id);
+          stats.deliverables++;
+        }
       }
 
       // Import Actions
@@ -956,7 +1015,8 @@ export async function registerRoutes(
         const solutionId = solutionKeyToId.get(row.solution_key);
         const streamId = streamKeyToId.get(row.stream_key);
         if (!solutionId || !streamId) continue;
-        const action = await storage.createAction(userId, {
+        
+        const actionData = {
           solutionId,
           streamId,
           deliverableId: deliverableId || undefined,
@@ -966,13 +1026,28 @@ export async function registerRoutes(
           dueDate: row.due_date ? excelDateToJS(row.due_date).toISOString() : undefined,
           effort: row.effort || undefined,
           owners: row.owners?.split(";").map(o => o.trim()).filter(Boolean) || [],
-          labels: [],
-        });
-        actionKeyToId.set(row.action_key, action.id);
-        stats.actions++;
+          labels: [] as string[],
+        };
+        
+        // In update mode, check if action exists by name within the same solution and deliverable
+        const existingAction = updateMode ? existingActions.find(a => 
+          a.name === row.action_name && 
+          a.solutionId === solutionId && 
+          (deliverableId ? a.deliverableId === deliverableId : !a.deliverableId)
+        ) : null;
+        
+        if (existingAction) {
+          await storage.updateAction(userId, existingAction.id, actionData);
+          actionKeyToId.set(row.action_key, existingAction.id);
+          stats.actionsUpdated++;
+        } else {
+          const action = await storage.createAction(userId, actionData);
+          actionKeyToId.set(row.action_key, action.id);
+          stats.actions++;
+        }
       }
 
-      // Import Steps
+      // Import Steps (steps don't have update mode - always create new)
       const stepsData = parseSheet<{
         step_key: string;
         step_name: string;
@@ -995,7 +1070,7 @@ export async function registerRoutes(
         stats.steps++;
       }
 
-      res.json({ success: true, stats });
+      res.json({ success: true, stats, updateMode });
     } catch (error) {
       console.error("[Import] Execute error:", error);
       res.status(500).json({ error: "Failed to import data" });
