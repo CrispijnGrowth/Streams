@@ -222,14 +222,12 @@ export function StreamsOverview({ showDescriptions }: StreamsOverviewProps) {
   if (streamsLoading) {
     return (
       <div className="flex flex-col h-full">
-        <div className="flex-1 overflow-auto p-6">
+        <div className="flex-1 overflow-auto p-6 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <StreamCardSkeleton key={i} />
             ))}
           </div>
-        </div>
-        <div className="shrink-0 border-t p-4 bg-background">
           <TimelineSkeleton />
         </div>
       </div>
@@ -334,16 +332,14 @@ export function StreamsOverview({ showDescriptions }: StreamsOverviewProps) {
               isLoading={createStream.isPending}
             />
           </div>
-        </div>
-      </div>
 
-      <div className="shrink-0 border-t p-4 bg-background">
-        <Timeline
-          items={timelineItems}
-          onItemClick={handleTimelineItemClick}
-          level="stream"
-          defaultWindowMonths={12}
-        />
+          <Timeline
+            items={timelineItems}
+            onItemClick={handleTimelineItemClick}
+            level="stream"
+            defaultWindowMonths={12}
+          />
+        </div>
       </div>
     </div>
   );

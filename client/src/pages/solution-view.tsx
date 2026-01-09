@@ -342,10 +342,8 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
   if (isLoading) {
     return (
       <div className="flex flex-col h-full">
-        <div className="flex-1 overflow-auto p-6">
+        <div className="flex-1 overflow-auto p-6 space-y-6">
           <KanbanSkeleton />
-        </div>
-        <div className="shrink-0 border-t p-4 bg-background">
           <TimelineSkeleton />
         </div>
       </div>
@@ -503,17 +501,15 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
             />
 
           </div>
-        </div>
-      </div>
 
-      <div className="shrink-0 border-t p-4 bg-background relative z-50">
-        <Timeline
-          items={timelineItems}
-          onItemClick={handleTimelineItemClick}
-          onDateChange={handleTimelineDateChange}
-          level="action"
-          defaultWindowMonths={6}
-        />
+          <Timeline
+            items={timelineItems}
+            onItemClick={handleTimelineItemClick}
+            onDateChange={handleTimelineDateChange}
+            level="action"
+            defaultWindowMonths={6}
+          />
+        </div>
       </div>
 
       <EditSolutionDialog

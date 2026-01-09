@@ -207,14 +207,12 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
   if (isLoading) {
     return (
       <div className="flex flex-col h-full">
-        <div className="flex-1 overflow-auto p-6">
+        <div className="flex-1 overflow-auto p-6 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <SolutionCardSkeleton key={i} />
             ))}
           </div>
-        </div>
-        <div className="shrink-0 border-t p-4 bg-background">
           <TimelineSkeleton />
         </div>
       </div>
@@ -236,7 +234,7 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
   if (!solutions || solutions.length === 0) {
     return (
       <div className="flex flex-col h-full">
-        <div className="flex-1 overflow-auto p-6">
+        <div className="flex-1 overflow-auto p-6 space-y-6">
           <EmptyState
             icon={Package}
             title="No solutions yet"
@@ -244,8 +242,6 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
             actionLabel="Create Solution"
             onAction={() => createSolution.mutate("New Solution")}
           />
-        </div>
-        <div className="shrink-0 border-t p-4 bg-background">
           <Timeline
             items={[]}
             onItemClick={handleSolutionClick}
@@ -409,17 +405,15 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
               </div>
             )}
           </div>
-        </div>
-      </div>
 
-      <div className="shrink-0 border-t p-4 bg-background">
-        <Timeline
-          items={timelineItems}
-          onItemClick={handleSolutionClick}
-          onDateChange={(id, newDate) => updateSolutionDate.mutate({ solutionId: id, milestoneDate: newDate })}
-          level="solution"
-          defaultWindowMonths={12}
-        />
+          <Timeline
+            items={timelineItems}
+            onItemClick={handleSolutionClick}
+            onDateChange={(id, newDate) => updateSolutionDate.mutate({ solutionId: id, milestoneDate: newDate })}
+            level="solution"
+            defaultWindowMonths={12}
+          />
+        </div>
       </div>
 
       <EditStreamDialog
