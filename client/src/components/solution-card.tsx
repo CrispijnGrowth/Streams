@@ -139,13 +139,19 @@ export function SolutionCard({
 
       <div className="flex items-center gap-2 mt-1.5 flex-wrap">
         {solution.priority && (
-          <Badge 
-            variant="default" 
-            className="text-xs font-semibold bg-primary text-primary-foreground"
+          <div 
+            className={`flex items-center justify-center rounded-full border-2 font-bold ${
+              solution.priority === 1 ? "w-8 h-8 text-base border-foreground bg-foreground/10" :
+              solution.priority === 2 ? "w-7 h-7 text-sm border-foreground/80 bg-foreground/8" :
+              solution.priority === 3 ? "w-6 h-6 text-xs border-foreground/60 bg-foreground/6" :
+              solution.priority === 4 ? "w-5 h-5 text-[10px] border-foreground/40 bg-foreground/4" :
+              "w-4 h-4 text-[9px] border-foreground/30 bg-foreground/3"
+            }`}
             data-testid={`badge-priority-${solution.id}`}
+            title={`Priority ${solution.priority}`}
           >
-            Priority {solution.priority}
-          </Badge>
+            {solution.priority}
+          </div>
         )}
         {solution.milestoneDate && (
           <div
