@@ -73,6 +73,7 @@ function mapSolutionFromDb(row: any): Solution {
     description: row.description || undefined,
     streamId: row.streamId,
     milestoneDate: row.milestoneDate || undefined,
+    priority: row.priority ?? undefined,
     phases: row.phases || [],
     owners: row.owners || [],
     labels: row.labels || [],
@@ -556,6 +557,7 @@ export class DatabaseStorage implements IStorage {
       description: data.description || null,
       streamId: data.streamId,
       milestoneDate: data.milestoneDate || null,
+      priority: data.priority ?? null,
       phases: data.phases || [],
       owners: data.owners || [],
       labels: data.labels || [],
@@ -572,7 +574,7 @@ export class DatabaseStorage implements IStorage {
     return mapSolutionFromDb(newSolution);
   }
 
-  async updateSolution(userId: string, id: string, data: Partial<InsertSolution & { isDeleted?: boolean; lastMovementAt?: string; momentumStatus?: string }>): Promise<Solution | undefined> {
+  async updateSolution(userId: string, id: string, data: Partial<InsertSolution & { isDeleted?: boolean; lastMovementAt?: string; momentumStatus?: string; priority?: number | null }>): Promise<Solution | undefined> {
     const [existing] = await db.select().from(solutions).where(
       and(eq(solutions.id, id), eq(solutions.userId, userId))
     );
@@ -582,6 +584,7 @@ export class DatabaseStorage implements IStorage {
     if (data.name !== undefined) updateData.name = data.name;
     if (data.description !== undefined) updateData.description = data.description || null;
     if (data.milestoneDate !== undefined) updateData.milestoneDate = data.milestoneDate || null;
+    if (data.priority !== undefined) updateData.priority = data.priority;
     if (data.phases !== undefined) updateData.phases = data.phases;
     if (data.owners !== undefined) updateData.owners = data.owners;
     if (data.labels !== undefined) updateData.labels = data.labels;
