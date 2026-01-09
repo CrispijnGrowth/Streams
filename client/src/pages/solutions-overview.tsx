@@ -191,14 +191,18 @@ export function SolutionsOverview({ showDescriptions }: SolutionsOverviewProps) 
             {filteredAndSortedSolutions.map((solution) => {
               const stream = streamMap.get(solution.streamId);
               return (
-                <div key={solution.id} className="space-y-1">
+                <div key={solution.id} className="space-y-0.5">
                   {stream && (
                     <button
-                      onClick={() => setLocation(`/stream/${stream.id}`)}
-                      className="text-xs text-muted-foreground hover:text-foreground transition-colors truncate block w-full text-left"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setLocation(`/stream/${stream.id}`);
+                      }}
+                      className="text-xs text-muted-foreground hover:text-foreground transition-colors truncate flex items-center gap-1 pl-1"
                       data-testid={`link-stream-${stream.id}`}
                     >
-                      {stream.name}
+                      <Layers className="h-3 w-3 shrink-0" />
+                      <span className="truncate">{stream.name}</span>
                     </button>
                   )}
                   <SolutionCard
