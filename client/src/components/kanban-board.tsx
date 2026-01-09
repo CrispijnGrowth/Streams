@@ -632,6 +632,7 @@ export function KanbanBoard({
   const hasDeliverables = deliverables.length > 0 && actions.some((a) => a.deliverableId);
 
   if (!hasDeliverables) {
+    const isEmpty = actions.length === 0;
     return (
       <DndContext
         sensors={sensors}
@@ -640,20 +641,23 @@ export function KanbanBoard({
         onDragEnd={handleDragEnd}
       >
         <ScrollArea className="w-full">
-          <div className="flex gap-4 pb-4 min-w-max">
-            {columnData.map((column, columnIndex) => {
-              const columnActions = actions
-                .filter((a) => a.status === column.status)
-                .sort((a, b) => a.kanbanOrder - b.kanbanOrder);
-              const bgColor = columnIndex % 2 === 0 ? "bg-[hsl(var(--kanban-column-a))]" : "bg-[hsl(var(--kanban-column-b))]";
-              
-              return (
-                <div
-                  key={column.status}
-                  className={`w-72 flex-shrink-0 rounded-lg ${bgColor}`}
-                  data-testid={`kanban-column-${column.status.toLowerCase().replace(/\s/g, "-")}`}
-                >
-                  <div className="sticky top-0 z-10 pb-3 border-b mb-3 pt-2 px-2">
+          <div className="min-w-max relative">
+            {/* Column background stripes */}
+            <div className="absolute top-0 bottom-0 left-44 right-0 flex gap-4 pointer-events-none" style={{ zIndex: 0 }}>
+              {columnData.map((column, columnIndex) => {
+                const bgColor = columnIndex % 2 === 0 ? "bg-[hsl(var(--kanban-column-a))]" : "bg-[hsl(var(--kanban-column-b))]";
+                return (
+                  <div key={`bg-${column.status}`} className={`w-72 flex-shrink-0 ${bgColor}`} />
+                );
+              })}
+            </div>
+
+            {/* Column headers */}
+            <div className="flex gap-4 pb-3 border-b mb-3 pl-44 relative" style={{ zIndex: 1 }}>
+              {columnData.map((column) => {
+                const columnActions = actions.filter((a) => a.status === column.status);
+                return (
+                  <div key={column.status} className="w-72 flex-shrink-0 pt-2 px-2">
                     <div className="flex items-center justify-between px-1">
                       <div className="flex items-center gap-2">
                         <div className={`w-3 h-3 rounded-full ${column.color}`} />
@@ -662,20 +666,106 @@ export function KanbanBoard({
                       <span className="text-sm font-medium text-muted-foreground">{columnActions.length}</span>
                     </div>
                   </div>
-                  <DroppableCell
-                    id={`cell__ungrouped__${column.status}`}
-                    status={column.status}
-                    items={columnActions}
-                    columnIndex={columnIndex}
-                    onActionClick={onActionClick}
-                    onActionEdit={onActionEdit}
-                    onAddAction={onAddAction ? () => onAddAction(column.status) : undefined}
-                    showDescription={showDescription}
-                    isEditMode={isEditMode}
-                  />
+                );
+              })}
+            </div>
+
+            {/* Placeholder deliverable row with cyan border for empty state */}
+            <div className="space-y-4 relative" style={{ zIndex: 1 }}>
+              <div
+                className="flex gap-4 py-3 rounded-md"
+                style={{
+                  borderLeft: isEmpty ? `3px solid hsl(${borderColorMap.cyan})` : undefined,
+                }}
+              >
+                <div className="w-40 flex-shrink-0 pl-3">
+                  {isEmpty && isEditMode && onAddDeliverable ? (
+                    <Popover open={addDeliverableOpen} onOpenChange={setAddDeliverableOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="gap-2 text-muted-foreground"
+                          data-testid="button-add-deliverable-empty"
+                        >
+                          <Plus className="h-4 w-4" />
+                          Add Deliverable
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-72" align="start">
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="deliverable-name-empty">Name</Label>
+                            <Input
+                              id="deliverable-name-empty"
+                              value={newDeliverableName}
+                              onChange={(e) => setNewDeliverableName(e.target.value)}
+                              placeholder="Enter deliverable name"
+                              data-testid="input-new-deliverable-name-empty"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Border Color</Label>
+                            <div className="grid grid-cols-4 gap-2">
+                              {Object.entries(DeliverableBorderColor).map(([key, value]) => (
+                                <button
+                                  key={value}
+                                  type="button"
+                                  className={`w-8 h-8 rounded-md border-2 transition-all ${
+                                    newDeliverableColor === value ? "ring-2 ring-offset-2 ring-primary" : ""
+                                  }`}
+                                  style={{ backgroundColor: `hsl(${borderColorMap[value]})` }}
+                                  onClick={() => setNewDeliverableColor(value)}
+                                  data-testid={`button-color-empty-${value}`}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                          <Button
+                            onClick={() => {
+                              if (newDeliverableName.trim()) {
+                                onAddDeliverable(newDeliverableName.trim(), newDeliverableColor);
+                                setNewDeliverableName("");
+                                setNewDeliverableColor("cyan");
+                                setAddDeliverableOpen(false);
+                              }
+                            }}
+                            disabled={!newDeliverableName.trim()}
+                            className="w-full"
+                            data-testid="button-create-deliverable-empty"
+                          >
+                            Create Deliverable
+                          </Button>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  ) : isEmpty ? (
+                    <span className="text-sm text-muted-foreground pl-2">+ Add Deliverable</span>
+                  ) : null}
                 </div>
-              );
-            })}
+
+                {/* Action cells */}
+                {columnData.map((column, columnIndex) => {
+                  const columnActions = actions
+                    .filter((a) => a.status === column.status)
+                    .sort((a, b) => a.kanbanOrder - b.kanbanOrder);
+                  return (
+                    <DroppableCell
+                      key={column.status}
+                      id={`cell__ungrouped__${column.status}`}
+                      status={column.status}
+                      items={columnActions}
+                      columnIndex={columnIndex}
+                      onActionClick={onActionClick}
+                      onActionEdit={onActionEdit}
+                      onAddAction={onAddAction ? () => onAddAction(column.status) : undefined}
+                      showDescription={showDescription}
+                      isEditMode={isEditMode}
+                    />
+                  );
+                })}
+              </div>
+            </div>
           </div>
           <ScrollBar orientation="horizontal" />
         </ScrollArea>
