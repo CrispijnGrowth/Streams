@@ -342,6 +342,7 @@ export const insertSolutionSchema = z.object({
   description: z.string().optional(),
   streamId: z.string().min(1, "Stream is required"),
   milestoneDate: z.string().optional(),
+  priority: z.number().int().min(1).max(5).nullable().optional(),
   phases: z.array(z.string()).default([]),
   owners: z.array(z.string()).default([]),
   labels: z.array(z.string()).default([]),

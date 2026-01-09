@@ -369,6 +369,15 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/solutions/all-with-breakdown", authMiddleware, async (req, res) => {
+    try {
+      const solutions = await storage.getAllSolutionsWithBreakdown(req.userId!);
+      res.json(solutions);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch solutions" });
+    }
+  });
+
   app.get("/api/solutions/:id", authMiddleware, async (req, res) => {
     try {
       const solution = await storage.getSolution(req.userId!, req.params.id);

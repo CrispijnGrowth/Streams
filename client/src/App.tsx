@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { LayoutGrid, Trash2, Search, LogOut, Settings, Loader2, Pencil, Play } from "lucide-react";
+import { LayoutGrid, Trash2, Search, LogOut, Settings, Loader2, Pencil, Play, Layers } from "lucide-react";
 import { useTheme } from "@/lib/theme-provider";
 import logoWhite from "@assets/Streams_Logo_White_1767805031570.png";
 import logoBlack from "@assets/Streams_Logo_Black_1767805053205.png";
@@ -24,6 +24,7 @@ import { StreamView } from "@/pages/stream-view";
 import { SolutionView } from "@/pages/solution-view";
 import { ActionView } from "@/pages/action-view";
 import { GlobalKanban } from "@/pages/global-kanban";
+import { SolutionsOverview } from "@/pages/solutions-overview";
 import { RecycleBin } from "@/pages/recycle-bin";
 import { SettingsPage } from "@/pages/settings";
 import { LoginPage } from "@/pages/login";
@@ -33,6 +34,9 @@ import NotFound from "@/pages/not-found";
 function Router({ showDescriptions }: { showDescriptions: boolean }) {
   return (
     <Switch>
+      <Route path="/solutions">
+        <SolutionsOverview showDescriptions={showDescriptions} />
+      </Route>
       <Route path="/kanban">
         <GlobalKanban showDescriptions={showDescriptions} />
       </Route>
@@ -87,6 +91,17 @@ function TopNav() {
         />
       </Link>
       <div className="flex items-center gap-1">
+        <Link href="/solutions">
+          <Button
+            variant={location === "/solutions" ? "secondary" : "ghost"}
+            size="sm"
+            className="gap-2"
+            data-testid="nav-solutions"
+          >
+            <Layers className="h-4 w-4" />
+            <span>Solutions</span>
+          </Button>
+        </Link>
         <Link href="/kanban">
           <Button
             variant={location === "/kanban" ? "secondary" : "ghost"}

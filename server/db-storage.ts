@@ -528,6 +528,84 @@ export class DatabaseStorage implements IStorage {
     return results;
   }
 
+  async getAllSolutionsWithBreakdown(userId: string): Promise<SolutionWithBreakdownAndComment[]> {
+    const rows = await db.select().from(solutions).where(
+      and(eq(solutions.userId, userId), eq(solutions.isDeleted, false))
+    );
+    
+    // Group by streamId and maintain ordinal ordering within streams
+    const byStream = new Map<string, typeof rows>();
+    for (const row of rows) {
+      const group = byStream.get(row.streamId) || [];
+      group.push(row);
+      byStream.set(row.streamId, group);
+    }
+    
+    const activeStatuses = [ActionStatus.EXECUTING, ActionStatus.BLOCKED, ActionStatus.DELEGATED];
+    const results: SolutionWithBreakdownAndComment[] = [];
+    let globalDisplayIndex = 1;
+    
+    for (const [streamId, streamRows] of byStream) {
+      streamRows.sort((a, b) => a.ordinal - b.ordinal);
+      
+      for (const row of streamRows) {
+        const sol = mapSolutionFromDb(row);
+        const stats = await this.computeSolutionProgress(sol.id, userId);
+        const displayIndex = globalDisplayIndex++;
+        
+        
+        const solutionDeliverables = await db.select().from(deliverables).where(
+          and(eq(deliverables.solutionId, sol.id), eq(deliverables.userId, userId), eq(deliverables.isDeleted, false))
+        );
+        solutionDeliverables.sort((a, b) => a.ordinal - b.ordinal);
+        
+        const solutionActions = await db.select().from(actions).where(
+          and(eq(actions.solutionId, sol.id), eq(actions.userId, userId), eq(actions.isDeleted, false))
+        );
+        
+        const deliverableBreakdown: DeliverableBreakdown[] = solutionDeliverables.map((del) => {
+          const activeActions = solutionActions
+            .filter((a) => a.deliverableId === del.id && activeStatuses.includes(a.status as any))
+            .map((a) => ({
+              id: a.id,
+              name: a.name,
+              status: a.status as any,
+            }));
+          
+          return {
+            id: del.id,
+            name: del.name,
+            borderColor: del.borderColor as any,
+            activeActions,
+          };
+        });
+        
+        const unassignedActiveActions = solutionActions
+          .filter((a) => !a.deliverableId && activeStatuses.includes(a.status as any))
+          .map((a) => ({
+            id: a.id,
+            name: a.name,
+            status: a.status as any,
+          }));
+        
+        if (unassignedActiveActions.length > 0) {
+          deliverableBreakdown.unshift({
+            id: "unassigned",
+            name: "Unassigned",
+            borderColor: "cyan" as any,
+            activeActions: unassignedActiveActions,
+          });
+        }
+        
+        const lastComment = await this.getLastComment(userId, CommentEntityType.SOLUTION, sol.id);
+        
+        results.push({ ...sol, ...stats, deliverableBreakdown, lastComment, displayKey: `Solution ${displayIndex}` });
+      }
+    }
+    
+    return results;
+  }
+
   async getSolution(userId: string, id: string): Promise<Solution | undefined> {
     const [row] = await db.select().from(solutions).where(
       and(eq(solutions.id, id), eq(solutions.userId, userId), eq(solutions.isDeleted, false))

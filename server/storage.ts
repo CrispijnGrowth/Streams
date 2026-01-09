@@ -40,6 +40,7 @@ export interface IStorage {
   getSolutions(userId: string): Promise<SolutionWithProgress[]>;
   getSolutionsByStream(userId: string, streamId: string): Promise<SolutionWithProgress[]>;
   getSolutionsByStreamWithBreakdown(userId: string, streamId: string): Promise<SolutionWithBreakdownAndComment[]>;
+  getAllSolutionsWithBreakdown(userId: string): Promise<SolutionWithBreakdownAndComment[]>;
   getSolution(userId: string, id: string): Promise<Solution | undefined>;
   createSolution(userId: string, data: InsertSolution): Promise<Solution>;
   updateSolution(userId: string, id: string, data: Partial<InsertSolution>): Promise<Solution | undefined>;
@@ -417,6 +418,79 @@ export class MemStorage implements IStorage {
     return results;
   }
 
+  async getAllSolutionsWithBreakdown(userId: string): Promise<SolutionWithBreakdownAndComment[]> {
+    const allSolutions = Array.from(this.solutions.values())
+      .filter((s) => s.userId === userId && !s.isDeleted);
+    
+    // Group by streamId and maintain ordinal ordering
+    const byStream = new Map<string, Solution[]>();
+    for (const sol of allSolutions) {
+      const group = byStream.get(sol.streamId) || [];
+      group.push(sol);
+      byStream.set(sol.streamId, group);
+    }
+    
+    const activeStatuses = [ActionStatus.EXECUTING, ActionStatus.BLOCKED, ActionStatus.DELEGATED];
+    const results: SolutionWithBreakdownAndComment[] = [];
+    let globalDisplayIndex = 1;
+    
+    for (const [streamId, streamSolutions] of byStream) {
+      streamSolutions.sort((a, b) => a.ordinal - b.ordinal);
+      
+      for (const sol of streamSolutions) {
+        const displayIndex = globalDisplayIndex++;
+        const stats = this.computeSolutionProgress(sol.id, userId);
+        
+        const solutionDeliverables = Array.from(this.deliverables.values())
+          .filter((d) => d.solutionId === sol.id && d.userId === userId && !d.isDeleted)
+          .sort((a, b) => a.ordinal - b.ordinal);
+        
+        const solutionActions = Array.from(this.actions.values())
+          .filter((a) => a.solutionId === sol.id && a.userId === userId && !a.isDeleted);
+        
+        const deliverableBreakdown: DeliverableBreakdown[] = solutionDeliverables.map((del) => {
+          const activeActions = solutionActions
+            .filter((a) => a.deliverableId === del.id && activeStatuses.includes(a.status as any))
+            .map((a) => ({
+              id: a.id,
+              name: a.name,
+              status: a.status as any,
+            }));
+          
+          return {
+            id: del.id,
+            name: del.name,
+            borderColor: del.borderColor as any,
+            activeActions,
+          };
+        });
+        
+        const unassignedActiveActions = solutionActions
+          .filter((a) => !a.deliverableId && activeStatuses.includes(a.status as any))
+          .map((a) => ({
+            id: a.id,
+            name: a.name,
+            status: a.status as any,
+          }));
+        
+        if (unassignedActiveActions.length > 0) {
+          deliverableBreakdown.unshift({
+            id: "unassigned",
+            name: "Unassigned",
+            borderColor: "cyan" as any,
+            activeActions: unassignedActiveActions,
+          });
+        }
+        
+        const lastComment = await this.getLastComment(userId, CommentEntityType.SOLUTION, sol.id);
+        
+        results.push({ ...sol, ...stats, deliverableBreakdown, lastComment, displayKey: `Solution ${displayIndex}` });
+      }
+    }
+    
+    return results;
+  }
+
   async getSolution(userId: string, id: string): Promise<Solution | undefined> {
     const sol = this.solutions.get(id);
     if (!sol || sol.userId !== userId || sol.isDeleted) return undefined;
@@ -441,10 +515,13 @@ export class MemStorage implements IStorage {
       description: data.description,
       streamId: data.streamId,
       milestoneDate: data.milestoneDate,
+      priority: data.priority ?? undefined,
       phases: data.phases || [],
       owners: data.owners || [],
       labels: data.labels || [],
       status: (data.status as any) || SolutionStatus.IN_PROGRESS,
+      momentumStatus: MomentumStatus.ACTIVE,
+      lastMovementAt: new Date().toISOString(),
       ordinal,
       isDeleted: false,
     };
