@@ -16,6 +16,8 @@ interface SolutionCardProps {
   onEdit?: () => void;
   showDescription?: boolean;
   isDragging?: boolean;
+  streamName?: string;
+  onStreamClick?: () => void;
 }
 
 const borderColorMap: Record<DeliverableBorderColorType, string> = {
@@ -48,6 +50,8 @@ export function SolutionCard({
   onEdit,
   showDescription = true,
   isDragging = false,
+  streamName,
+  onStreamClick,
 }: SolutionCardProps) {
   const teamMembers = useTeamMembers();
   const { isEditMode } = useMode();
@@ -128,6 +132,18 @@ export function SolutionCard({
         )}
 
         <div className="space-y-0.5">
+          {streamName && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onStreamClick?.();
+              }}
+              className="text-[10px] text-muted-foreground hover:text-foreground transition-colors truncate block max-w-full text-left"
+              data-testid={`link-stream-${solution.streamId}`}
+            >
+              {streamName}
+            </button>
+          )}
           <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium" data-testid={`text-solution-key-${solution.id}`}>
             {solution.displayKey}
           </span>
