@@ -337,11 +337,11 @@ function DeliverableRow({
                       </div>
                     </PopoverTrigger>
                   </HoverCardTrigger>
-                  <HoverCardContent side="right" align="start" className="w-auto p-4">
+                  <HoverCardContent side="right" align="start" className="w-auto max-w-[600px] p-4">
                     {deliverableInfoContent}
                   </HoverCardContent>
                 </HoverCard>
-                <PopoverContent side="right" align="start" className="w-auto p-4">
+                <PopoverContent side="right" align="start" className="w-auto max-w-[600px] p-4">
                   <div className="flex justify-between items-start gap-4 mb-2">
                     <span className="text-xs text-muted-foreground uppercase tracking-wide">Deliverable</span>
                     <Button 
