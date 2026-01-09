@@ -1,26 +1,58 @@
+import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Trash2, RotateCcw, Layers, Target, CheckSquare, ListChecks } from "lucide-react";
+import { Trash2, RotateCcw, Layers, Target, CheckSquare, ListChecks, AlertTriangle, Package } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/empty-state";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { Stream, Solution, Action, Step } from "@shared/schema";
+import type { Stream, Solution, Deliverable, Action, Step } from "@shared/schema";
 
 interface DeletedItems {
   streams: Stream[];
   solutions: Solution[];
+  deliverables: Deliverable[];
   actions: Action[];
   steps: Step[];
 }
 
 export function RecycleBin() {
   const { toast } = useToast();
+  const [showEmptyConfirm, setShowEmptyConfirm] = useState(false);
 
   const { data: deletedItems, isLoading } = useQuery<DeletedItems>({
     queryKey: ["/api/recycle-bin"],
+  });
+
+  const emptyRecycleBin = useMutation({
+    mutationFn: async () => {
+      return apiRequest("DELETE", "/api/recycle-bin/empty");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/recycle-bin"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/solutions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/deliverables"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/steps"] });
+      toast({ title: "Recycle bin emptied", description: "All items have been permanently deleted." });
+      setShowEmptyConfirm(false);
+    },
+    onError: () => {
+      toast({ title: "Failed to empty recycle bin", variant: "destructive" });
+    },
   });
 
   const restoreStream = useMutation({
@@ -34,6 +66,22 @@ export function RecycleBin() {
     },
     onError: () => {
       toast({ title: "Failed to restore stream", variant: "destructive" });
+    },
+  });
+
+  const restoreDeliverable = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("POST", `/api/recycle-bin/restore/deliverable/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/recycle-bin"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/deliverables"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/solutions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
+      toast({ title: "Deliverable restored" });
+    },
+    onError: () => {
+      toast({ title: "Failed to restore deliverable", variant: "destructive" });
     },
   });
 
@@ -105,15 +153,62 @@ export function RecycleBin() {
     deletedItems &&
     (deletedItems.streams.length > 0 ||
       deletedItems.solutions.length > 0 ||
+      deletedItems.deliverables.length > 0 ||
       deletedItems.actions.length > 0 ||
       deletedItems.steps.length > 0);
 
+  const totalItems = deletedItems
+    ? deletedItems.streams.length +
+      deletedItems.solutions.length +
+      deletedItems.deliverables.length +
+      deletedItems.actions.length +
+      deletedItems.steps.length
+    : 0;
+
   return (
     <div className="p-6 space-y-6">
-      <div className="flex items-center gap-3">
-        <Trash2 className="h-6 w-6 text-muted-foreground" />
-        <h1 className="text-2xl font-semibold" data-testid="text-recycle-bin-title">Recycle Bin</h1>
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-3">
+          <Trash2 className="h-6 w-6 text-muted-foreground" />
+          <h1 className="text-2xl font-semibold" data-testid="text-recycle-bin-title">Recycle Bin</h1>
+        </div>
+        {hasDeletedItems && (
+          <Button
+            variant="destructive"
+            onClick={() => setShowEmptyConfirm(true)}
+            disabled={emptyRecycleBin.isPending}
+            data-testid="button-empty-recycle-bin"
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Empty Recycle Bin
+          </Button>
+        )}
       </div>
+
+      <AlertDialog open={showEmptyConfirm} onOpenChange={setShowEmptyConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Permanently Delete All Items?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete {totalItems} item{totalItems !== 1 ? "s" : ""} from the recycle bin. 
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-empty">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => emptyRecycleBin.mutate()}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="button-confirm-empty"
+            >
+              {emptyRecycleBin.isPending ? "Deleting..." : "Yes, Delete All"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {!hasDeletedItems ? (
         <Card className="p-8">
@@ -183,6 +278,40 @@ export function RecycleBin() {
                       onClick={() => restoreSolution.mutate(solution.id)}
                       disabled={restoreSolution.isPending}
                       data-testid={`button-restore-solution-${solution.id}`}
+                    >
+                      <RotateCcw className="h-4 w-4 mr-2" />
+                      Restore
+                    </Button>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {deletedItems.deliverables.length > 0 && (
+            <div className="space-y-3">
+              <h2 className="text-lg font-medium flex items-center gap-2">
+                <Package className="h-5 w-5" />
+                Deliverables ({deletedItems.deliverables.length})
+              </h2>
+              <div className="space-y-2">
+                {deletedItems.deliverables.map((deliverable) => (
+                  <Card key={deliverable.id} className="p-4 flex items-center justify-between gap-4" data-testid={`deleted-deliverable-${deliverable.id}`}>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-xs font-mono">{deliverable.key}</Badge>
+                        <span className="font-medium truncate">{deliverable.name}</span>
+                      </div>
+                      {deliverable.description && (
+                        <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{deliverable.description}</p>
+                      )}
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => restoreDeliverable.mutate(deliverable.id)}
+                      disabled={restoreDeliverable.isPending}
+                      data-testid={`button-restore-deliverable-${deliverable.id}`}
                     >
                       <RotateCcw className="h-4 w-4 mr-2" />
                       Restore
