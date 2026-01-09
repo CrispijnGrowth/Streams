@@ -629,7 +629,7 @@ export function KanbanBoard({
     }
   };
 
-  const hasDeliverables = deliverables.length > 0 && actions.some((a) => a.deliverableId);
+  const hasDeliverables = deliverables.length > 0;
 
   if (!hasDeliverables) {
     const isEmpty = actions.length === 0;
