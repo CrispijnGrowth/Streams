@@ -675,7 +675,7 @@ export function KanbanBoard({
               <div
                 className="flex gap-4 py-3 rounded-md"
                 style={{
-                  borderLeft: isEmpty ? `3px solid hsl(${borderColorMap.cyan})` : undefined,
+                  border: isEmpty ? `2px solid hsl(${borderColorMap.cyan})` : undefined,
                 }}
               >
                 <div className="w-40 flex-shrink-0 pl-3">
