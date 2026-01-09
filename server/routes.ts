@@ -397,20 +397,11 @@ export async function registerRoutes(
         return res.status(400).json({ error: parsed.error.message });
       }
       
-      // Validate priority (1-5) and uniqueness if provided
+      // Validate priority (1-5) if provided
       if (parsed.data.priority !== undefined && parsed.data.priority !== null) {
         const priority = parsed.data.priority;
         if (typeof priority !== "number" || priority < 1 || priority > 5) {
           return res.status(400).json({ error: "Priority must be between 1 and 5" });
-        }
-        const streamSolutions = await storage.getSolutionsByStream(req.userId!, parsed.data.streamId);
-        const conflictingSolution = streamSolutions.find(
-          s => s.priority === priority && !s.isDeleted
-        );
-        if (conflictingSolution) {
-          return res.status(409).json({ 
-            error: `Priority ${priority} is already assigned to "${conflictingSolution.name}"` 
-          });
         }
       }
       
@@ -442,22 +433,6 @@ export async function registerRoutes(
             }
           }
           updateData[field] = req.body[field];
-        }
-      }
-      
-      // If priority is being set, check for uniqueness within the stream
-      if (req.body.priority !== undefined && req.body.priority !== null) {
-        const currentSolution = await storage.getSolution(req.userId!, req.params.id);
-        if (currentSolution) {
-          const streamSolutions = await storage.getSolutionsByStream(req.userId!, currentSolution.streamId);
-          const conflictingSolution = streamSolutions.find(
-            s => s.id !== req.params.id && s.priority === req.body.priority && !s.isDeleted
-          );
-          if (conflictingSolution) {
-            return res.status(409).json({ 
-              error: `Priority ${req.body.priority} is already assigned to "${conflictingSolution.name}"` 
-            });
-          }
         }
       }
       
