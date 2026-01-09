@@ -37,6 +37,7 @@ export const solutions = pgTable("solutions", {
   description: text("description"),
   streamId: text("stream_id").notNull(),
   milestoneDate: text("milestone_date"),
+  priority: integer("priority"),
   phases: text("phases").array().notNull().default([]),
   owners: text("owners").array().notNull().default([]),
   labels: text("labels").array().notNull().default([]),
@@ -238,6 +239,7 @@ export interface Solution {
   description?: string;
   streamId: string;
   milestoneDate?: string;
+  priority?: number;
   phases: string[];
   owners: string[];
   labels: string[];

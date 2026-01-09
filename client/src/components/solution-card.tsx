@@ -137,22 +137,33 @@ export function SolutionCard({
         </div>
       </div>
 
-      {solution.milestoneDate && (
-        <div
-          className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md mt-1.5 text-sm font-medium ${
-            isOnHold 
-              ? "bg-muted text-muted-foreground" 
-              : isOverdue 
-                ? "bg-status-blocked/10 text-status-blocked" 
-                : "bg-primary/10 text-primary"
-          }`}
-        >
-          <Calendar className="h-4 w-4" />
-          <span className="font-mono">
-            {format(new Date(solution.milestoneDate), "MMM d")}
-          </span>
-        </div>
-      )}
+      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+        {solution.priority && (
+          <Badge 
+            variant="outline" 
+            className="text-xs py-0 h-5 font-mono border-primary/50 text-primary"
+            data-testid={`badge-priority-${solution.id}`}
+          >
+            P{solution.priority}
+          </Badge>
+        )}
+        {solution.milestoneDate && (
+          <div
+            className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-sm font-medium ${
+              isOnHold 
+                ? "bg-muted text-muted-foreground" 
+                : isOverdue 
+                  ? "bg-status-blocked/10 text-status-blocked" 
+                  : "bg-primary/10 text-primary"
+            }`}
+          >
+            <Calendar className="h-4 w-4" />
+            <span className="font-mono">
+              {format(new Date(solution.milestoneDate), "MMM d")}
+            </span>
+          </div>
+        )}
+      </div>
 
       {showDescription && solution.description && (
         <p className="text-xs text-muted-foreground line-clamp-1 mt-1">

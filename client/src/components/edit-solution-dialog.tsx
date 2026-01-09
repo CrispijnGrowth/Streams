@@ -35,6 +35,7 @@ const editSolutionSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
   milestoneDate: z.string().optional(),
+  priority: z.number().min(1).max(5).nullable().optional(),
   status: z.string(),
   owners: z.array(z.string()).default([]),
   labels: z.array(z.string()).default([]),
@@ -92,6 +93,7 @@ export function EditSolutionDialog({ solution, open, onOpenChange, onDeleted }: 
       name: "",
       description: "",
       milestoneDate: "",
+      priority: null,
       status: SolutionStatus.IN_PROGRESS,
       owners: [],
       labels: [],
@@ -104,6 +106,7 @@ export function EditSolutionDialog({ solution, open, onOpenChange, onDeleted }: 
         name: solution.name,
         description: solution.description || "",
         milestoneDate: solution.milestoneDate || "",
+        priority: solution.priority ?? null,
         status: solution.status,
         owners: solution.owners || [],
         labels: solution.labels || [],
@@ -125,8 +128,21 @@ export function EditSolutionDialog({ solution, open, onOpenChange, onDeleted }: 
       toast({ title: "Solution updated successfully" });
       onOpenChange(false);
     },
-    onError: () => {
-      toast({ title: "Failed to update solution", variant: "destructive" });
+    onError: (error: any) => {
+      let message = "Failed to update solution";
+      if (error?.message) {
+        // Try to extract JSON error from message like "409: {"error":"..."}"
+        const match = error.message.match(/^\d+:\s*(.+)$/);
+        if (match) {
+          try {
+            const parsed = JSON.parse(match[1]);
+            message = parsed.error || message;
+          } catch {
+            message = match[1] || message;
+          }
+        }
+      }
+      toast({ title: message, variant: "destructive" });
     },
   });
 
@@ -185,7 +201,27 @@ export function EditSolutionDialog({ solution, open, onOpenChange, onDeleted }: 
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="priority">Priority</Label>
+              <Select
+                value={form.watch("priority")?.toString() || "none"}
+                onValueChange={(value) => form.setValue("priority", value === "none" ? null : parseInt(value))}
+              >
+                <SelectTrigger data-testid="select-solution-priority">
+                  <SelectValue placeholder="None" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  <SelectItem value="1">P1</SelectItem>
+                  <SelectItem value="2">P2</SelectItem>
+                  <SelectItem value="3">P3</SelectItem>
+                  <SelectItem value="4">P4</SelectItem>
+                  <SelectItem value="5">P5</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="milestoneDate">Milestone Date</Label>
               <Input
