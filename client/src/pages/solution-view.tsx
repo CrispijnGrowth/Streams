@@ -398,19 +398,18 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
               
               <div className="flex items-center gap-4 flex-wrap">
                 {solution.priority && (
-                  <div 
-                    className={`flex items-center justify-center rounded-full border-2 font-bold ${
-                      solution.priority === 1 ? "w-10 h-10 text-lg border-foreground bg-foreground/10" :
-                      solution.priority === 2 ? "w-9 h-9 text-base border-foreground/80 bg-foreground/8" :
-                      solution.priority === 3 ? "w-8 h-8 text-sm border-foreground/60 bg-foreground/6" :
-                      solution.priority === 4 ? "w-7 h-7 text-xs border-foreground/40 bg-foreground/4" :
-                      "w-6 h-6 text-xs border-foreground/30 bg-foreground/3"
+                  <span 
+                    className={`inline-flex items-center rounded-md border px-2 py-1 font-mono ${
+                      solution.priority === 1 ? "text-sm font-bold border-foreground/60 bg-foreground/15 text-foreground" :
+                      solution.priority === 2 ? "text-sm font-semibold border-foreground/50 bg-foreground/12 text-foreground/90" :
+                      solution.priority === 3 ? "text-xs font-medium border-foreground/40 bg-foreground/8 text-foreground/80" :
+                      solution.priority === 4 ? "text-xs font-normal border-foreground/30 bg-foreground/5 text-foreground/70" :
+                      "text-xs font-normal border-foreground/20 bg-foreground/3 text-foreground/60"
                     }`}
                     data-testid="badge-solution-priority"
-                    title={`Priority ${solution.priority}`}
                   >
-                    {solution.priority}
-                  </div>
+                    Prio {solution.priority}
+                  </span>
                 )}
                 {solution.milestoneDate && (
                   <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-primary/10 border border-primary/20">
