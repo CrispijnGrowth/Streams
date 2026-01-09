@@ -137,7 +137,7 @@ function DroppableCell({
     <SortableContext items={items.map((a) => a.id)} strategy={verticalListSortingStrategy}>
       <div
         ref={setNodeRef}
-        className={`w-72 flex-shrink-0 space-y-2 min-h-[60px] p-2 transition-colors ${
+        className={`w-44 md:w-56 lg:w-64 flex-shrink-0 space-y-2 min-h-[60px] p-2 transition-colors ${
           isOver ? "ring-2 ring-primary/30 rounded-lg" : ""
         }`}
         data-testid={`kanban-cell-${status.toLowerCase().replace(/\s/g, "-")}`}
@@ -416,7 +416,7 @@ function DeliverableRow({
         )}
       </div>
 
-      <div className="flex gap-4 flex-1 pr-3">
+      <div className="flex gap-3 flex-1 pr-3">
         {columnData.map((column, columnIndex) => {
           const columnActions = actions
             .filter((a) => a.status === column.status)
@@ -643,27 +643,27 @@ export function KanbanBoard({
         <ScrollArea className="w-full">
           <div className="min-w-max relative">
             {/* Column background stripes */}
-            <div className="absolute top-0 bottom-0 left-44 right-0 flex gap-4 pointer-events-none" style={{ zIndex: 0 }}>
+            <div className="absolute top-0 bottom-0 left-40 right-0 flex gap-3 pointer-events-none" style={{ zIndex: 0 }}>
               {columnData.map((column, columnIndex) => {
                 const bgColor = columnIndex % 2 === 0 ? "bg-[hsl(var(--kanban-column-a))]" : "bg-[hsl(var(--kanban-column-b))]";
                 return (
-                  <div key={`bg-${column.status}`} className={`w-72 flex-shrink-0 ${bgColor}`} />
+                  <div key={`bg-${column.status}`} className={`w-44 md:w-56 lg:w-64 flex-shrink-0 ${bgColor}`} />
                 );
               })}
             </div>
 
-            {/* Column headers */}
-            <div className="flex gap-4 pb-3 border-b mb-3 pl-44 relative" style={{ zIndex: 1 }}>
+            {/* Column headers - sticky for vertical scroll */}
+            <div className="flex gap-3 pb-3 border-b mb-3 pl-40 relative sticky top-0 bg-background z-20">
               {columnData.map((column) => {
                 const columnActions = actions.filter((a) => a.status === column.status);
                 return (
-                  <div key={column.status} className="w-72 flex-shrink-0 pt-2 px-2">
+                  <div key={column.status} className="w-44 md:w-56 lg:w-64 flex-shrink-0 pt-2 px-2">
                     <div className="flex items-center justify-between px-1">
                       <div className="flex items-center gap-2">
                         <div className={`w-3 h-3 rounded-full ${column.color}`} />
-                        <h3 className="font-semibold text-base uppercase tracking-wide">{column.label}</h3>
+                        <h3 className="font-semibold text-xs md:text-sm lg:text-base uppercase tracking-wide">{column.label}</h3>
                       </div>
-                      <span className="text-sm font-medium text-muted-foreground">{columnActions.length}</span>
+                      <span className="text-xs md:text-sm font-medium text-muted-foreground">{columnActions.length}</span>
                     </div>
                   </div>
                 );
@@ -793,26 +793,26 @@ export function KanbanBoard({
     >
       <ScrollArea className="w-full">
         <div className="min-w-max relative">
-          <div className="absolute top-0 bottom-0 left-44 right-0 flex gap-4 pointer-events-none" style={{ zIndex: 0 }}>
+          <div className="absolute top-0 bottom-0 left-40 right-0 flex gap-3 pointer-events-none" style={{ zIndex: 0 }}>
             {columnData.map((column, columnIndex) => {
               const bgColor = columnIndex % 2 === 0 ? "bg-[hsl(var(--kanban-column-a))]" : "bg-[hsl(var(--kanban-column-b))]";
               return (
-                <div key={`bg-${column.status}`} className={`w-72 flex-shrink-0 ${bgColor}`} />
+                <div key={`bg-${column.status}`} className={`w-44 md:w-56 lg:w-64 flex-shrink-0 ${bgColor}`} />
               );
             })}
           </div>
 
-          <div className="flex gap-4 pb-3 border-b mb-3 pl-44 relative" style={{ zIndex: 1 }}>
+          <div className="flex gap-3 pb-3 border-b mb-3 pl-40 relative sticky top-0 bg-background z-20">
             {columnData.map((column, columnIndex) => {
               const columnCount = actions.filter((a) => a.status === column.status).length;
               return (
-                <div key={column.status} className="w-72 flex-shrink-0 pt-2 px-2">
+                <div key={column.status} className="w-44 md:w-56 lg:w-64 flex-shrink-0 pt-2 px-2">
                   <div className="flex items-center justify-between px-1">
                     <div className="flex items-center gap-2">
                       <div className={`w-3 h-3 rounded-full ${column.color}`} />
-                      <h3 className="font-semibold text-base uppercase tracking-wide">{column.label}</h3>
+                      <h3 className="font-semibold text-xs md:text-sm lg:text-base uppercase tracking-wide">{column.label}</h3>
                     </div>
-                    <span className="text-sm font-medium text-muted-foreground">{columnCount}</span>
+                    <span className="text-xs md:text-sm font-medium text-muted-foreground">{columnCount}</span>
                   </div>
                 </div>
               );
