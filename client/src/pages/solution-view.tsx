@@ -399,11 +399,11 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
               <div className="flex items-center gap-4 flex-wrap">
                 {solution.priority && (
                   <Badge 
-                    variant="outline" 
-                    className="text-sm font-mono border-primary/50 text-primary"
+                    variant="default" 
+                    className="text-sm font-semibold bg-primary text-primary-foreground px-3"
                     data-testid="badge-solution-priority"
                   >
-                    P{solution.priority}
+                    Priority {solution.priority}
                   </Badge>
                 )}
                 {solution.milestoneDate && (

@@ -140,11 +140,11 @@ export function SolutionCard({
       <div className="flex items-center gap-2 mt-1.5 flex-wrap">
         {solution.priority && (
           <Badge 
-            variant="outline" 
-            className="text-xs py-0 h-5 font-mono border-primary/50 text-primary"
+            variant="default" 
+            className="text-xs font-semibold bg-primary text-primary-foreground"
             data-testid={`badge-priority-${solution.id}`}
           >
-            P{solution.priority}
+            Priority {solution.priority}
           </Badge>
         )}
         {solution.milestoneDate && (
