@@ -316,51 +316,47 @@ function DeliverableRow({
             </div>
           )}
           {deliverable ? (
-            <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
-              <HoverCard openDelay={300} closeDelay={100}>
-                <HoverCardTrigger asChild>
-                  <PopoverTrigger asChild>
-                    <div 
-                      className={`font-medium text-sm text-foreground flex-1 break-words cursor-pointer hover:underline ${isEditMode ? "border-b border-dashed border-primary" : ""}`}
-                      data-testid={`button-deliverable-info-${deliverable.id}`}
+            isEditMode && onEditDeliverable ? (
+              <div 
+                className="font-medium text-sm text-foreground flex-1 break-words cursor-pointer hover:underline border-b border-dashed border-primary"
+                onClick={() => onEditDeliverable(deliverable)}
+                data-testid={`button-deliverable-info-${deliverable.id}`}
+              >
+                {deliverable.name}
+              </div>
+            ) : (
+              <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+                <HoverCard openDelay={300} closeDelay={100}>
+                  <HoverCardTrigger asChild>
+                    <PopoverTrigger asChild>
+                      <div 
+                        className="font-medium text-sm text-foreground flex-1 break-words cursor-pointer hover:underline"
+                        data-testid={`button-deliverable-info-${deliverable.id}`}
+                      >
+                        {deliverable.name}
+                      </div>
+                    </PopoverTrigger>
+                  </HoverCardTrigger>
+                  <HoverCardContent side="right" align="start" className="w-auto p-4">
+                    {deliverableInfoContent}
+                  </HoverCardContent>
+                </HoverCard>
+                <PopoverContent side="right" align="start" className="w-auto p-4">
+                  <div className="flex justify-between items-start gap-4 mb-2">
+                    <span className="text-xs text-muted-foreground uppercase tracking-wide">Deliverable</span>
+                    <Button 
+                      size="icon" 
+                      variant="ghost" 
+                      className="h-5 w-5 -mt-1 -mr-1"
+                      onClick={() => setPopoverOpen(false)}
                     >
-                      {deliverable.name}
-                    </div>
-                  </PopoverTrigger>
-                </HoverCardTrigger>
-                <HoverCardContent side="right" align="start" className="w-auto p-4">
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
                   {deliverableInfoContent}
-                </HoverCardContent>
-              </HoverCard>
-              <PopoverContent side="right" align="start" className="w-auto p-4">
-                <div className="flex justify-between items-start gap-4 mb-2">
-                  <span className="text-xs text-muted-foreground uppercase tracking-wide">Deliverable</span>
-                  <Button 
-                    size="icon" 
-                    variant="ghost" 
-                    className="h-5 w-5 -mt-1 -mr-1"
-                    onClick={() => setPopoverOpen(false)}
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                </div>
-                {deliverableInfoContent}
-                {isEditMode && onEditDeliverable && (
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="w-full mt-3"
-                    onClick={() => {
-                      setPopoverOpen(false);
-                      onEditDeliverable(deliverable);
-                    }}
-                    data-testid={`button-edit-deliverable-${deliverable.id}`}
-                  >
-                    Edit Deliverable
-                  </Button>
-                )}
-              </PopoverContent>
-            </Popover>
+                </PopoverContent>
+              </Popover>
+            )
           ) : (
             <div className="font-medium text-sm text-muted-foreground italic pl-5">
               Ungrouped
