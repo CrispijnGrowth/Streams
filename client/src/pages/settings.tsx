@@ -12,7 +12,8 @@ import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Check, UserPlus, Shield, Upload, FileSpreadsheet, AlertCircle, Users, Plus, Trash2, Pencil, X, Download } from "lucide-react";
+import { Loader2, Check, UserPlus, Shield, Upload, FileSpreadsheet, AlertCircle, Users, Plus, Trash2, Pencil, X, Download, Keyboard } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import type { User, TeamMember } from "@shared/schema";
 
 interface ImportPreview {
@@ -372,6 +373,63 @@ export function SettingsPage() {
               </SelectContent>
             </Select>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Keyboard className="h-5 w-5" />
+            Keyboard Shortcuts
+          </CardTitle>
+          <CardDescription>
+            Speed up your workflow with keyboard shortcuts
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" data-testid="button-view-shortcuts">
+                <Keyboard className="h-4 w-4 mr-2" />
+                View Shortcuts
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Keyboard className="h-5 w-5" />
+                  Keyboard Shortcuts
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 pt-4">
+                <div className="space-y-3">
+                  <h4 className="font-medium text-sm text-muted-foreground">Navigation & Actions</h4>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Add new item</span>
+                      <Badge variant="secondary" className="font-mono">N</Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Edit selected item</span>
+                      <Badge variant="secondary" className="font-mono">E</Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Archive selected item</span>
+                      <Badge variant="secondary" className="font-mono">A</Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Delete selected item</span>
+                      <Badge variant="secondary" className="font-mono">Delete</Badge>
+                    </div>
+                  </div>
+                </div>
+                <Separator />
+                <div className="text-xs text-muted-foreground">
+                  Shortcuts are disabled when typing in text fields.
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </CardContent>
       </Card>
       
