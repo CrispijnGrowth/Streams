@@ -176,18 +176,6 @@ export function SolutionsOverview({ showDescriptions }: SolutionsOverviewProps) 
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {filteredAndSortedSolutions.length > 0 && (
-          <Timeline
-            items={timelineItems}
-            onItemClick={(id) => {
-              const solution = filteredAndSortedSolutions.find((s) => s.id === id);
-              if (solution) handleSolutionClick(solution);
-            }}
-            level="solution"
-            showNoDateShelf={true}
-          />
-        )}
-
         {filteredAndSortedSolutions.length === 0 ? (
           <EmptyState
             icon={Layers}
@@ -223,6 +211,18 @@ export function SolutionsOverview({ showDescriptions }: SolutionsOverviewProps) 
               );
             })}
           </div>
+        )}
+
+        {filteredAndSortedSolutions.length > 0 && (
+          <Timeline
+            items={timelineItems}
+            onItemClick={(id) => {
+              const solution = filteredAndSortedSolutions.find((s) => s.id === id);
+              if (solution) handleSolutionClick(solution);
+            }}
+            level="solution"
+            showNoDateShelf={true}
+          />
         )}
       </div>
 
