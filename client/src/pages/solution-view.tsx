@@ -223,7 +223,7 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
   });
 
   const updateDeliverable = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: { name: string; borderColor: DeliverableBorderColorType; owners: string[]; isMilestoneLinked: boolean; dueDate?: string } }) => {
+    mutationFn: async ({ id, data }: { id: string; data: { name: string; description?: string; borderColor: DeliverableBorderColorType; owners: string[]; isMilestoneLinked: boolean; dueDate?: string } }) => {
       return apiRequest("PATCH", `/api/deliverables/${id}`, data);
     },
     onSuccess: () => {

@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { ComboboxMultiSelect } from "@/components/ui/combobox-multi-select";
@@ -29,7 +30,7 @@ interface EditDeliverablePopupProps {
   deliverable: Deliverable | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (id: string, data: { name: string; borderColor: DeliverableBorderColorType; owners: string[]; isMilestoneLinked: boolean; dueDate?: string }) => void;
+  onSave: (id: string, data: { name: string; description?: string; borderColor: DeliverableBorderColorType; owners: string[]; isMilestoneLinked: boolean; dueDate?: string }) => void;
   onDelete?: (id: string) => void;
   isPending?: boolean;
   anchorElement?: HTMLElement | null;
@@ -49,6 +50,7 @@ export function EditDeliverablePopup({
 }: EditDeliverablePopupProps) {
   const { toast } = useToast();
   const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
   const [borderColor, setBorderColor] = useState<DeliverableBorderColorType>("cyan");
   const [owners, setOwners] = useState<string[]>([]);
   const [isMilestoneLinked, setIsMilestoneLinked] = useState(true);
@@ -90,6 +92,7 @@ export function EditDeliverablePopup({
   useEffect(() => {
     if (deliverable && open) {
       setName(deliverable.name);
+      setDescription(deliverable.description || "");
       setBorderColor(deliverable.borderColor || "cyan");
       setOwners(deliverable.owners || []);
       setIsMilestoneLinked(deliverable.isMilestoneLinked ?? true);
@@ -108,6 +111,7 @@ export function EditDeliverablePopup({
       }
       onSave(deliverable.id, { 
         name: name.trim(), 
+        description: description.trim() || undefined,
         borderColor, 
         owners,
         isMilestoneLinked,
@@ -140,6 +144,18 @@ export function EditDeliverablePopup({
               value={name}
               onChange={(e) => setName(e.target.value)}
               data-testid="input-edit-deliverable-name"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="edit-deliverable-description">Description</Label>
+            <Textarea
+              id="edit-deliverable-description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Add a description..."
+              rows={2}
+              data-testid="input-edit-deliverable-description"
             />
           </div>
 
