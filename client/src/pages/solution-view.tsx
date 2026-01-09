@@ -364,28 +364,6 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
     );
   }
 
-  if (!actions || actions.length === 0) {
-    return (
-      <div className="flex flex-col h-full">
-        <div className="flex-1 overflow-auto p-6">
-          <EmptyState
-            icon={CheckSquare}
-            title="No actions yet"
-            description="Create your first action to start tracking work in this solution."
-            actionLabel="Create Action"
-            onAction={() => createAction.mutate("New Action")}
-          />
-        </div>
-        <div className="shrink-0 border-t p-4 bg-background relative z-50">
-          <Timeline
-            items={[]}
-            onItemClick={handleTimelineItemClick}
-            level="action"
-          />
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="flex flex-col h-full">
@@ -495,7 +473,7 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
           <div className="space-y-3">
 
             <KanbanBoard
-              actions={actions.filter((a) => !a.isDeleted)}
+              actions={(actions || []).filter((a) => !a.isDeleted)}
               deliverables={deliverables?.filter((d) => !d.isDeleted) || []}
               parentMilestoneDate={solution.milestoneDate}
               onActionClick={handleActionClick}
