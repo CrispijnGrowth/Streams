@@ -78,6 +78,7 @@ export interface IStorage {
   restoreDeliverable(userId: string, id: string): Promise<boolean>;
   restoreAction(userId: string, id: string): Promise<boolean>;
   restoreStep(userId: string, id: string): Promise<boolean>;
+  emptyRecycleBin(userId: string): Promise<{ streams: number; solutions: number; deliverables: number; actions: number; steps: number }>;
 
   seedExampleData(userId: string): Promise<void>;
   hasExampleData(userId: string): Promise<boolean>;
@@ -932,6 +933,43 @@ export class MemStorage implements IStorage {
     if (!step || step.userId !== userId || !step.isDeleted) return false;
     step.isDeleted = false;
     return true;
+  }
+
+  async emptyRecycleBin(userId: string): Promise<{ streams: number; solutions: number; deliverables: number; actions: number; steps: number }> {
+    let streamCount = 0, solutionCount = 0, deliverableCount = 0, actionCount = 0, stepCount = 0;
+    
+    for (const [id, step] of this.steps) {
+      if (step.userId === userId && step.isDeleted) {
+        this.steps.delete(id);
+        stepCount++;
+      }
+    }
+    for (const [id, action] of this.actions) {
+      if (action.userId === userId && action.isDeleted) {
+        this.actions.delete(id);
+        actionCount++;
+      }
+    }
+    for (const [id, deliverable] of this.deliverables) {
+      if (deliverable.userId === userId && deliverable.isDeleted) {
+        this.deliverables.delete(id);
+        deliverableCount++;
+      }
+    }
+    for (const [id, solution] of this.solutions) {
+      if (solution.userId === userId && solution.isDeleted) {
+        this.solutions.delete(id);
+        solutionCount++;
+      }
+    }
+    for (const [id, stream] of this.streams) {
+      if (stream.userId === userId && stream.isDeleted) {
+        this.streams.delete(id);
+        streamCount++;
+      }
+    }
+    
+    return { streams: streamCount, solutions: solutionCount, deliverables: deliverableCount, actions: actionCount, steps: stepCount };
   }
 
   async hasExampleData(userId: string): Promise<boolean> {

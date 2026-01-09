@@ -1053,6 +1053,58 @@ export class DatabaseStorage implements IStorage {
     return true;
   }
 
+  async emptyRecycleBin(userId: string): Promise<{ streams: number; solutions: number; deliverables: number; actions: number; steps: number }> {
+    const deletedStreams = await db.select().from(streams).where(
+      and(eq(streams.userId, userId), eq(streams.isDeleted, true))
+    );
+    const deletedSolutions = await db.select().from(solutions).where(
+      and(eq(solutions.userId, userId), eq(solutions.isDeleted, true))
+    );
+    const deletedDeliverables = await db.select().from(deliverables).where(
+      and(eq(deliverables.userId, userId), eq(deliverables.isDeleted, true))
+    );
+    const deletedActions = await db.select().from(actions).where(
+      and(eq(actions.userId, userId), eq(actions.isDeleted, true))
+    );
+    const deletedSteps = await db.select().from(steps).where(
+      and(eq(steps.userId, userId), eq(steps.isDeleted, true))
+    );
+
+    if (deletedSteps.length > 0) {
+      await db.delete(steps).where(
+        and(eq(steps.userId, userId), eq(steps.isDeleted, true))
+      );
+    }
+    if (deletedActions.length > 0) {
+      await db.delete(actions).where(
+        and(eq(actions.userId, userId), eq(actions.isDeleted, true))
+      );
+    }
+    if (deletedDeliverables.length > 0) {
+      await db.delete(deliverables).where(
+        and(eq(deliverables.userId, userId), eq(deliverables.isDeleted, true))
+      );
+    }
+    if (deletedSolutions.length > 0) {
+      await db.delete(solutions).where(
+        and(eq(solutions.userId, userId), eq(solutions.isDeleted, true))
+      );
+    }
+    if (deletedStreams.length > 0) {
+      await db.delete(streams).where(
+        and(eq(streams.userId, userId), eq(streams.isDeleted, true))
+      );
+    }
+
+    return {
+      streams: deletedStreams.length,
+      solutions: deletedSolutions.length,
+      deliverables: deletedDeliverables.length,
+      actions: deletedActions.length,
+      steps: deletedSteps.length,
+    };
+  }
+
   async seedExampleData(userId: string): Promise<void> {
     const hasData = await this.hasExampleData(userId);
     if (hasData) return;

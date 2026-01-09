@@ -802,6 +802,16 @@ export async function registerRoutes(
     }
   });
 
+  app.delete("/api/recycle-bin/empty", authMiddleware, async (req, res) => {
+    try {
+      const result = await storage.emptyRecycleBin(req.userId!);
+      res.json({ success: true, deleted: result });
+    } catch (error) {
+      console.error("[RecycleBin] Empty error:", error);
+      res.status(500).json({ error: "Failed to empty recycle bin" });
+    }
+  });
+
   // Excel Import - Download Template
   app.get("/api/import/template", authMiddleware, (req, res) => {
     const templatePath = path.join(process.cwd(), "attached_assets", "Streams_Solutions_IMPORT_TEMPLATE_1767869308008.xlsx");
