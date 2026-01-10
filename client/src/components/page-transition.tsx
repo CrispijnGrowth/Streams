@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useLayoutEffect, useRef, cloneElement, isValidElement } from "react";
+import { createContext, useContext, useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 
 interface PageTransitionContextType {
@@ -15,6 +15,9 @@ interface PageTransitionProps {
   children: React.ReactNode;
   transitionKey: string;
 }
+
+const DURATION = 0.32;
+const EASING = [0.25, 0.9, 0.3, 1];
 
 const enterVariants = {
   initial: {
@@ -38,41 +41,37 @@ const exitVariants = {
   },
 };
 
-const transitionConfig = {
-  duration: 0.22,
-  ease: [0.22, 0.61, 0.36, 1],
-};
+interface SnapshotState {
+  key: string;
+  node: React.ReactNode;
+}
 
 export function PageTransition({ children, transitionKey }: PageTransitionProps) {
-  const [activeKey, setActiveKey] = useState(transitionKey);
-  const [activeNode, setActiveNode] = useState(children);
-  const [exitingNode, setExitingNode] = useState<React.ReactNode>(null);
-  const [exitingKey, setExitingKey] = useState<string | null>(null);
-  const isFirstRender = useRef(true);
+  const [active, setActive] = useState<SnapshotState>({ key: transitionKey, node: children });
+  const [exiting, setExiting] = useState<SnapshotState | null>(null);
+  const prevKeyRef = useRef(transitionKey);
+  const isInitialMount = useRef(true);
 
   const prefersReducedMotion = 
     typeof window !== "undefined" && 
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  useLayoutEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      setActiveKey(transitionKey);
-      setActiveNode(children);
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      prevKeyRef.current = transitionKey;
       return;
     }
 
-    if (transitionKey !== activeKey) {
-      setExitingNode(activeNode);
-      setExitingKey(activeKey);
-      setActiveKey(transitionKey);
-      setActiveNode(children);
+    if (transitionKey !== prevKeyRef.current) {
+      setExiting({ key: prevKeyRef.current, node: active.node });
+      setActive({ key: transitionKey, node: children });
+      prevKeyRef.current = transitionKey;
     }
-  }, [transitionKey, children, activeKey, activeNode]);
+  }, [transitionKey, children, active.node]);
 
   const handleExitComplete = () => {
-    setExitingNode(null);
-    setExitingKey(null);
+    setExiting(null);
   };
 
   if (prefersReducedMotion) {
@@ -88,30 +87,39 @@ export function PageTransition({ children, transitionKey }: PageTransitionProps)
   return (
     <PageTransitionContext.Provider value={{ animationKey: 0 }}>
       <div className="relative w-full h-full overflow-hidden">
-        {exitingNode && exitingKey && (
+        {exiting && (
           <motion.div
-            key={`exit-${exitingKey}`}
+            key={`exit-${exiting.key}`}
             className="absolute inset-0 w-full h-full overflow-auto"
             initial="initial"
             animate="animate"
             variants={exitVariants}
-            transition={transitionConfig}
+            transition={{ duration: DURATION, ease: EASING }}
             onAnimationComplete={handleExitComplete}
-            style={{ zIndex: 1 }}
+            style={{ 
+              zIndex: 1,
+              transformOrigin: "center top",
+              pointerEvents: "none",
+              willChange: "transform, opacity",
+            }}
           >
-            {exitingNode}
+            {exiting.node}
           </motion.div>
         )}
         <motion.div
-          key={`enter-${activeKey}`}
+          key={`enter-${active.key}`}
           className="absolute inset-0 w-full h-full overflow-auto"
-          initial={exitingNode ? "initial" : false}
+          initial={exiting ? "initial" : false}
           animate="animate"
           variants={enterVariants}
-          transition={transitionConfig}
-          style={{ zIndex: 2 }}
+          transition={{ duration: DURATION, ease: EASING }}
+          style={{ 
+            zIndex: 2,
+            transformOrigin: "center top",
+            willChange: "transform, opacity",
+          }}
         >
-          {activeNode}
+          {active.node}
         </motion.div>
       </div>
     </PageTransitionContext.Provider>
