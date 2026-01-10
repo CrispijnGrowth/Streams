@@ -92,6 +92,8 @@ export function HeroTransitionProvider({ children }: { children: React.ReactNode
       return;
     }
 
+    clearPolling();
+    
     setTransitionData(data);
     setIsTransitioning(true);
     setShowOverlay(true);
@@ -101,7 +103,7 @@ export function HeroTransitionProvider({ children }: { children: React.ReactNode
     requestAnimationFrame(() => {
       navigate();
     });
-  }, [prefersReducedMotion]);
+  }, [prefersReducedMotion, clearPolling]);
 
   const handleAnimationComplete = useCallback(() => {
     clearPolling();

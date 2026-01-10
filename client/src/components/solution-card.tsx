@@ -78,22 +78,24 @@ export function SolutionCard({
   const handleCardClick = () => {
     if (isEditMode) {
       onEdit?.();
-    } else if (cardRef.current) {
-      const rect = cardRef.current.getBoundingClientRect();
-      startTransition(
-        {
-          sourceRect: rect,
-          entityId: solution.id,
-          entityName: solution.name,
-          displayKey: solution.displayKey || "",
-          entityType: "solution",
-        },
-        () => {
-          setLocation(`/stream/${solution.streamId}/solution/${solution.id}`);
-        }
-      );
     } else {
-      onClick?.();
+      if (cardRef.current) {
+        const rect = cardRef.current.getBoundingClientRect();
+        startTransition(
+          {
+            sourceRect: rect,
+            entityId: solution.id,
+            entityName: solution.name,
+            displayKey: solution.displayKey || "",
+            entityType: "solution",
+          },
+          () => {
+            setLocation(`/stream/${solution.streamId}/solution/${solution.id}`);
+          }
+        );
+      } else {
+        setLocation(`/stream/${solution.streamId}/solution/${solution.id}`);
+      }
     }
   };
 

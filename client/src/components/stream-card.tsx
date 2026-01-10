@@ -47,22 +47,24 @@ export function StreamCard({ stream, onClick, onEdit, onMomentumClick, showDescr
   const handleCardClick = () => {
     if (isEditMode) {
       onEdit?.();
-    } else if (cardRef.current) {
-      const rect = cardRef.current.getBoundingClientRect();
-      startTransition(
-        {
-          sourceRect: rect,
-          entityId: stream.id,
-          entityName: stream.name,
-          displayKey: stream.displayKey || "",
-          entityType: "stream",
-        },
-        () => {
-          setLocation(`/stream/${stream.id}`);
-        }
-      );
     } else {
-      onClick?.();
+      if (cardRef.current) {
+        const rect = cardRef.current.getBoundingClientRect();
+        startTransition(
+          {
+            sourceRect: rect,
+            entityId: stream.id,
+            entityName: stream.name,
+            displayKey: stream.displayKey || "",
+            entityType: "stream",
+          },
+          () => {
+            setLocation(`/stream/${stream.id}`);
+          }
+        );
+      } else {
+        setLocation(`/stream/${stream.id}`);
+      }
     }
   };
 
