@@ -292,7 +292,7 @@ function DeliverableRow({
   
   return (
     <div 
-      className={`relative flex gap-4 py-3 ${isDragging ? "opacity-50" : ""}`}
+      className={`relative flex gap-3 py-3 ${isDragging ? "opacity-50" : ""}`}
       data-testid={`deliverable-row-${rowId}`}
     >
       <div 
@@ -643,7 +643,7 @@ export function KanbanBoard({
         <ScrollArea className="w-full">
           <div className="min-w-max relative">
             {/* Column background stripes */}
-            <div className="absolute top-0 bottom-0 left-40 right-0 flex gap-3 pointer-events-none" style={{ zIndex: 0 }}>
+            <div className="absolute top-0 bottom-0 left-[172px] right-0 flex gap-3 pointer-events-none" style={{ zIndex: 0 }}>
               {columnData.map((column, columnIndex) => {
                 const bgColor = columnIndex % 2 === 0 ? "bg-[hsl(var(--kanban-column-a))]" : "bg-[hsl(var(--kanban-column-b))]";
                 return (
@@ -653,7 +653,7 @@ export function KanbanBoard({
             </div>
 
             {/* Column headers - sticky for vertical scroll */}
-            <div className="flex gap-3 pb-3 border-b mb-3 pl-40 relative sticky top-0 bg-background z-20">
+            <div className="flex gap-3 pb-3 border-b mb-3 pl-[172px] relative sticky top-0 bg-background z-20">
               {columnData.map((column) => {
                 const columnActions = actions.filter((a) => a.status === column.status);
                 return (
@@ -792,7 +792,7 @@ export function KanbanBoard({
     >
       <ScrollArea className="w-full">
         <div className="min-w-max relative">
-          <div className="absolute top-0 bottom-0 left-40 right-0 flex gap-3 pointer-events-none" style={{ zIndex: 0 }}>
+          <div className="absolute top-0 bottom-0 left-[172px] right-0 flex gap-3 pointer-events-none" style={{ zIndex: 0 }}>
             {columnData.map((column, columnIndex) => {
               const bgColor = columnIndex % 2 === 0 ? "bg-[hsl(var(--kanban-column-a))]" : "bg-[hsl(var(--kanban-column-b))]";
               return (
@@ -801,7 +801,7 @@ export function KanbanBoard({
             })}
           </div>
 
-          <div className="flex gap-3 pb-3 border-b mb-3 pl-40 relative sticky top-0 bg-background z-20">
+          <div className="flex gap-3 pb-3 border-b mb-3 pl-[172px] relative sticky top-0 bg-background z-20">
             {columnData.map((column, columnIndex) => {
               const columnCount = actions.filter((a) => a.status === column.status).length;
               return (
