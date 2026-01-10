@@ -31,9 +31,9 @@ import { LoginPage } from "@/pages/login";
 import { AuthVerifyPage } from "@/pages/auth-verify";
 import { ResetPasswordPage } from "@/pages/reset-password";
 import NotFound from "@/pages/not-found";
-function Router({ showDescriptions, displayLocation }: { showDescriptions: boolean; displayLocation: string }) {
+function Router({ showDescriptions }: { showDescriptions: boolean }) {
   return (
-    <Switch location={displayLocation}>
+    <Switch>
       <Route path="/solutions">
         <SolutionsOverview showDescriptions={showDescriptions} />
       </Route>
@@ -292,12 +292,9 @@ function AppContent() {
       </header>
       <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
       <main className="flex-1 overflow-auto">
-        <PageTransition 
-          transitionKey={location}
-          renderContent={(displayLocation) => (
-            <Router showDescriptions={showDescriptions} displayLocation={displayLocation} />
-          )}
-        />
+        <PageTransition transitionKey={location}>
+          <Router showDescriptions={showDescriptions} />
+        </PageTransition>
       </main>
     </div>
   );

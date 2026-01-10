@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useLayoutEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface PageTransitionContextType {
@@ -12,55 +12,53 @@ export function usePageTransition() {
 }
 
 interface PageTransitionProps {
+  children: React.ReactNode;
   transitionKey: string;
-  renderContent: (displayKey: string) => React.ReactNode;
 }
 
 const pageVariants = {
   initial: {
     opacity: 0,
-    scale: 0.985,
   },
   animate: {
     opacity: 1,
-    scale: 1,
   },
   exit: {
     opacity: 0,
-    scale: 1.015,
   },
 };
 
 const pageTransition = {
-  type: "tween",
-  ease: [0.4, 0, 0.2, 1],
-  duration: 0.2,
+  duration: 0.15,
+  ease: "easeInOut",
 };
 
-export function PageTransition({ transitionKey, renderContent }: PageTransitionProps) {
-  const [displayKey, setDisplayKey] = useState(transitionKey);
-  const [isAnimating, setIsAnimating] = useState(false);
+export function PageTransition({ children, transitionKey }: PageTransitionProps) {
+  const [currentKey, setCurrentKey] = useState(transitionKey);
+  const [currentChildren, setCurrentChildren] = useState(children);
+  const isFirstRender = useRef(true);
 
   const prefersReducedMotion = 
     typeof window !== "undefined" && 
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  useEffect(() => {
-    if (transitionKey !== displayKey && !isAnimating) {
-      setIsAnimating(true);
+  useLayoutEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
     }
-  }, [transitionKey, displayKey, isAnimating]);
-
-  const handleExitComplete = () => {
-    setDisplayKey(transitionKey);
-    setIsAnimating(false);
-  };
+    
+    if (transitionKey !== currentKey) {
+      setCurrentKey(transitionKey);
+      setCurrentChildren(children);
+    }
+  }, [transitionKey, children, currentKey]);
 
   if (prefersReducedMotion) {
     return (
       <PageTransitionContext.Provider value={{ animationKey: 0 }}>
         <div className="w-full h-full">
-          {renderContent(transitionKey)}
+          {children}
         </div>
       </PageTransitionContext.Provider>
     );
@@ -68,9 +66,9 @@ export function PageTransition({ transitionKey, renderContent }: PageTransitionP
 
   return (
     <PageTransitionContext.Provider value={{ animationKey: 0 }}>
-      <AnimatePresence mode="wait" onExitComplete={handleExitComplete}>
+      <AnimatePresence mode="wait" initial={false}>
         <motion.div
-          key={displayKey}
+          key={currentKey}
           className="w-full h-full"
           initial="initial"
           animate="animate"
@@ -78,7 +76,7 @@ export function PageTransition({ transitionKey, renderContent }: PageTransitionP
           variants={pageVariants}
           transition={pageTransition}
         >
-          {renderContent(displayKey)}
+          {currentChildren}
         </motion.div>
       </AnimatePresence>
     </PageTransitionContext.Provider>
