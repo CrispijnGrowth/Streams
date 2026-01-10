@@ -73,7 +73,7 @@ const kanbanColumns: { status: ActionStatusType; label: string; color: string }[
 
 // Kanban layout constants - single source of truth for column sizing
 const KANBAN_DELIVERABLE_WIDTH = 160; // px
-const KANBAN_COLUMN_WIDTH = 180; // px
+const KANBAN_COLUMN_WIDTH = 198; // px (180 * 1.1 = 10% wider)
 const KANBAN_GAP = 12; // px (gap-3)
 
 interface SortableActionCardProps {
