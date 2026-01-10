@@ -1,4 +1,4 @@
-import { createContext, useContext } from "react";
+import { createContext, useContext, useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface PageTransitionContextType {
@@ -12,14 +12,14 @@ export function usePageTransition() {
 }
 
 interface PageTransitionProps {
-  children: React.ReactNode;
   transitionKey: string;
+  renderContent: (displayKey: string) => React.ReactNode;
 }
 
 const pageVariants = {
   initial: {
     opacity: 0,
-    scale: 0.98,
+    scale: 0.985,
   },
   animate: {
     opacity: 1,
@@ -27,26 +27,40 @@ const pageVariants = {
   },
   exit: {
     opacity: 0,
-    scale: 1.02,
+    scale: 1.015,
   },
 };
 
 const pageTransition = {
   type: "tween",
-  ease: [0.25, 0.1, 0.25, 1],
+  ease: [0.4, 0, 0.2, 1],
   duration: 0.2,
 };
 
-export function PageTransition({ children, transitionKey }: PageTransitionProps) {
+export function PageTransition({ transitionKey, renderContent }: PageTransitionProps) {
+  const [displayKey, setDisplayKey] = useState(transitionKey);
+  const [isAnimating, setIsAnimating] = useState(false);
+
   const prefersReducedMotion = 
     typeof window !== "undefined" && 
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  useEffect(() => {
+    if (transitionKey !== displayKey && !isAnimating) {
+      setIsAnimating(true);
+    }
+  }, [transitionKey, displayKey, isAnimating]);
+
+  const handleExitComplete = () => {
+    setDisplayKey(transitionKey);
+    setIsAnimating(false);
+  };
 
   if (prefersReducedMotion) {
     return (
       <PageTransitionContext.Provider value={{ animationKey: 0 }}>
         <div className="w-full h-full">
-          {children}
+          {renderContent(transitionKey)}
         </div>
       </PageTransitionContext.Provider>
     );
@@ -54,21 +68,19 @@ export function PageTransition({ children, transitionKey }: PageTransitionProps)
 
   return (
     <PageTransitionContext.Provider value={{ animationKey: 0 }}>
-      <div className="relative w-full h-full overflow-hidden">
-        <AnimatePresence initial={false}>
-          <motion.div
-            key={transitionKey}
-            className="absolute inset-0 w-full h-full overflow-auto"
-            initial="initial"
-            animate="animate"
-            exit="exit"
-            variants={pageVariants}
-            transition={pageTransition}
-          >
-            {children}
-          </motion.div>
-        </AnimatePresence>
-      </div>
+      <AnimatePresence mode="wait" onExitComplete={handleExitComplete}>
+        <motion.div
+          key={displayKey}
+          className="w-full h-full"
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          variants={pageVariants}
+          transition={pageTransition}
+        >
+          {renderContent(displayKey)}
+        </motion.div>
+      </AnimatePresence>
     </PageTransitionContext.Provider>
   );
 }
