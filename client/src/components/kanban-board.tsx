@@ -71,6 +71,11 @@ const kanbanColumns: { status: ActionStatusType; label: string; color: string }[
   { status: ActionStatus.ARCHIVE, label: "Archive", color: "bg-status-archive" },
 ];
 
+// Kanban layout constants - single source of truth for column sizing
+const KANBAN_DELIVERABLE_WIDTH = 160; // px
+const KANBAN_COLUMN_WIDTH = 180; // px
+const KANBAN_GAP = 12; // px (gap-3)
+
 interface SortableActionCardProps {
   action: ActionWithLastComment;
   onClick?: () => void;
@@ -137,9 +142,10 @@ function DroppableCell({
     <SortableContext items={items.map((a) => a.id)} strategy={verticalListSortingStrategy}>
       <div
         ref={setNodeRef}
-        className={`w-40 md:w-44 lg:w-48 flex-shrink-0 space-y-2 min-h-[60px] px-[5px] py-1 flex flex-col items-stretch transition-colors ${
+        className={`flex-shrink-0 space-y-2 min-h-[60px] px-[5px] py-1 flex flex-col items-stretch transition-colors ${
           isOver ? "ring-2 ring-primary/30 rounded-lg" : ""
         }`}
+        style={{ width: KANBAN_COLUMN_WIDTH }}
         data-testid={`kanban-cell-${status.toLowerCase().replace(/\s/g, "-")}`}
       >
         {items.length === 0 ? (
@@ -292,7 +298,8 @@ function DeliverableRow({
   
   return (
     <div 
-      className={`relative flex gap-3 py-3 ${isDragging ? "opacity-50" : ""}`}
+      className={`relative flex py-3 ${isDragging ? "opacity-50" : ""}`}
+      style={{ gap: KANBAN_GAP }}
       data-testid={`deliverable-row-${rowId}`}
     >
       <div 
@@ -304,7 +311,7 @@ function DeliverableRow({
         }}
       />
       
-      <div className="w-40 flex-shrink-0 flex flex-col pt-2 pl-1 z-10 gap-1">
+      <div className="flex-shrink-0 flex flex-col pt-2 pl-1 z-10 gap-1" style={{ width: KANBAN_DELIVERABLE_WIDTH }}>
         <div className="flex items-start gap-1">
           {deliverable && dragHandleProps && (
             <div 
@@ -416,7 +423,7 @@ function DeliverableRow({
         )}
       </div>
 
-      <div className="flex gap-3">
+      <div className="flex" style={{ gap: KANBAN_GAP }}>
         {columnData.map((column, columnIndex) => {
           const columnActions = actions
             .filter((a) => a.status === column.status)
@@ -643,21 +650,21 @@ export function KanbanBoard({
         <ScrollArea className="w-full">
           <div className="min-w-max relative">
             {/* Column background stripes */}
-            <div className="absolute top-0 bottom-0 left-[172px] right-0 flex gap-3 pointer-events-none" style={{ zIndex: 0 }}>
+            <div className="absolute top-0 bottom-0 right-0 flex pointer-events-none" style={{ zIndex: 0, left: KANBAN_DELIVERABLE_WIDTH + KANBAN_GAP, gap: KANBAN_GAP }}>
               {columnData.map((column, columnIndex) => {
                 const bgColor = columnIndex % 2 === 0 ? "bg-[hsl(var(--kanban-column-a))]" : "bg-[hsl(var(--kanban-column-b))]";
                 return (
-                  <div key={`bg-${column.status}`} className={`w-40 md:w-44 lg:w-48 flex-shrink-0 ${bgColor}`} />
+                  <div key={`bg-${column.status}`} className={`flex-shrink-0 ${bgColor}`} style={{ width: KANBAN_COLUMN_WIDTH }} />
                 );
               })}
             </div>
 
             {/* Column headers - sticky for vertical scroll */}
-            <div className="flex gap-3 pb-3 border-b mb-3 pl-[172px] relative sticky top-0 bg-background z-20">
+            <div className="flex pb-3 border-b mb-3 relative sticky top-0 bg-background z-20" style={{ paddingLeft: KANBAN_DELIVERABLE_WIDTH + KANBAN_GAP, gap: KANBAN_GAP }}>
               {columnData.map((column) => {
                 const columnActions = actions.filter((a) => a.status === column.status);
                 return (
-                  <div key={column.status} className="w-40 md:w-44 lg:w-48 flex-shrink-0 pt-2 px-1">
+                  <div key={column.status} className="flex-shrink-0 pt-2 px-1" style={{ width: KANBAN_COLUMN_WIDTH }}>
                     <div className="flex items-center justify-center px-1">
                       <div className="flex items-center gap-2">
                         <div className={`w-3 h-3 rounded-full ${column.color}`} />
@@ -677,7 +684,7 @@ export function KanbanBoard({
                   border: isEmpty ? `2px solid hsl(${borderColorMap.cyan})` : undefined,
                 }}
               >
-                <div className="w-40 flex-shrink-0 pl-3">
+                <div className="flex-shrink-0 pl-3" style={{ width: KANBAN_DELIVERABLE_WIDTH }}>
                   {isEmpty && isEditMode && onAddDeliverable ? (
                     <Popover open={addDeliverableOpen} onOpenChange={setAddDeliverableOpen}>
                       <PopoverTrigger asChild>
@@ -792,20 +799,20 @@ export function KanbanBoard({
     >
       <ScrollArea className="w-full">
         <div className="min-w-max relative">
-          <div className="absolute top-0 bottom-0 left-[172px] right-0 flex gap-3 pointer-events-none" style={{ zIndex: 0 }}>
+          <div className="absolute top-0 bottom-0 right-0 flex pointer-events-none" style={{ zIndex: 0, left: KANBAN_DELIVERABLE_WIDTH + KANBAN_GAP, gap: KANBAN_GAP }}>
             {columnData.map((column, columnIndex) => {
               const bgColor = columnIndex % 2 === 0 ? "bg-[hsl(var(--kanban-column-a))]" : "bg-[hsl(var(--kanban-column-b))]";
               return (
-                <div key={`bg-${column.status}`} className={`w-40 md:w-44 lg:w-48 flex-shrink-0 ${bgColor}`} />
+                <div key={`bg-${column.status}`} className={`flex-shrink-0 ${bgColor}`} style={{ width: KANBAN_COLUMN_WIDTH }} />
               );
             })}
           </div>
 
-          <div className="flex gap-3 pb-3 border-b mb-3 pl-[172px] relative sticky top-0 bg-background z-20">
+          <div className="flex pb-3 border-b mb-3 relative sticky top-0 bg-background z-20" style={{ paddingLeft: KANBAN_DELIVERABLE_WIDTH + KANBAN_GAP, gap: KANBAN_GAP }}>
             {columnData.map((column, columnIndex) => {
               const columnCount = actions.filter((a) => a.status === column.status).length;
               return (
-                <div key={column.status} className="w-40 md:w-44 lg:w-48 flex-shrink-0 pt-2 px-1">
+                <div key={column.status} className="flex-shrink-0 pt-2 px-1" style={{ width: KANBAN_COLUMN_WIDTH }}>
                   <div className="flex items-center justify-center px-1">
                     <div className="flex items-center gap-2">
                       <div className={`w-3 h-3 rounded-full ${column.color}`} />
@@ -856,8 +863,8 @@ export function KanbanBoard({
               })}
             
             {isEditMode && onAddDeliverable && (
-              <div className="flex gap-4 py-3 pl-3">
-                <div className="w-40 flex-shrink-0">
+              <div className="flex py-3 pl-3" style={{ gap: KANBAN_GAP }}>
+                <div className="flex-shrink-0" style={{ width: KANBAN_DELIVERABLE_WIDTH }}>
                   <Popover open={addDeliverableOpen} onOpenChange={setAddDeliverableOpen}>
                     <PopoverTrigger asChild>
                       <Button
