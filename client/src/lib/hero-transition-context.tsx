@@ -35,6 +35,7 @@ export function HeroTransitionProvider({ children }: { children: React.ReactNode
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [transitionComplete, setTransitionComplete] = useState(true);
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
+  const [classNavBottom, setClassNavBottom] = useState<number | null>(null);
   const [showOverlay, setShowOverlay] = useState(false);
   const [animationPhase, setAnimationPhase] = useState<"waiting" | "expanding" | "done">("done");
   const targetRegistryRef = useRef<Map<string, HTMLElement>>(new Map());
@@ -63,9 +64,18 @@ export function HeroTransitionProvider({ children }: { children: React.ReactNode
     if (animationPhase === "waiting" && transitionData) {
       const checkForTarget = () => {
         const targetElement = targetRegistryRef.current.get(transitionData.entityId);
+        const classNav = document.querySelector('[data-testid="class-navigator"]');
+        
         if (targetElement) {
           const rect = targetElement.getBoundingClientRect();
           setTargetRect(rect);
+          
+          // Get ClassNavigator bottom position + 5px buffer
+          if (classNav) {
+            const navRect = classNav.getBoundingClientRect();
+            setClassNavBottom(navRect.bottom + 5);
+          }
+          
           setAnimationPhase("expanding");
           clearPolling();
         }
@@ -116,6 +126,7 @@ export function HeroTransitionProvider({ children }: { children: React.ReactNode
     setTransitionComplete(true);
     setTransitionData(null);
     setTargetRect(null);
+    setClassNavBottom(null);
     setAnimationPhase("done");
   }, [clearPolling]);
 
@@ -143,7 +154,7 @@ export function HeroTransitionProvider({ children }: { children: React.ReactNode
                 top: 0,
                 left: 0,
                 width: "100vw",
-                height: "100vh",
+                height: classNavBottom ?? "100vh",
                 opacity: 0,
                 borderRadius: 0,
               }}

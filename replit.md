@@ -119,6 +119,7 @@ Progress is computed automatically by rolling up completion percentages from ste
 - **Stats Display**: Shows counts for both created and updated records after import
 
 ### Recent Changes
+- 2026-01-10: Refined hero transition - card expansion now stops 5px below ClassNavigator breadcrumb instead of filling entire viewport
 - 2026-01-08: Replaced object storage with portable database photo storage - team member photos now stored as base64 data URIs in PostgreSQL (photoData column), works uniformly across all deployment platforms
 - 2026-01-08: Added update mode for Excel import - can now update existing records by matching names
 - 2026-01-07: Added auto-edit mode for empty states - pages switch to Edit mode when no data exists
