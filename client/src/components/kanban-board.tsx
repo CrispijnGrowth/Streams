@@ -137,7 +137,7 @@ function DroppableCell({
     <SortableContext items={items.map((a) => a.id)} strategy={verticalListSortingStrategy}>
       <div
         ref={setNodeRef}
-        className={`w-40 md:w-44 lg:w-48 flex-shrink-0 space-y-2 min-h-[60px] p-1 transition-colors ${
+        className={`w-40 md:w-44 lg:w-48 flex-shrink-0 space-y-2 min-h-[60px] p-1 flex flex-col items-center transition-colors ${
           isOver ? "ring-2 ring-primary/30 rounded-lg" : ""
         }`}
         data-testid={`kanban-cell-${status.toLowerCase().replace(/\s/g, "-")}`}
@@ -658,12 +658,11 @@ export function KanbanBoard({
                 const columnActions = actions.filter((a) => a.status === column.status);
                 return (
                   <div key={column.status} className="w-40 md:w-44 lg:w-48 flex-shrink-0 pt-2 px-1">
-                    <div className="flex items-center justify-between px-1">
+                    <div className="flex items-center justify-center px-1">
                       <div className="flex items-center gap-2">
                         <div className={`w-3 h-3 rounded-full ${column.color}`} />
                         <h3 className="font-semibold text-xs uppercase tracking-wide">{column.label}</h3>
                       </div>
-                      <span className="text-xs md:text-sm font-medium text-muted-foreground">{columnActions.length}</span>
                     </div>
                   </div>
                 );
@@ -807,12 +806,11 @@ export function KanbanBoard({
               const columnCount = actions.filter((a) => a.status === column.status).length;
               return (
                 <div key={column.status} className="w-40 md:w-44 lg:w-48 flex-shrink-0 pt-2 px-1">
-                  <div className="flex items-center justify-between px-1">
+                  <div className="flex items-center justify-center px-1">
                     <div className="flex items-center gap-2">
                       <div className={`w-3 h-3 rounded-full ${column.color}`} />
                       <h3 className="font-semibold text-xs uppercase tracking-wide">{column.label}</h3>
                     </div>
-                    <span className="text-xs md:text-sm font-medium text-muted-foreground">{columnCount}</span>
                   </div>
                 </div>
               );
