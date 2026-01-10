@@ -1,4 +1,5 @@
-import { createContext, useContext, useEffect, useState, useRef } from "react";
+import { createContext, useContext } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface PageTransitionContextType {
   animationKey: number;
@@ -15,39 +16,60 @@ interface PageTransitionProps {
   transitionKey: string;
 }
 
+const pageVariants = {
+  initial: {
+    opacity: 0,
+    y: 8,
+    scale: 0.99,
+  },
+  animate: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+  },
+  exit: {
+    opacity: 0,
+    y: -4,
+    scale: 1.01,
+  },
+};
+
+const pageTransition = {
+  type: "tween",
+  ease: "easeOut",
+  duration: 0.25,
+};
+
 export function PageTransition({ children, transitionKey }: PageTransitionProps) {
-  const [animationKey, setAnimationKey] = useState(0);
-  const [contentVisible, setContentVisible] = useState(true);
-  const prevKeyRef = useRef(transitionKey);
+  const prefersReducedMotion = 
+    typeof window !== "undefined" && 
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  useEffect(() => {
-    if (transitionKey !== prevKeyRef.current) {
-      const prefersReducedMotion = 
-        typeof window !== "undefined" && 
-        window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-      if (!prefersReducedMotion) {
-        setContentVisible(false);
-        
-        const fadeInTimer = setTimeout(() => {
-          setContentVisible(true);
-          setAnimationKey(prev => prev + 1);
-        }, 50);
-
-        prevKeyRef.current = transitionKey;
-        return () => clearTimeout(fadeInTimer);
-      }
-      prevKeyRef.current = transitionKey;
-    }
-  }, [transitionKey]);
+  if (prefersReducedMotion) {
+    return (
+      <PageTransitionContext.Provider value={{ animationKey: 0 }}>
+        <div className="w-full h-full">
+          {children}
+        </div>
+      </PageTransitionContext.Provider>
+    );
+  }
 
   return (
-    <PageTransitionContext.Provider value={{ animationKey }}>
-      <div 
-        className={`w-full h-full transition-opacity duration-150 ${contentVisible ? 'opacity-100' : 'opacity-0'}`}
-      >
-        {children}
-      </div>
+    <PageTransitionContext.Provider value={{ animationKey: 0 }}>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={transitionKey}
+          className="w-full h-full"
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          variants={pageVariants}
+          transition={pageTransition}
+        >
+          {children}
+        </motion.div>
+      </AnimatePresence>
     </PageTransitionContext.Provider>
   );
 }
