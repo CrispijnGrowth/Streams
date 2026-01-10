@@ -13,27 +13,30 @@ interface HeroTransitionContextType {
   startTransition: (data: TransitionData, navigate: () => void) => void;
   registerTarget: (entityId: string, element: HTMLElement | null) => void;
   isTransitioning: boolean;
+  transitionComplete: boolean;
 }
 
 const HeroTransitionContext = createContext<HeroTransitionContextType>({
   startTransition: () => {},
   registerTarget: () => {},
   isTransitioning: false,
+  transitionComplete: true,
 });
 
 export function useHeroTransition() {
   return useContext(HeroTransitionContext);
 }
 
-const DURATION = 0.52;
-const EASING = [0.16, 1, 0.3, 1];
+const DURATION = 0.6;
+const EASING = [0.32, 0.72, 0, 1];
 
 export function HeroTransitionProvider({ children }: { children: React.ReactNode }) {
   const [transitionData, setTransitionData] = useState<TransitionData | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [transitionComplete, setTransitionComplete] = useState(true);
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
   const [showOverlay, setShowOverlay] = useState(false);
-  const [animationPhase, setAnimationPhase] = useState<"waiting" | "animating" | "done">("done");
+  const [animationPhase, setAnimationPhase] = useState<"waiting" | "expanding" | "done">("done");
   const targetRegistryRef = useRef<Map<string, HTMLElement>>(new Map());
   const pollIntervalRef = useRef<number | null>(null);
 
@@ -63,7 +66,7 @@ export function HeroTransitionProvider({ children }: { children: React.ReactNode
         if (targetElement) {
           const rect = targetElement.getBoundingClientRect();
           setTargetRect(rect);
-          setAnimationPhase("animating");
+          setAnimationPhase("expanding");
           clearPolling();
         }
       };
@@ -96,6 +99,7 @@ export function HeroTransitionProvider({ children }: { children: React.ReactNode
     
     setTransitionData(data);
     setIsTransitioning(true);
+    setTransitionComplete(false);
     setShowOverlay(true);
     setTargetRect(null);
     setAnimationPhase("waiting");
@@ -109,75 +113,80 @@ export function HeroTransitionProvider({ children }: { children: React.ReactNode
     clearPolling();
     setShowOverlay(false);
     setIsTransitioning(false);
+    setTransitionComplete(true);
     setTransitionData(null);
     setTargetRect(null);
     setAnimationPhase("done");
   }, [clearPolling]);
 
-  const sourceStyle = transitionData?.sourceRect ? {
-    position: "fixed" as const,
-    top: transitionData.sourceRect.top,
-    left: transitionData.sourceRect.left,
-    width: transitionData.sourceRect.width,
-    height: transitionData.sourceRect.height,
-  } : {};
-
-  const targetStyle = targetRect ? {
-    position: "fixed" as const,
-    top: targetRect.top,
-    left: targetRect.left,
-    width: "auto" as const,
-    height: "auto" as const,
-  } : {};
+  const sourceRect = transitionData?.sourceRect;
 
   return (
-    <HeroTransitionContext.Provider value={{ startTransition, registerTarget, isTransitioning }}>
+    <HeroTransitionContext.Provider value={{ startTransition, registerTarget, isTransitioning, transitionComplete }}>
       {children}
       
       <AnimatePresence onExitComplete={handleAnimationComplete}>
-        {showOverlay && transitionData && (
+        {showOverlay && transitionData && sourceRect && (
           <>
             <motion.div
-              key="backdrop"
-              className="fixed inset-0 bg-background z-[9998]"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: DURATION * 0.6, ease: EASING }}
+              key="card-expand"
+              className="fixed z-[9998] bg-card border border-border rounded-md shadow-xl overflow-hidden"
+              initial={{
+                top: sourceRect.top,
+                left: sourceRect.left,
+                width: sourceRect.width,
+                height: sourceRect.height,
+                opacity: 1,
+                borderRadius: 6,
+              }}
+              animate={{
+                top: 0,
+                left: 0,
+                width: "100vw",
+                height: "100vh",
+                opacity: 0,
+                borderRadius: 0,
+              }}
+              transition={{ 
+                duration: DURATION, 
+                ease: EASING,
+                opacity: { duration: DURATION * 0.8, delay: DURATION * 0.2 }
+              }}
+              style={{ pointerEvents: "none" }}
             />
             
             <motion.div
-              key="hero-card"
-              className="z-[9999] bg-card border rounded-md shadow-lg p-4 overflow-hidden"
-              initial={sourceStyle}
-              animate={targetRect ? targetStyle : sourceStyle}
-              exit={{ opacity: 0 }}
+              key="title-float"
+              className="fixed z-[9999] pointer-events-none"
+              initial={{
+                top: sourceRect.top + 12,
+                left: sourceRect.left + 16,
+              }}
+              animate={targetRect ? {
+                top: targetRect.top,
+                left: targetRect.left,
+              } : {
+                top: sourceRect.top + 12,
+                left: sourceRect.left + 16,
+              }}
               transition={{ 
                 duration: DURATION, 
                 ease: EASING,
               }}
               onAnimationComplete={() => {
                 if (targetRect) {
-                  setTimeout(handleAnimationComplete, 80);
+                  setTimeout(handleAnimationComplete, 50);
                 }
               }}
-              style={{ pointerEvents: "none" }}
             >
-              <div className="space-y-1">
-                {transitionData.displayKey && (
-                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
-                    {transitionData.displayKey}
-                  </span>
-                )}
-                <motion.h4 
-                  className="font-medium whitespace-nowrap"
-                  initial={{ fontSize: transitionData.entityType === "stream" ? "0.875rem" : "0.875rem" }}
-                  animate={targetRect ? { fontSize: "1.125rem" } : { fontSize: "0.875rem" }}
-                  transition={{ duration: DURATION, ease: EASING }}
-                >
-                  {transitionData.entityName}
-                </motion.h4>
-              </div>
+              <motion.h4 
+                className="font-semibold text-foreground whitespace-nowrap"
+                initial={{ fontSize: "0.875rem" }}
+                animate={{ fontSize: "1.25rem" }}
+                transition={{ duration: DURATION, ease: EASING }}
+              >
+                {transitionData.entityName}
+              </motion.h4>
             </motion.div>
           </>
         )}

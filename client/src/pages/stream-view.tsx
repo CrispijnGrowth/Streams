@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
+import { motion } from "framer-motion";
 import { Package, Tag, Calendar, Activity } from "lucide-react";
 import { useHeroTransition } from "@/lib/hero-transition-context";
 import { ClassNavigator } from "@/components/class-navigator";
@@ -32,7 +33,7 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { isEditMode, setAutoEditForEmptyState } = useMode();
-  const { registerTarget } = useHeroTransition();
+  const { registerTarget, transitionComplete } = useHeroTransition();
   const teamMembers = useTeamMembers();
   const [editingStream, setEditingStream] = useState(false);
   const [editFocusField, setEditFocusField] = useState<EditStreamFocusField>(null);
@@ -275,9 +276,12 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-auto px-6 pt-3 pb-6">
         <div className="space-y-4">
-          <div 
+          <motion.div 
             className={`space-y-2 pb-3 border-b ${isEditMode ? "border-2 border-dashed border-primary rounded-md p-4 cursor-pointer hover-elevate" : ""}`}
             onClick={isEditMode ? () => setEditingStream(true) : undefined}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.4, delay: transitionComplete ? 0 : 0.3, ease: [0.32, 0.72, 0, 1] }}
           >
             <ClassNavigator currentLevel="stream" streamId={streamId} />
             
@@ -374,9 +378,14 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
                 ))}
               </div>
             )}
-          </div>
+          </motion.div>
 
-          <div className="space-y-4">
+          <motion.div 
+            className="space-y-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.4, delay: transitionComplete ? 0 : 0.4, ease: [0.32, 0.72, 0, 1] }}
+          >
             <div className="flex items-center justify-between gap-4">
               <h2 className="text-lg font-semibold">Solutions</h2>
               <span className="text-sm text-muted-foreground">
@@ -393,14 +402,24 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
                   if (aOnHold !== bOnHold) return aOnHold - bOnHold;
                   return a.ordinal - b.ordinal;
                 })
-                .map((solution) => (
-                  <SolutionCard
+                .map((solution, index) => (
+                  <motion.div
                     key={solution.id}
-                    solution={solution}
-                    onClick={() => handleSolutionClick(solution.id)}
-                    onEdit={isEditMode ? () => setEditingSolution(solution) : undefined}
-                    showDescription={showDescriptions}
-                  />
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ 
+                      duration: 0.4, 
+                      delay: transitionComplete ? 0 : 0.5 + index * 0.08,
+                      ease: [0.32, 0.72, 0, 1]
+                    }}
+                  >
+                    <SolutionCard
+                      solution={solution}
+                      onClick={() => handleSolutionClick(solution.id)}
+                      onEdit={isEditMode ? () => setEditingSolution(solution) : undefined}
+                      showDescription={showDescriptions}
+                    />
+                  </motion.div>
                 ))}
             </div>
 
@@ -414,7 +433,7 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
                 />
               </div>
             )}
-          </div>
+          </motion.div>
 
           <Timeline
             items={timelineItems}
