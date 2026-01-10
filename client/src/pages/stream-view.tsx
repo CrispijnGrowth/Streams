@@ -207,7 +207,7 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
   if (isLoading) {
     return (
       <div className="flex flex-col h-full">
-        <div className="flex-1 overflow-auto p-6 space-y-6">
+        <div className="flex-1 overflow-auto px-6 pt-3 pb-6 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <SolutionCardSkeleton key={i} />
@@ -234,7 +234,7 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
   if (!solutions || solutions.length === 0) {
     return (
       <div className="flex flex-col h-full">
-        <div className="flex-1 overflow-auto p-6 space-y-6">
+        <div className="flex-1 overflow-auto px-6 pt-3 pb-6 space-y-4">
           <EmptyState
             icon={Package}
             title="No solutions yet"
@@ -263,7 +263,7 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-auto p-6">
+      <div className="flex-1 overflow-auto px-6 pt-3 pb-6">
         <div className="space-y-6">
           <div 
             className={`space-y-3 pb-4 border-b pt-2 ${isEditMode ? "border-2 border-dashed border-primary rounded-md p-4 cursor-pointer hover-elevate" : ""}`}

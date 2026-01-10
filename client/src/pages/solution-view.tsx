@@ -342,7 +342,7 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
   if (isLoading) {
     return (
       <div className="flex flex-col h-full">
-        <div className="flex-1 overflow-auto p-6 space-y-6">
+        <div className="flex-1 overflow-auto px-6 pt-3 pb-6 space-y-4">
           <KanbanSkeleton />
           <TimelineSkeleton />
         </div>
@@ -365,7 +365,7 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-auto p-6 relative z-0">
+      <div className="flex-1 overflow-auto px-6 pt-3 pb-6 relative z-0">
         <div className="space-y-6">
           <div 
             className={`space-y-3 pb-4 border-b pt-2 ${isEditMode ? "border-2 border-dashed border-primary rounded-md p-4 cursor-pointer hover-elevate" : ""}`}
