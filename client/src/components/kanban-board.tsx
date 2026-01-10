@@ -416,7 +416,7 @@ function DeliverableRow({
         )}
       </div>
 
-      <div className="flex gap-3 flex-1 pr-3">
+      <div className="flex gap-3">
         {columnData.map((column, columnIndex) => {
           const columnActions = actions
             .filter((a) => a.status === column.status)
