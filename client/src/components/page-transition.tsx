@@ -16,17 +16,19 @@ interface PageTransitionProps {
   transitionKey: string;
 }
 
-const DURATION = 0.32;
-const EASING = [0.25, 0.9, 0.3, 1];
+const DURATION = 0.5;
+const EASING = [0.4, 0, 0.2, 1];
 
 const enterVariants = {
   initial: {
     opacity: 0,
-    scale: 0.97,
+    scale: 0.92,
+    y: 20,
   },
   animate: {
     opacity: 1,
     scale: 1,
+    y: 0,
   },
 };
 
@@ -34,10 +36,12 @@ const exitVariants = {
   initial: {
     opacity: 1,
     scale: 1,
+    y: 0,
   },
   animate: {
     opacity: 0,
-    scale: 1.03,
+    scale: 1.05,
+    y: -10,
   },
 };
 
@@ -94,11 +98,14 @@ export function PageTransition({ children, transitionKey }: PageTransitionProps)
             initial="initial"
             animate="animate"
             variants={exitVariants}
-            transition={{ duration: DURATION, ease: EASING }}
+            transition={{ 
+              duration: DURATION, 
+              ease: EASING,
+            }}
             onAnimationComplete={handleExitComplete}
             style={{ 
               zIndex: 1,
-              transformOrigin: "center top",
+              transformOrigin: "center center",
               pointerEvents: "none",
               willChange: "transform, opacity",
             }}
@@ -112,10 +119,14 @@ export function PageTransition({ children, transitionKey }: PageTransitionProps)
           initial={exiting ? "initial" : false}
           animate="animate"
           variants={enterVariants}
-          transition={{ duration: DURATION, ease: EASING }}
+          transition={{ 
+            duration: DURATION, 
+            ease: EASING,
+            delay: exiting ? 0.1 : 0,
+          }}
           style={{ 
             zIndex: 2,
-            transformOrigin: "center top",
+            transformOrigin: "center center",
             willChange: "transform, opacity",
           }}
         >
