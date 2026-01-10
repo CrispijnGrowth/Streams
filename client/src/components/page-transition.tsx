@@ -19,25 +19,22 @@ interface PageTransitionProps {
 const pageVariants = {
   initial: {
     opacity: 0,
-    y: 8,
-    scale: 0.99,
+    scale: 0.98,
   },
   animate: {
     opacity: 1,
-    y: 0,
     scale: 1,
   },
   exit: {
     opacity: 0,
-    y: -4,
-    scale: 1.01,
+    scale: 1.02,
   },
 };
 
 const pageTransition = {
   type: "tween",
-  ease: "easeOut",
-  duration: 0.25,
+  ease: [0.25, 0.1, 0.25, 1],
+  duration: 0.2,
 };
 
 export function PageTransition({ children, transitionKey }: PageTransitionProps) {
@@ -57,19 +54,21 @@ export function PageTransition({ children, transitionKey }: PageTransitionProps)
 
   return (
     <PageTransitionContext.Provider value={{ animationKey: 0 }}>
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={transitionKey}
-          className="w-full h-full"
-          initial="initial"
-          animate="animate"
-          exit="exit"
-          variants={pageVariants}
-          transition={pageTransition}
-        >
-          {children}
-        </motion.div>
-      </AnimatePresence>
+      <div className="relative w-full h-full overflow-hidden">
+        <AnimatePresence initial={false}>
+          <motion.div
+            key={transitionKey}
+            className="absolute inset-0 w-full h-full overflow-auto"
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            variants={pageVariants}
+            transition={pageTransition}
+          >
+            {children}
+          </motion.div>
+        </AnimatePresence>
+      </div>
     </PageTransitionContext.Provider>
   );
 }
