@@ -16,34 +16,8 @@ interface PageTransitionProps {
   transitionKey: string;
 }
 
-const DURATION = 0.5;
-const EASING = [0.4, 0, 0.2, 1];
-
-const enterVariants = {
-  initial: {
-    opacity: 0,
-    scale: 0.92,
-    y: 20,
-  },
-  animate: {
-    opacity: 1,
-    scale: 1,
-    y: 0,
-  },
-};
-
-const exitVariants = {
-  initial: {
-    opacity: 1,
-    scale: 1,
-    y: 0,
-  },
-  animate: {
-    opacity: 0,
-    scale: 1.05,
-    y: -10,
-  },
-};
+const DURATION = 0.48;
+const EASING = [0.33, 1, 0.68, 1];
 
 interface SnapshotState {
   key: string;
@@ -95,9 +69,8 @@ export function PageTransition({ children, transitionKey }: PageTransitionProps)
           <motion.div
             key={`exit-${exiting.key}`}
             className="absolute inset-0 w-full h-full overflow-auto"
-            initial="initial"
-            animate="animate"
-            variants={exitVariants}
+            initial={{ opacity: 1 }}
+            animate={{ opacity: 0 }}
             transition={{ 
               duration: DURATION, 
               ease: EASING,
@@ -105,9 +78,8 @@ export function PageTransition({ children, transitionKey }: PageTransitionProps)
             onAnimationComplete={handleExitComplete}
             style={{ 
               zIndex: 1,
-              transformOrigin: "center center",
               pointerEvents: "none",
-              willChange: "transform, opacity",
+              willChange: "opacity",
             }}
           >
             {exiting.node}
@@ -116,18 +88,15 @@ export function PageTransition({ children, transitionKey }: PageTransitionProps)
         <motion.div
           key={`enter-${active.key}`}
           className="absolute inset-0 w-full h-full overflow-auto"
-          initial={exiting ? "initial" : false}
-          animate="animate"
-          variants={enterVariants}
+          initial={exiting ? { opacity: 0 } : false}
+          animate={{ opacity: 1 }}
           transition={{ 
             duration: DURATION, 
             ease: EASING,
-            delay: exiting ? 0.1 : 0,
           }}
           style={{ 
             zIndex: 2,
-            transformOrigin: "center center",
-            willChange: "transform, opacity",
+            willChange: "opacity",
           }}
         >
           {active.node}
