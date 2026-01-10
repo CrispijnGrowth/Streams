@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Package, Tag, Calendar, Activity } from "lucide-react";
+import { useHeroTransition } from "@/lib/hero-transition-context";
 import { ClassNavigator } from "@/components/class-navigator";
 import { Timeline } from "@/components/timeline";
 import { SolutionCard } from "@/components/solution-card";
@@ -31,11 +32,13 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { isEditMode, setAutoEditForEmptyState } = useMode();
+  const { registerTarget } = useHeroTransition();
   const teamMembers = useTeamMembers();
   const [editingStream, setEditingStream] = useState(false);
   const [editFocusField, setEditFocusField] = useState<EditStreamFocusField>(null);
   const [editingSolution, setEditingSolution] = useState<Solution | null>(null);
   const quickAddRef = useRef<QuickAddFormRef>(null);
+  const titleRef = useRef<HTMLHeadingElement>(null);
 
   const getOwnerInfo = (ownerName: string) => {
     return teamMembers.find((m) => m.name === ownerName);
@@ -52,6 +55,13 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
   const { data: solutions, isLoading: solutionsLoading } = useQuery<SolutionWithBreakdownAndComment[]>({
     queryKey: ["/api/streams", streamId, "solutions"],
   });
+
+  useEffect(() => {
+    if (titleRef.current && stream) {
+      registerTarget(streamId, titleRef.current);
+    }
+    return () => registerTarget(streamId, null);
+  }, [streamId, registerTarget, stream]);
 
   useEffect(() => {
     if (!solutionsLoading && solutions !== undefined) {
@@ -273,7 +283,7 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
             
             <div className="flex items-center justify-between gap-4 flex-wrap">
               <div className="flex items-center gap-3 flex-wrap">
-                <h1 className="text-xl font-semibold" data-testid="text-stream-name">{stream.name}</h1>
+                <h1 ref={titleRef} className="text-xl font-semibold" data-testid="text-stream-name">{stream.name}</h1>
                 {stream.momentumStatus && (
                   <Badge 
                     variant="secondary" 

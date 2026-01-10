@@ -38,11 +38,6 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
   const [editingSolution, setEditingSolution] = useState(false);
   const titleRef = useRef<HTMLHeadingElement>(null);
 
-  useEffect(() => {
-    registerTarget(solutionId, titleRef.current);
-    return () => registerTarget(solutionId, null);
-  }, [solutionId, registerTarget]);
-
   const getOwnerInfo = (ownerName: string) => {
     return teamMembers.find((m) => m.name === ownerName);
   };
@@ -58,6 +53,13 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
   const { data: solution, isLoading: solutionLoading } = useQuery<SolutionWithProgress>({
     queryKey: ["/api/solutions", solutionId],
   });
+
+  useEffect(() => {
+    if (titleRef.current && solution) {
+      registerTarget(solutionId, titleRef.current);
+    }
+    return () => registerTarget(solutionId, null);
+  }, [solutionId, registerTarget, solution]);
 
   const { data: actions, isLoading: actionsLoading } = useQuery<ActionWithLastComment[]>({
     queryKey: ["/api/solutions", solutionId, "actions"],

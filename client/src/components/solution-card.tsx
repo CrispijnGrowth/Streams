@@ -83,9 +83,10 @@ export function SolutionCard({
       startTransition(
         {
           sourceRect: rect,
-          solutionId: solution.id,
-          solutionName: solution.name,
+          entityId: solution.id,
+          entityName: solution.name,
           displayKey: solution.displayKey || "",
+          entityType: "solution",
         },
         () => {
           setLocation(`/stream/${solution.streamId}/solution/${solution.id}`);

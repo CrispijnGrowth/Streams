@@ -1,16 +1,17 @@
-import { createContext, useContext, useState, useCallback, useRef } from "react";
+import { createContext, useContext, useState, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface TransitionData {
   sourceRect: DOMRect;
-  solutionId: string;
-  solutionName: string;
+  entityId: string;
+  entityName: string;
   displayKey: string;
+  entityType: "stream" | "solution";
 }
 
 interface HeroTransitionContextType {
   startTransition: (data: TransitionData, navigate: () => void) => void;
-  registerTarget: (solutionId: string, element: HTMLElement | null) => void;
+  registerTarget: (entityId: string, element: HTMLElement | null) => void;
   isTransitioning: boolean;
 }
 
@@ -32,27 +33,58 @@ export function HeroTransitionProvider({ children }: { children: React.ReactNode
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
   const [showOverlay, setShowOverlay] = useState(false);
+  const [animationPhase, setAnimationPhase] = useState<"waiting" | "animating" | "done">("done");
   const targetRegistryRef = useRef<Map<string, HTMLElement>>(new Map());
-  const pendingNavigateRef = useRef<(() => void) | null>(null);
+  const pollIntervalRef = useRef<number | null>(null);
 
   const prefersReducedMotion = 
     typeof window !== "undefined" && 
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  const registerTarget = useCallback((solutionId: string, element: HTMLElement | null) => {
-    if (element) {
-      targetRegistryRef.current.set(solutionId, element);
-      
-      if (transitionData?.solutionId === solutionId && isTransitioning && !targetRect) {
-        requestAnimationFrame(() => {
-          const rect = element.getBoundingClientRect();
-          setTargetRect(rect);
-        });
-      }
-    } else {
-      targetRegistryRef.current.delete(solutionId);
+  const clearPolling = useCallback(() => {
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
     }
-  }, [transitionData, isTransitioning, targetRect]);
+  }, []);
+
+  const registerTarget = useCallback((entityId: string, element: HTMLElement | null) => {
+    if (element) {
+      targetRegistryRef.current.set(entityId, element);
+    } else {
+      targetRegistryRef.current.delete(entityId);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (animationPhase === "waiting" && transitionData) {
+      const checkForTarget = () => {
+        const targetElement = targetRegistryRef.current.get(transitionData.entityId);
+        if (targetElement) {
+          const rect = targetElement.getBoundingClientRect();
+          setTargetRect(rect);
+          setAnimationPhase("animating");
+          clearPolling();
+        }
+      };
+
+      checkForTarget();
+      
+      pollIntervalRef.current = window.setInterval(checkForTarget, 50);
+
+      const timeout = setTimeout(() => {
+        clearPolling();
+        if (animationPhase === "waiting") {
+          handleAnimationComplete();
+        }
+      }, 2000);
+
+      return () => {
+        clearTimeout(timeout);
+        clearPolling();
+      };
+    }
+  }, [animationPhase, transitionData, clearPolling]);
 
   const startTransition = useCallback((data: TransitionData, navigate: () => void) => {
     if (prefersReducedMotion) {
@@ -64,7 +96,7 @@ export function HeroTransitionProvider({ children }: { children: React.ReactNode
     setIsTransitioning(true);
     setShowOverlay(true);
     setTargetRect(null);
-    pendingNavigateRef.current = navigate;
+    setAnimationPhase("waiting");
 
     requestAnimationFrame(() => {
       navigate();
@@ -72,12 +104,13 @@ export function HeroTransitionProvider({ children }: { children: React.ReactNode
   }, [prefersReducedMotion]);
 
   const handleAnimationComplete = useCallback(() => {
+    clearPolling();
     setShowOverlay(false);
     setIsTransitioning(false);
     setTransitionData(null);
     setTargetRect(null);
-    pendingNavigateRef.current = null;
-  }, []);
+    setAnimationPhase("done");
+  }, [clearPolling]);
 
   const sourceStyle = transitionData?.sourceRect ? {
     position: "fixed" as const,
@@ -91,7 +124,7 @@ export function HeroTransitionProvider({ children }: { children: React.ReactNode
     position: "fixed" as const,
     top: targetRect.top,
     left: targetRect.left,
-    width: targetRect.width,
+    width: "auto" as const,
     height: "auto" as const,
   } : {};
 
@@ -99,7 +132,7 @@ export function HeroTransitionProvider({ children }: { children: React.ReactNode
     <HeroTransitionContext.Provider value={{ startTransition, registerTarget, isTransitioning }}>
       {children}
       
-      <AnimatePresence>
+      <AnimatePresence onExitComplete={handleAnimationComplete}>
         {showOverlay && transitionData && (
           <>
             <motion.div
@@ -123,22 +156,24 @@ export function HeroTransitionProvider({ children }: { children: React.ReactNode
               }}
               onAnimationComplete={() => {
                 if (targetRect) {
-                  setTimeout(handleAnimationComplete, 100);
+                  setTimeout(handleAnimationComplete, 80);
                 }
               }}
               style={{ pointerEvents: "none" }}
             >
               <div className="space-y-1">
-                <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
-                  {transitionData.displayKey}
-                </span>
+                {transitionData.displayKey && (
+                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+                    {transitionData.displayKey}
+                  </span>
+                )}
                 <motion.h4 
-                  className="font-medium"
-                  initial={{ fontSize: "0.875rem" }}
+                  className="font-medium whitespace-nowrap"
+                  initial={{ fontSize: transitionData.entityType === "stream" ? "0.875rem" : "0.875rem" }}
                   animate={targetRect ? { fontSize: "1.125rem" } : { fontSize: "0.875rem" }}
                   transition={{ duration: DURATION, ease: EASING }}
                 >
-                  {transitionData.solutionName}
+                  {transitionData.entityName}
                 </motion.h4>
               </div>
             </motion.div>

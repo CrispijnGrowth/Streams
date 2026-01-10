@@ -1,3 +1,5 @@
+import { useRef } from "react";
+import { useLocation } from "wouter";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -7,6 +9,7 @@ import { Calendar } from "lucide-react";
 import { format } from "date-fns";
 import { useTeamMembers } from "@/hooks/use-suggestions";
 import { useMode } from "@/lib/mode-context";
+import { useHeroTransition } from "@/lib/hero-transition-context";
 import type { StreamWithProgress, MomentumStatusType } from "@shared/schema";
 import { SolutionStatus } from "@shared/schema";
 
@@ -21,6 +24,9 @@ interface StreamCardProps {
 export function StreamCard({ stream, onClick, onEdit, onMomentumClick, showDescription = true }: StreamCardProps) {
   const teamMembers = useTeamMembers();
   const { isEditMode } = useMode();
+  const { startTransition } = useHeroTransition();
+  const [, setLocation] = useLocation();
+  const cardRef = useRef<HTMLDivElement>(null);
   const isOnHold = stream.status === SolutionStatus.ON_HOLD;
   
   const isOverdue =
@@ -41,6 +47,20 @@ export function StreamCard({ stream, onClick, onEdit, onMomentumClick, showDescr
   const handleCardClick = () => {
     if (isEditMode) {
       onEdit?.();
+    } else if (cardRef.current) {
+      const rect = cardRef.current.getBoundingClientRect();
+      startTransition(
+        {
+          sourceRect: rect,
+          entityId: stream.id,
+          entityName: stream.name,
+          displayKey: stream.displayKey || "",
+          entityType: "stream",
+        },
+        () => {
+          setLocation(`/stream/${stream.id}`);
+        }
+      );
     } else {
       onClick?.();
     }
@@ -63,6 +83,7 @@ export function StreamCard({ stream, onClick, onEdit, onMomentumClick, showDescr
 
   return (
     <Card
+      ref={cardRef}
       className={`p-4 cursor-pointer hover-elevate active-elevate-2 transition-all group shadow-sm ${
         isOnHold ? "opacity-60 grayscale" : ""
       } ${
