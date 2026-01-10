@@ -95,7 +95,7 @@ function SortableActionCard({ action, onClick, onEdit, showDescription }: Sortab
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="w-[92%] mx-auto">
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="w-full">
       <ActionCard
         action={action}
         onClick={onClick}
@@ -137,13 +137,13 @@ function DroppableCell({
     <SortableContext items={items.map((a) => a.id)} strategy={verticalListSortingStrategy}>
       <div
         ref={setNodeRef}
-        className={`w-40 md:w-44 lg:w-48 flex-shrink-0 space-y-2 min-h-[60px] p-1 flex flex-col items-stretch transition-colors ${
+        className={`w-40 md:w-44 lg:w-48 flex-shrink-0 space-y-2 min-h-[60px] px-[5px] py-1 flex flex-col items-stretch transition-colors ${
           isOver ? "ring-2 ring-primary/30 rounded-lg" : ""
         }`}
         data-testid={`kanban-cell-${status.toLowerCase().replace(/\s/g, "-")}`}
       >
         {items.length === 0 ? (
-          <div className={`h-16 w-[92%] mx-auto border border-dashed rounded-lg transition-colors ${
+          <div className={`h-16 w-full border border-dashed rounded-lg transition-colors ${
             isOver ? "border-primary/50 bg-primary/5" : "border-border/30"
           }`} />
         ) : (
