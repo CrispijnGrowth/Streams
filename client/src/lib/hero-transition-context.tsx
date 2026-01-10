@@ -107,6 +107,11 @@ export function HeroTransitionProvider({ children }: { children: React.ReactNode
 
     clearPolling();
     
+    // Set estimated ClassNavigator bottom position immediately
+    // Header (~48px) + content padding (12px) + ClassNavigator (48px) + 5px buffer = ~113px
+    // This provides the correct target height from the start, before navigation completes
+    setClassNavBottom(113);
+    
     setTransitionData(data);
     setIsTransitioning(true);
     setTransitionComplete(false);
