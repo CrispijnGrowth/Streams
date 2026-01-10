@@ -27,16 +27,23 @@ export function useHeroTransition() {
   return useContext(HeroTransitionContext);
 }
 
-const DURATION = 0.6;
+// Slower duration for smooth wipe effect (like the reference GIF)
+const DURATION = 1.0;
 const EASING = [0.32, 0.72, 0, 1];
+
+// Estimated height where card expansion should stop
+// Header (~48px) + content padding (12px) + ClassNavigator (~36px) + 5px buffer = ~101px
+// Using a conservative estimate to ensure we never overshoot
+const ESTIMATED_NAV_BOTTOM = 95;
 
 export function HeroTransitionProvider({ children }: { children: React.ReactNode }) {
   const [transitionData, setTransitionData] = useState<TransitionData | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [transitionComplete, setTransitionComplete] = useState(true);
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
-  const [classNavBottom, setClassNavBottom] = useState<number | null>(null);
+  const [classNavBottom, setClassNavBottom] = useState<number>(ESTIMATED_NAV_BOTTOM);
   const [showOverlay, setShowOverlay] = useState(false);
+  const [cardExpanded, setCardExpanded] = useState(false);
   const [animationPhase, setAnimationPhase] = useState<"waiting" | "expanding" | "done">("done");
   const targetRegistryRef = useRef<Map<string, HTMLElement>>(new Map());
   const pollIntervalRef = useRef<number | null>(null);
@@ -70,7 +77,7 @@ export function HeroTransitionProvider({ children }: { children: React.ReactNode
           const rect = targetElement.getBoundingClientRect();
           setTargetRect(rect);
           
-          // Get ClassNavigator bottom position + 5px buffer
+          // Get actual ClassNavigator bottom position + 5px buffer
           if (classNav) {
             const navRect = classNav.getBoundingClientRect();
             setClassNavBottom(navRect.bottom + 5);
@@ -107,11 +114,9 @@ export function HeroTransitionProvider({ children }: { children: React.ReactNode
 
     clearPolling();
     
-    // Set estimated ClassNavigator bottom position immediately
-    // Header (~48px) + content padding (12px) + ClassNavigator (48px) + 5px buffer = ~113px
-    // This provides the correct target height from the start, before navigation completes
-    setClassNavBottom(113);
-    
+    // Reset states
+    setClassNavBottom(ESTIMATED_NAV_BOTTOM);
+    setCardExpanded(false);
     setTransitionData(data);
     setIsTransitioning(true);
     setTransitionComplete(false);
@@ -131,7 +136,8 @@ export function HeroTransitionProvider({ children }: { children: React.ReactNode
     setTransitionComplete(true);
     setTransitionData(null);
     setTargetRect(null);
-    setClassNavBottom(null);
+    setCardExpanded(false);
+    setClassNavBottom(ESTIMATED_NAV_BOTTOM);
     setAnimationPhase("done");
   }, [clearPolling]);
 
@@ -144,6 +150,7 @@ export function HeroTransitionProvider({ children }: { children: React.ReactNode
       <AnimatePresence onExitComplete={handleAnimationComplete}>
         {showOverlay && transitionData && sourceRect && (
           <>
+            {/* Expanding card - stays opaque while expanding, then fades after reaching final size */}
             <motion.div
               key="card-expand"
               className="fixed z-[9998] bg-card border border-border rounded-md shadow-xl overflow-hidden"
@@ -159,39 +166,51 @@ export function HeroTransitionProvider({ children }: { children: React.ReactNode
                 top: 0,
                 left: 0,
                 width: "100vw",
-                height: classNavBottom ?? "100vh",
-                opacity: 0,
+                height: classNavBottom,
+                opacity: cardExpanded ? 0 : 1,
                 borderRadius: 0,
               }}
               transition={{ 
                 duration: DURATION, 
                 ease: EASING,
-                opacity: { duration: DURATION * 0.8, delay: DURATION * 0.2 }
+                // Opacity fades quickly after card is expanded
+                opacity: { duration: 0.3, ease: "easeOut" }
+              }}
+              onAnimationComplete={() => {
+                // Card has reached final size, now trigger fade
+                setCardExpanded(true);
               }}
               style={{ pointerEvents: "none" }}
             />
             
+            {/* Title floats from card position to page title position */}
+            {/* Delayed start so title arrives AFTER the card expansion begins */}
             <motion.div
               key="title-float"
               className="fixed z-[9999] pointer-events-none"
               initial={{
                 top: sourceRect.top + 12,
                 left: sourceRect.left + 16,
+                opacity: 1,
               }}
               animate={targetRect ? {
                 top: targetRect.top,
                 left: targetRect.left,
+                opacity: 0,
               } : {
                 top: sourceRect.top + 12,
                 left: sourceRect.left + 16,
+                opacity: 1,
               }}
               transition={{ 
-                duration: DURATION, 
+                duration: DURATION * 0.7,
+                delay: DURATION * 0.4,
                 ease: EASING,
+                opacity: { duration: 0.2, delay: DURATION * 0.9 }
               }}
               onAnimationComplete={() => {
                 if (targetRect) {
-                  setTimeout(handleAnimationComplete, 50);
+                  setTimeout(handleAnimationComplete, 100);
                 }
               }}
             >
@@ -199,7 +218,11 @@ export function HeroTransitionProvider({ children }: { children: React.ReactNode
                 className="font-semibold text-foreground whitespace-nowrap"
                 initial={{ fontSize: "0.875rem" }}
                 animate={{ fontSize: "1.25rem" }}
-                transition={{ duration: DURATION, ease: EASING }}
+                transition={{ 
+                  duration: DURATION * 0.7, 
+                  delay: DURATION * 0.4,
+                  ease: EASING 
+                }}
               >
                 {transitionData.entityName}
               </motion.h4>
