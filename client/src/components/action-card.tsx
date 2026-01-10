@@ -66,7 +66,7 @@ export function ActionCard({
           </div>
         )}
         <div className="flex-1 min-w-0">
-          <h4 className="font-medium text-sm truncate" data-testid={`text-action-name-${action.id}`}>
+          <h4 className="font-medium text-sm line-clamp-2" data-testid={`text-action-name-${action.id}`}>
             {action.name}
           </h4>
           {showDescription && (
