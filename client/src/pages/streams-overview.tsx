@@ -223,7 +223,7 @@ export function StreamsOverview({ showDescriptions }: StreamsOverviewProps) {
     return (
       <div className="flex flex-col h-full">
         <div className="flex-1 overflow-auto p-6 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <StreamCardSkeleton key={i} />
             ))}
@@ -305,7 +305,7 @@ export function StreamsOverview({ showDescriptions }: StreamsOverviewProps) {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredAndSortedStreams.map((stream) => (
                 <StreamCard
                   key={stream.id}
