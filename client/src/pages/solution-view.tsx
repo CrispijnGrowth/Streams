@@ -1,7 +1,8 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { CheckSquare, Tag, Calendar, Activity } from "lucide-react";
+import { useHeroTransition } from "@/lib/hero-transition-context";
 import { ClassNavigator } from "@/components/class-navigator";
 import { Timeline } from "@/components/timeline";
 import { KanbanBoard } from "@/components/kanban-board";
@@ -32,8 +33,15 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { isEditMode, setAutoEditForEmptyState } = useMode();
+  const { registerTarget } = useHeroTransition();
   const teamMembers = useTeamMembers();
   const [editingSolution, setEditingSolution] = useState(false);
+  const titleRef = useRef<HTMLHeadingElement>(null);
+
+  useEffect(() => {
+    registerTarget(solutionId, titleRef.current);
+    return () => registerTarget(solutionId, null);
+  }, [solutionId, registerTarget]);
 
   const getOwnerInfo = (ownerName: string) => {
     return teamMembers.find((m) => m.name === ownerName);
@@ -375,7 +383,7 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
             
             <div className="flex items-center justify-between gap-4 flex-wrap">
               <div className="flex items-center gap-3 flex-wrap">
-                <h1 className="text-lg font-semibold" data-testid="text-solution-name">{solution.name}</h1>
+                <h1 ref={titleRef} className="text-lg font-semibold" data-testid="text-solution-name">{solution.name}</h1>
                 {solution.momentumStatus && (
                   <Badge 
                     variant="secondary" 

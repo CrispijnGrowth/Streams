@@ -11,6 +11,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { DescriptionsToggle } from "@/components/descriptions-toggle";
 import { GlobalSearch } from "@/components/global-search";
 import { PageTransition } from "@/components/page-transition";
+import { HeroTransitionProvider } from "@/lib/hero-transition-context";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -307,7 +308,9 @@ function App() {
         <TooltipProvider>
           <AuthProvider>
             <ModeProvider>
-              <AppContent />
+              <HeroTransitionProvider>
+                <AppContent />
+              </HeroTransitionProvider>
             </ModeProvider>
           </AuthProvider>
           <Toaster />
