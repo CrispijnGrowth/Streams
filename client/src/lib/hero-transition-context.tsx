@@ -126,13 +126,23 @@ export function HeroTransitionProvider({ children }: { children: React.ReactNode
   const sourceRect = transitionData?.sourceRect;
   
   // Calculate the final dimensions for the expanded card
-  // The card should:
-  // - TOP: Stay at header bottom (HEADER_HEIGHT), NOT go to top:0
-  // - BOTTOM: Reach down to the title position (targetRect.bottom + 8)
-  // - LEFT/RIGHT: Fill the viewport width
-  // Height = from header bottom to title bottom
+  // The card should EXPAND in all directions:
+  // - TOP edge: moves UP to header bottom (HEADER_HEIGHT)
+  // - BOTTOM edge: moves DOWN (never up!) - at minimum stays at original position
+  // - LEFT edge: moves LEFT to 0
+  // - RIGHT edge: moves RIGHT to viewport width
+  
   const finalTop = HEADER_HEIGHT;
-  const finalHeight = targetRect ? (targetRect.bottom + 8 - HEADER_HEIGHT) : 150;
+  
+  // The bottom edge must expand DOWN, never shrink up
+  // Original bottom position of the card
+  const sourceBottom = sourceRect ? sourceRect.top + sourceRect.height : 400;
+  // Target bottom (where the title is on the new page)
+  const targetBottom = targetRect ? targetRect.bottom + 8 : 150;
+  // Final bottom is the MAXIMUM of: original position, target position, or a reasonable minimum
+  const finalBottom = Math.max(sourceBottom, targetBottom, 300);
+  // Height is from top (header) to bottom
+  const finalHeight = finalBottom - finalTop;
 
   return (
     <HeroTransitionContext.Provider value={{ startTransition, registerTarget, isTransitioning, transitionComplete }}>
