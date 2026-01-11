@@ -31,6 +31,10 @@ export function useHeroTransition() {
 const DURATION = 0.8;
 const EASING = [0.32, 0.72, 0, 1];
 
+// Header height - the gray bar at the top
+// Header has py-2 (16px total) + content (~32px min-height buttons) = ~48px
+const HEADER_HEIGHT = 48;
+
 export function HeroTransitionProvider({ children }: { children: React.ReactNode }) {
   const [transitionData, setTransitionData] = useState<TransitionData | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -121,10 +125,14 @@ export function HeroTransitionProvider({ children }: { children: React.ReactNode
 
   const sourceRect = transitionData?.sourceRect;
   
-  // Calculate the target height - card should expand to cover up to the title position
-  // The title is positioned after the header and ClassNavigator
-  // We want the card to stop at the bottom edge of where the title will be
-  const targetHeight = targetRect ? targetRect.bottom + 8 : 120;
+  // Calculate the final dimensions for the expanded card
+  // The card should:
+  // - TOP: Stay at header bottom (HEADER_HEIGHT), NOT go to top:0
+  // - BOTTOM: Reach down to the title position (targetRect.bottom + 8)
+  // - LEFT/RIGHT: Fill the viewport width
+  // Height = from header bottom to title bottom
+  const finalTop = HEADER_HEIGHT;
+  const finalHeight = targetRect ? (targetRect.bottom + 8 - HEADER_HEIGHT) : 150;
 
   return (
     <HeroTransitionContext.Provider value={{ startTransition, registerTarget, isTransitioning, transitionComplete }}>
@@ -133,7 +141,7 @@ export function HeroTransitionProvider({ children }: { children: React.ReactNode
       <AnimatePresence onExitComplete={handleAnimationComplete}>
         {showOverlay && transitionData && sourceRect && (
           <>
-            {/* Expanding card - engulfs the page up to the title position */}
+            {/* Expanding card - unfolds to cover page body from header to title */}
             <motion.div
               key="card-expand"
               className="fixed z-[9998] bg-card rounded-md shadow-xl overflow-hidden"
@@ -151,10 +159,11 @@ export function HeroTransitionProvider({ children }: { children: React.ReactNode
                 borderRadius: 6,
               }}
               animate={{
-                top: 0,
+                // KEY FIX: Top stays at header bottom, NOT at 0
+                top: finalTop,
                 left: 0,
                 width: "100vw",
-                height: targetHeight,
+                height: finalHeight,
                 opacity: animationPhase === "fading" ? 0 : 1,
                 borderRadius: 0,
               }}
@@ -171,14 +180,13 @@ export function HeroTransitionProvider({ children }: { children: React.ReactNode
                 }
               }}
             >
-              {/* Card content that fades quickly - everything except title */}
+              {/* Card content that fades quickly */}
               <motion.div
                 className="absolute inset-0 p-4 flex flex-col gap-2"
                 initial={{ opacity: 1 }}
                 animate={{ opacity: 0 }}
                 transition={{ duration: DURATION * 0.3, ease: "easeOut" }}
               >
-                {/* Placeholder for card details that fade out */}
                 <div className="h-4 w-24 bg-muted/50 rounded mt-6" />
                 <div className="h-3 w-32 bg-muted/30 rounded" />
                 <div className="h-3 w-20 bg-muted/30 rounded" />
