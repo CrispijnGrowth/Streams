@@ -287,7 +287,16 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
             
             <div className="flex items-center justify-between gap-4 flex-wrap">
               <div className="flex items-center gap-3 flex-wrap">
-                <h1 ref={titleRef} className="text-xl font-semibold" data-testid="text-stream-name">{stream.name}</h1>
+                <motion.h1 
+                  ref={titleRef} 
+                  className="text-xl font-semibold" 
+                  data-testid="text-stream-name"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.15, delay: transitionComplete ? 0 : 0.75 }}
+                >
+                  {stream.name}
+                </motion.h1>
                 {stream.momentumStatus && (
                   <Badge 
                     variant="secondary" 

@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
+import { motion } from "framer-motion";
 import { CheckSquare, Tag, Calendar, Activity } from "lucide-react";
 import { useHeroTransition } from "@/lib/hero-transition-context";
 import { ClassNavigator } from "@/components/class-navigator";
@@ -33,7 +34,7 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { isEditMode, setAutoEditForEmptyState } = useMode();
-  const { registerTarget } = useHeroTransition();
+  const { registerTarget, transitionComplete } = useHeroTransition();
   const teamMembers = useTeamMembers();
   const [editingSolution, setEditingSolution] = useState(false);
   const titleRef = useRef<HTMLHeadingElement>(null);
@@ -385,7 +386,16 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
             
             <div className="flex items-center justify-between gap-4 flex-wrap">
               <div className="flex items-center gap-3 flex-wrap">
-                <h1 ref={titleRef} className="text-lg font-semibold" data-testid="text-solution-name">{solution.name}</h1>
+                <motion.h1 
+                  ref={titleRef} 
+                  className="text-lg font-semibold" 
+                  data-testid="text-solution-name"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.15, delay: transitionComplete ? 0 : 0.75 }}
+                >
+                  {solution.name}
+                </motion.h1>
                 {solution.momentumStatus && (
                   <Badge 
                     variant="secondary" 
