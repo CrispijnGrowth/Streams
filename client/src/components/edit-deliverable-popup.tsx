@@ -6,13 +6,20 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ComboboxMultiSelect } from "@/components/ui/combobox-multi-select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useOwnerSuggestions } from "@/hooks/use-suggestions";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { DeliverableBorderColor, type Deliverable, type DeliverableBorderColorType, type Comment } from "@shared/schema";
-import { Loader2, Trash2, Calendar, MessageSquare, Send } from "lucide-react";
+import { DeliverableBorderColor, type Deliverable, type DeliverableBorderColorType, type Comment, type Solution } from "@shared/schema";
+import { Loader2, Trash2, Calendar, MessageSquare, Send, ArrowRight } from "lucide-react";
 import { format } from "date-fns";
 
 const borderColorMap: Record<DeliverableBorderColorType, string> = {
@@ -56,7 +63,31 @@ export function EditDeliverablePopup({
   const [isMilestoneLinked, setIsMilestoneLinked] = useState(true);
   const [dueDate, setDueDate] = useState<string>("");
   const [newComment, setNewComment] = useState("");
+  const [selectedSolutionId, setSelectedSolutionId] = useState<string>("");
   const ownerSuggestions = useOwnerSuggestions();
+
+  const { data: solutions = [] } = useQuery<Solution[]>({
+    queryKey: ["/api/solutions"],
+    enabled: open,
+  });
+
+  const moveDeliverable = useMutation({
+    mutationFn: async (newSolutionId: string) => {
+      return apiRequest("PATCH", `/api/deliverables/${deliverable?.id}`, {
+        solutionId: newSolutionId,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/deliverables"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/solutions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
+      toast({ title: "Deliverable moved successfully" });
+      onOpenChange(false);
+    },
+    onError: () => {
+      toast({ title: "Failed to move deliverable", variant: "destructive" });
+    },
+  });
 
   const { data: comments = [] } = useQuery<Comment[]>({
     queryKey: ["/api/comments", "deliverable", deliverable?.id],
@@ -97,9 +128,11 @@ export function EditDeliverablePopup({
       setOwners(deliverable.owners || []);
       setIsMilestoneLinked(deliverable.isMilestoneLinked ?? true);
       setDueDate(deliverable.dueDate || "");
+      setSelectedSolutionId(deliverable.solutionId);
     }
     if (!open) {
       setNewComment("");
+      setSelectedSolutionId("");
     }
   }, [deliverable, open]);
 
@@ -222,6 +255,47 @@ export function EditDeliverablePopup({
                 />
               ))}
             </div>
+          </div>
+
+          <div className="space-y-2 border-t pt-3">
+            <Label className="flex items-center gap-1.5">
+              <ArrowRight className="h-4 w-4" />
+              Move to Solution
+            </Label>
+            <div className="flex gap-2">
+              <Select
+                value={selectedSolutionId}
+                onValueChange={setSelectedSolutionId}
+              >
+                <SelectTrigger className="flex-1" data-testid="select-move-deliverable-solution">
+                  <SelectValue placeholder="Select solution..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {solutions
+                    .filter((s) => !s.isDeleted)
+                    .map((solution) => (
+                      <SelectItem key={solution.id} value={solution.id}>
+                        {solution.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={!selectedSolutionId || selectedSolutionId === deliverable.solutionId || moveDeliverable.isPending}
+                onClick={() => selectedSolutionId && moveDeliverable.mutate(selectedSolutionId)}
+                data-testid="button-move-deliverable"
+              >
+                {moveDeliverable.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Move"}
+              </Button>
+            </div>
+            {selectedSolutionId && selectedSolutionId !== deliverable.solutionId && (
+              <p className="text-xs text-muted-foreground">
+                Will move to: {solutions.find((s) => s.id === selectedSolutionId)?.name}
+              </p>
+            )}
           </div>
 
           <div className="space-y-2 border-t pt-3">

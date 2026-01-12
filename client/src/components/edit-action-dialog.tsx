@@ -22,11 +22,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ComboboxMultiSelect } from "@/components/ui/combobox-multi-select";
-import { Plus, Loader2, X, MessageSquare, Send, CheckSquare, Trash2 } from "lucide-react";
+import { Plus, Loader2, X, MessageSquare, Send, CheckSquare, Trash2, ArrowRight } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useOwnerSuggestions, useLabelSuggestions } from "@/hooks/use-suggestions";
-import type { Action, Deliverable, DeliverableBorderColorType, Comment, Step } from "@shared/schema";
+import type { Action, Deliverable, DeliverableBorderColorType, Comment, Step, Solution } from "@shared/schema";
 import { ActionStatus, DeliverableBorderColor } from "@shared/schema";
 import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
@@ -67,8 +67,27 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted, initia
   const [isSubmittingWithNewDeliverable, setIsSubmittingWithNewDeliverable] = useState(false);
   const [newComment, setNewComment] = useState("");
   const [newStepName, setNewStepName] = useState("");
+  const [moveTargetSolutionId, setMoveTargetSolutionId] = useState<string>("");
+  const [moveTargetDeliverableId, setMoveTargetDeliverableId] = useState<string>("");
   const ownerSuggestions = useOwnerSuggestions();
   const labelSuggestions = useLabelSuggestions();
+
+  const { data: solutions = [] } = useQuery<Solution[]>({
+    queryKey: ["/api/solutions"],
+    enabled: open,
+  });
+
+  const { data: targetDeliverables = [] } = useQuery<Deliverable[]>({
+    queryKey: ["/api/solutions", moveTargetSolutionId, "deliverables"],
+    queryFn: async () => {
+      const res = await fetch(`/api/solutions/${moveTargetSolutionId}/deliverables`, {
+        headers: { "x-session-id": localStorage.getItem("streams-session-id") || "" },
+      });
+      if (!res.ok) throw new Error("Failed to fetch deliverables");
+      return res.json();
+    },
+    enabled: !!moveTargetSolutionId && moveTargetSolutionId !== action?.solutionId && open,
+  });
 
   const { data: deliverables = [] } = useQuery<Deliverable[]>({
     queryKey: ["/api/solutions", action?.solutionId, "deliverables"],
@@ -158,6 +177,28 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted, initia
     },
   });
 
+  const moveAction = useMutation({
+    mutationFn: async ({ solutionId, deliverableId }: { solutionId: string; deliverableId?: string }) => {
+      return apiRequest("PATCH", `/api/actions/${action?.id}`, {
+        solutionId,
+        deliverableId: deliverableId || null,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/solutions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/deliverables"] });
+      toast({ title: "Action moved successfully" });
+      setMoveTargetSolutionId("");
+      setMoveTargetDeliverableId("");
+      onOpenChange(false);
+    },
+    onError: () => {
+      toast({ title: "Failed to move action", variant: "destructive" });
+    },
+  });
+
   const addComment = useMutation({
     mutationFn: async (content: string) => {
       return apiRequest("POST", "/api/comments", {
@@ -214,6 +255,8 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted, initia
       setIsSubmittingWithNewDeliverable(false);
       setNewComment("");
       setNewStepName("");
+      setMoveTargetSolutionId("");
+      setMoveTargetDeliverableId("");
     }
   }, [action, open, form]);
 
@@ -533,6 +576,80 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted, initia
               autoFocus={initialFocus === "label"}
               data-testid="combobox-action-labels"
             />
+          </div>
+
+          <div className="space-y-2 border-t pt-4">
+            <Label className="flex items-center gap-1.5">
+              <ArrowRight className="h-4 w-4" />
+              Move to Solution
+            </Label>
+            <div className="space-y-2">
+              <Select
+                value={moveTargetSolutionId}
+                onValueChange={(value) => {
+                  setMoveTargetSolutionId(value);
+                  setMoveTargetDeliverableId("");
+                }}
+              >
+                <SelectTrigger data-testid="select-move-action-solution">
+                  <SelectValue placeholder="Select target solution..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {solutions
+                    .filter((s) => !s.isDeleted)
+                    .map((solution) => (
+                      <SelectItem key={solution.id} value={solution.id}>
+                        {solution.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+              {moveTargetSolutionId && moveTargetSolutionId !== action?.solutionId && (
+                <Select
+                  value={moveTargetDeliverableId}
+                  onValueChange={setMoveTargetDeliverableId}
+                >
+                  <SelectTrigger data-testid="select-move-action-deliverable">
+                    <SelectValue placeholder="(Optional) Select deliverable..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">No deliverable</SelectItem>
+                    {targetDeliverables
+                      .filter((d) => !d.isDeleted)
+                      .map((deliverable) => (
+                        <SelectItem key={deliverable.id} value={deliverable.id}>
+                          {deliverable.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              )}
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="w-full"
+                disabled={!moveTargetSolutionId || moveTargetSolutionId === action?.solutionId || moveAction.isPending}
+                onClick={() => moveAction.mutate({ 
+                  solutionId: moveTargetSolutionId, 
+                  deliverableId: moveTargetDeliverableId || undefined 
+                })}
+                data-testid="button-move-action"
+              >
+                {moveAction.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <ArrowRight className="h-4 w-4 mr-2" />
+                )}
+                Move Action
+              </Button>
+              {moveTargetSolutionId && moveTargetSolutionId !== action?.solutionId && (
+                <p className="text-xs text-muted-foreground">
+                  Will move to: {solutions.find((s) => s.id === moveTargetSolutionId)?.name}
+                  {moveTargetDeliverableId && ` / ${targetDeliverables.find((d) => d.id === moveTargetDeliverableId)?.name}`}
+                </p>
+              )}
+            </div>
           </div>
 
           <div className="space-y-2 border-t pt-4">
