@@ -18,6 +18,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { StakeholderTagPicker } from "@/components/stakeholder-tag-picker";
 import type { Step } from "@shared/schema";
 
 const editStepSchema = z.object({
@@ -166,6 +167,16 @@ export function EditStepDialog({ step, open, onOpenChange, onDeleted }: EditStep
             />
             <Label htmlFor="isDone" className="cursor-pointer">Mark as done</Label>
           </div>
+
+          {step?.id && (
+            <div className="space-y-2">
+              <Label>Tagged Stakeholders</Label>
+              <StakeholderTagPicker
+                entityType="step"
+                entityId={step.id}
+              />
+            </div>
+          )}
 
           <DialogFooter className="flex justify-between gap-2 pt-4">
             <Button

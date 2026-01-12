@@ -19,6 +19,7 @@ import { Loader2 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useOwnerSuggestions, useLabelSuggestions } from "@/hooks/use-suggestions";
+import { StakeholderTagPicker } from "@/components/stakeholder-tag-picker";
 import type { Stream } from "@shared/schema";
 
 export type EditStreamFocusField = "owner" | "label" | null;
@@ -160,6 +161,16 @@ export function EditStreamDialog({ stream, open, onOpenChange, onDeleted, initia
               data-testid="combobox-stream-labels"
             />
           </div>
+
+          {stream?.id && (
+            <div className="space-y-2">
+              <Label>Tagged Stakeholders</Label>
+              <StakeholderTagPicker
+                entityType="stream"
+                entityId={stream.id}
+              />
+            </div>
+          )}
 
           <DialogFooter className="flex justify-between gap-2 pt-4">
             <Button

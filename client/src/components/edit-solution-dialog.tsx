@@ -27,6 +27,7 @@ import { Loader2, MessageSquare, Send } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useOwnerSuggestions, useLabelSuggestions } from "@/hooks/use-suggestions";
+import { StakeholderTagPicker } from "@/components/stakeholder-tag-picker";
 import type { Solution, Comment } from "@shared/schema";
 import { SolutionStatus } from "@shared/schema";
 import { format } from "date-fns";
@@ -275,6 +276,16 @@ export function EditSolutionDialog({ solution, open, onOpenChange, onDeleted }: 
               data-testid="combobox-solution-labels"
             />
           </div>
+
+          {solution?.id && (
+            <div className="space-y-2">
+              <Label>Tagged Stakeholders</Label>
+              <StakeholderTagPicker
+                entityType="solution"
+                entityId={solution.id}
+              />
+            </div>
+          )}
 
           <div className="space-y-2 border-t pt-4">
             <Label className="flex items-center gap-1.5">

@@ -26,6 +26,7 @@ import { Plus, Loader2, X, MessageSquare, Send, CheckSquare, Trash2, ArrowRight 
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useOwnerSuggestions, useLabelSuggestions } from "@/hooks/use-suggestions";
+import { StakeholderTagPicker } from "@/components/stakeholder-tag-picker";
 import type { Action, Deliverable, DeliverableBorderColorType, Comment, Step, Solution } from "@shared/schema";
 import { ActionStatus, DeliverableBorderColor } from "@shared/schema";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -577,6 +578,16 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted, initia
               data-testid="combobox-action-labels"
             />
           </div>
+
+          {action?.id && (
+            <div className="space-y-2">
+              <Label>Tagged Stakeholders</Label>
+              <StakeholderTagPicker
+                entityType="action"
+                entityId={action.id}
+              />
+            </div>
+          )}
 
           <div className="space-y-2 border-t pt-4">
             <Label className="flex items-center gap-1.5">
