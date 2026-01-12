@@ -613,7 +613,7 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted, initia
                     <SelectValue placeholder="(Optional) Select deliverable..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No deliverable</SelectItem>
+                    <SelectItem value="__none__">No deliverable</SelectItem>
                     {targetDeliverables
                       .filter((d) => !d.isDeleted)
                       .map((deliverable) => (
@@ -632,7 +632,7 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted, initia
                 disabled={!moveTargetSolutionId || moveTargetSolutionId === action?.solutionId || moveAction.isPending}
                 onClick={() => moveAction.mutate({ 
                   solutionId: moveTargetSolutionId, 
-                  deliverableId: moveTargetDeliverableId || undefined 
+                  deliverableId: moveTargetDeliverableId && moveTargetDeliverableId !== "__none__" ? moveTargetDeliverableId : undefined 
                 })}
                 data-testid="button-move-action"
               >
@@ -646,7 +646,7 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted, initia
               {moveTargetSolutionId && moveTargetSolutionId !== action?.solutionId && (
                 <p className="text-xs text-muted-foreground">
                   Will move to: {solutions.find((s) => s.id === moveTargetSolutionId)?.name}
-                  {moveTargetDeliverableId && ` / ${targetDeliverables.find((d) => d.id === moveTargetDeliverableId)?.name}`}
+                  {moveTargetDeliverableId && moveTargetDeliverableId !== "__none__" && ` / ${targetDeliverables.find((d) => d.id === moveTargetDeliverableId)?.name}`}
                 </p>
               )}
             </div>
