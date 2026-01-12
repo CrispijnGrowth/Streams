@@ -22,12 +22,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ComboboxMultiSelect } from "@/components/ui/combobox-multi-select";
-import { Plus, Loader2, X, MessageSquare, Send } from "lucide-react";
+import { Plus, Loader2, X, MessageSquare, Send, CheckSquare, Trash2 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useOwnerSuggestions, useLabelSuggestions } from "@/hooks/use-suggestions";
-import type { Action, Deliverable, DeliverableBorderColorType, Comment } from "@shared/schema";
+import type { Action, Deliverable, DeliverableBorderColorType, Comment, Step } from "@shared/schema";
 import { ActionStatus, DeliverableBorderColor } from "@shared/schema";
+import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -65,6 +66,7 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted, initia
   const [isCreatingDeliverable, setIsCreatingDeliverable] = useState(false);
   const [isSubmittingWithNewDeliverable, setIsSubmittingWithNewDeliverable] = useState(false);
   const [newComment, setNewComment] = useState("");
+  const [newStepName, setNewStepName] = useState("");
   const ownerSuggestions = useOwnerSuggestions();
   const labelSuggestions = useLabelSuggestions();
 
@@ -90,6 +92,70 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted, initia
       return res.json();
     },
     enabled: !!action?.id && open,
+  });
+
+  const { data: steps = [] } = useQuery<Step[]>({
+    queryKey: ["/api/actions", action?.id, "steps"],
+    queryFn: async () => {
+      const res = await fetch(`/api/actions/${action?.id}/steps`, {
+        headers: { "x-session-id": localStorage.getItem("streams-session-id") || "" },
+      });
+      if (!res.ok) throw new Error("Failed to fetch steps");
+      return res.json();
+    },
+    enabled: !!action?.id && open,
+  });
+
+  const createStep = useMutation({
+    mutationFn: async (name: string) => {
+      return apiRequest("POST", "/api/steps", {
+        name,
+        actionId: action?.id,
+        isDone: false,
+      });
+    },
+    onSuccess: () => {
+      setNewStepName("");
+      queryClient.invalidateQueries({ queryKey: ["/api/actions", action?.id, "steps"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/solutions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
+      toast({ title: "Step added" });
+    },
+    onError: () => {
+      toast({ title: "Failed to add step", variant: "destructive" });
+    },
+  });
+
+  const updateStep = useMutation({
+    mutationFn: async ({ stepId, isDone }: { stepId: string; isDone: boolean }) => {
+      return apiRequest("PATCH", `/api/steps/${stepId}`, { isDone });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/actions", action?.id, "steps"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/solutions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
+    },
+    onError: () => {
+      toast({ title: "Failed to update step", variant: "destructive" });
+    },
+  });
+
+  const deleteStep = useMutation({
+    mutationFn: async (stepId: string) => {
+      return apiRequest("DELETE", `/api/steps/${stepId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/actions", action?.id, "steps"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/solutions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
+      toast({ title: "Step deleted" });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete step", variant: "destructive" });
+    },
   });
 
   const addComment = useMutation({
@@ -147,6 +213,7 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted, initia
       setIsCreatingDeliverable(false);
       setIsSubmittingWithNewDeliverable(false);
       setNewComment("");
+      setNewStepName("");
     }
   }, [action, open, form]);
 
@@ -466,6 +533,70 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted, initia
               autoFocus={initialFocus === "label"}
               data-testid="combobox-action-labels"
             />
+          </div>
+
+          <div className="space-y-2 border-t pt-4">
+            <Label className="flex items-center gap-1.5">
+              <CheckSquare className="h-4 w-4" />
+              Steps
+              {steps.length > 0 && (
+                <span className="text-xs text-muted-foreground font-normal">
+                  ({steps.filter(s => s.isDone).length}/{steps.length} done)
+                </span>
+              )}
+            </Label>
+            {steps.length > 0 && (
+              <div className="space-y-1 rounded-md border p-2">
+                {steps.map((step) => (
+                  <div key={step.id} className="flex items-center gap-2 group">
+                    <Checkbox
+                      checked={step.isDone}
+                      onCheckedChange={(checked) => {
+                        updateStep.mutate({ stepId: step.id, isDone: checked === true });
+                      }}
+                      data-testid={`checkbox-step-complete-${step.id}`}
+                    />
+                    <span className={`flex-1 text-sm ${step.isDone ? "line-through text-muted-foreground" : ""}`}>
+                      {step.name}
+                    </span>
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => deleteStep.mutate(step.id)}
+                      data-testid={`button-step-delete-${step.id}`}
+                    >
+                      <Trash2 className="h-3 w-3 text-muted-foreground hover:text-destructive" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="flex gap-2">
+              <Input
+                placeholder="Add a step..."
+                value={newStepName}
+                onChange={(e) => setNewStepName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey && newStepName.trim()) {
+                    e.preventDefault();
+                    createStep.mutate(newStepName.trim());
+                  }
+                }}
+                data-testid="input-step-name"
+              />
+              <Button
+                type="button"
+                size="icon"
+                variant="outline"
+                disabled={!newStepName.trim() || createStep.isPending}
+                onClick={() => newStepName.trim() && createStep.mutate(newStepName.trim())}
+                data-testid="button-step-add"
+              >
+                {createStep.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+              </Button>
+            </div>
           </div>
 
           <div className="space-y-2 border-t pt-4">
