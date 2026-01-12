@@ -118,7 +118,28 @@ Progress is computed automatically by rolling up completion percentages from ste
 - **Matching Logic**: Streams by name, Solutions by name+stream, Deliverables by name+solution, Actions by name+solution+deliverable
 - **Stats Display**: Shows counts for both created and updated records after import
 
+### Stakeholder Tagging System
+- **Stakeholders Table**: `stakeholders` table with id, userId, firstName, lastName, email, organization, role, isDeleted fields
+- **Stakeholder Tags Table**: `stakeholder_tags` table linking stakeholders to entities (stream, solution, action, step) via entityType and entityId
+- **StakeholderTagPicker Component**: @mention-style UI in edit dialogs for search, create-on-the-fly, and tagging stakeholders - only visible when editing existing entities
+- **Integration**: Stakeholder tagging available in stream, solution, action, and step edit forms
+- **Key Files**: 
+  - `client/src/components/stakeholder-tag-picker.tsx` - Inline search and tagging component
+  - `shared/schema.ts` - Schema definitions for stakeholders and stakeholder_tags tables
+
+### Meetings System
+- **Meetings Table**: `meetings` table with id, userId, title, description, scheduledAt, status fields
+- **Meeting Items Table**: `meeting_items` table linking stakeholder_tags to meetings with discussionNotes and resolved status
+- **Three-Column Layout**: Stakeholder search (left), tagged items management with bulk select/untag (center), past meetings list (right)
+- **Meeting Workflow**: Search stakeholders → view their tagged items → select items → create meeting → add discussion notes → mark resolved
+- **CRUD Operations**: Full create, view, edit, delete functionality for meetings and meeting items
+- **Key Files**:
+  - `client/src/pages/meetings.tsx` - Meetings page with full workflow
+  - `server/routes.ts` - API routes for stakeholders, tags, meetings, and meeting items
+
 ### Recent Changes
+- 2026-01-12: Added Stakeholder Tagging System - tag stakeholders on streams, solutions, actions, and steps for tracking discussion items
+- 2026-01-12: Added Meetings page - three-column layout for managing stakeholder-tagged items with discussion notes and resolution tracking
 - 2026-01-12: Added Steps section to EditActionDialog - inline view, create, toggle completion, and delete of steps within action edit form
 - 2026-01-10: Refined hero transition - card expansion now stops 5px below ClassNavigator breadcrumb instead of filling entire viewport
 - 2026-01-08: Replaced object storage with portable database photo storage - team member photos now stored as base64 data URIs in PostgreSQL (photoData column), works uniformly across all deployment platforms
