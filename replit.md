@@ -137,7 +137,17 @@ Progress is computed automatically by rolling up completion percentages from ste
   - `client/src/pages/meetings.tsx` - Meetings page with full workflow
   - `server/routes.ts` - API routes for stakeholders, tags, meetings, and meeting items
 
+### @Mention System
+- **Canonical Format**: Mentions stored as `@[FirstName LastName](stakeholder:uuid)` to preserve stakeholder IDs
+- **MentionableTextArea Component**: Replaces Textarea in edit dialogs, triggers popover on @ typing with keyboard navigation (↑↓ to select, Enter to insert, Tab to create new)
+- **MentionHighlighter Component**: Parses and renders mentions with visual styling (primary color pill with @ icon)
+- **Key Files**:
+  - `client/src/hooks/use-stakeholder-mentions.ts` - Hook with formatMention/parseMentions utilities
+  - `client/src/components/mentionable-textarea.tsx` - Controlled textarea with mention detection
+  - `client/src/components/mention-highlighter.tsx` - Display component for rendering mentions
+
 ### Recent Changes
+- 2026-01-12: Added universal @mention system - type @ in description fields to tag stakeholders inline with popover search and creation
 - 2026-01-12: Added Stakeholder Tagging System - tag stakeholders on streams, solutions, actions, and steps for tracking discussion items
 - 2026-01-12: Added Meetings page - three-column layout for managing stakeholder-tagged items with discussion notes and resolution tracking
 - 2026-01-12: Added Steps section to EditActionDialog - inline view, create, toggle completion, and delete of steps within action edit form
