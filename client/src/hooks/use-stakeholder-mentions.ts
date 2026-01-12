@@ -65,11 +65,11 @@ export function useStakeholderMentions() {
 }
 
 export function formatMention(stakeholder: Stakeholder): string {
-  return `@[${stakeholder.firstName} ${stakeholder.lastName}](stakeholder:${stakeholder.id})`;
+  return `@${stakeholder.firstName}${stakeholder.lastName}`;
 }
 
-export function parseMentions(text: string): Array<{ text: string; isMention: boolean; stakeholderId?: string; displayName?: string }> {
-  const mentionRegex = /@\[([^\]]+)\]\(stakeholder:([^)]+)\)/g;
+export function parseMentions(text: string, allStakeholders: Stakeholder[] = []): Array<{ text: string; isMention: boolean; stakeholderId?: string; displayName?: string }> {
+  const mentionRegex = /@([A-Z][a-z]+[A-Z][a-zA-Z]*)/g;
   const parts: Array<{ text: string; isMention: boolean; stakeholderId?: string; displayName?: string }> = [];
   
   let lastIndex = 0;
@@ -79,11 +79,17 @@ export function parseMentions(text: string): Array<{ text: string; isMention: bo
     if (match.index > lastIndex) {
       parts.push({ text: text.slice(lastIndex, match.index), isMention: false });
     }
+    
+    const mentionName = match[1];
+    const stakeholder = allStakeholders.find(s => 
+      `${s.firstName}${s.lastName}` === mentionName
+    );
+    
     parts.push({
       text: match[0],
       isMention: true,
-      displayName: match[1],
-      stakeholderId: match[2],
+      displayName: mentionName,
+      stakeholderId: stakeholder?.id,
     });
     lastIndex = match.index + match[0].length;
   }
@@ -96,5 +102,5 @@ export function parseMentions(text: string): Array<{ text: string; isMention: bo
 }
 
 export function getPlainTextFromMentions(text: string): string {
-  return text.replace(/@\[([^\]]+)\]\(stakeholder:[^)]+\)/g, "@$1");
+  return text;
 }
