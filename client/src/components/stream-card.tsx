@@ -176,7 +176,15 @@ export function StreamCard({ stream, onClick, onEdit, onMomentumClick, showDescr
       )}
 
       <div className="space-y-2 mt-3">
-        {stream.inProgressSolutions.map((sol) => (
+        {[...stream.inProgressSolutions]
+          .sort((a, b) => {
+            // Sort by priority: P1 first, then P2, etc. No priority goes last
+            if (a.priority && b.priority) return a.priority - b.priority;
+            if (a.priority && !b.priority) return -1;
+            if (!a.priority && b.priority) return 1;
+            return 0;
+          })
+          .map((sol) => (
           <div key={sol.name} className="space-y-0.5">
             <div className="flex items-center justify-between gap-2">
               <span className={`text-xs line-clamp-1 flex-1 ${sol.isEarliest ? "font-medium" : "text-muted-foreground"}`}>
@@ -189,6 +197,12 @@ export function StreamCard({ stream, onClick, onEdit, onMomentumClick, showDescr
               )}
             </div>
             <div className="flex items-center gap-2">
+              <div className="flex-1">
+                <ProgressBar value={sol.progress} size="sm" showLabel={false} variant="stream" muted={isOnHold} />
+              </div>
+              <span className="text-xs font-mono text-muted-foreground shrink-0">
+                {Math.round(sol.progress)}%
+              </span>
               {sol.priority && (
                 <span 
                   className={`inline-flex items-center rounded-md border px-1 py-0 font-mono shrink-0 ${
@@ -202,12 +216,6 @@ export function StreamCard({ stream, onClick, onEdit, onMomentumClick, showDescr
                   P{sol.priority}
                 </span>
               )}
-              <div className="flex-1">
-                <ProgressBar value={sol.progress} size="sm" showLabel={false} variant="stream" muted={isOnHold} />
-              </div>
-              <span className="text-xs font-mono text-muted-foreground shrink-0">
-                {Math.round(sol.progress)}%
-              </span>
             </div>
           </div>
         ))}
