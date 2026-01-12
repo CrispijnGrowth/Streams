@@ -134,14 +134,15 @@ export function HeroTransitionProvider({ children }: { children: React.ReactNode
   
   const finalTop = HEADER_HEIGHT;
   
-  // The bottom edge must expand DOWN, never shrink up
-  // Original bottom position of the card
+  // The bottom edge must expand DOWN to fill the entire viewport
+  // But it must NEVER move up from its original position
+  const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 800;
   const sourceBottom = sourceRect ? sourceRect.top + sourceRect.height : 400;
-  // Target bottom (where the title is on the new page)
   const targetBottom = targetRect ? targetRect.bottom + 8 : 150;
-  // Final bottom is the MAXIMUM of: original position, target position, or a reasonable minimum
-  const finalBottom = Math.max(sourceBottom, targetBottom, 300);
-  // Height is from top (header) to bottom
+  // Final bottom is the MAX of: viewport height, original position, or target position
+  // This ensures the card always reaches the bottom of the page AND never shrinks up
+  const finalBottom = Math.max(sourceBottom, targetBottom, viewportHeight);
+  // Height is from top (header) to final bottom
   const finalHeight = finalBottom - finalTop;
 
   return (
