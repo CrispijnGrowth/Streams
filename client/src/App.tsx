@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { LayoutGrid, Trash2, Search, LogOut, Settings, Loader2, Pencil, Play, Layers } from "lucide-react";
+import { LayoutGrid, Trash2, Search, LogOut, Settings, Loader2, Pencil, Play, Layers, Calendar } from "lucide-react";
 import { useTheme } from "@/lib/theme-provider";
 import logoWhite from "@assets/Streams_Logo_White_1767805031570.png";
 import logoBlack from "@assets/Streams_Logo_Black_1767805053205.png";
@@ -31,6 +31,7 @@ import { SettingsPage } from "@/pages/settings";
 import { LoginPage } from "@/pages/login";
 import { AuthVerifyPage } from "@/pages/auth-verify";
 import { ResetPasswordPage } from "@/pages/reset-password";
+import { MeetingsPage } from "@/pages/meetings";
 import NotFound from "@/pages/not-found";
 function Router({ showDescriptions }: { showDescriptions: boolean }) {
   return (
@@ -46,6 +47,9 @@ function Router({ showDescriptions }: { showDescriptions: boolean }) {
       </Route>
       <Route path="/settings">
         <SettingsPage />
+      </Route>
+      <Route path="/meetings">
+        <MeetingsPage />
       </Route>
       <Route path="/stream/:streamId/solution/:solutionId/action/:actionId">
         {(params) => (
@@ -123,6 +127,17 @@ function TopNav() {
           >
             <Trash2 className="h-4 w-4" />
             <span>Recycle Bin</span>
+          </Button>
+        </Link>
+        <Link href="/meetings">
+          <Button
+            variant={location === "/meetings" ? "secondary" : "ghost"}
+            size="sm"
+            className="gap-2"
+            data-testid="nav-meetings"
+          >
+            <Calendar className="h-4 w-4" />
+            <span>Meetings</span>
           </Button>
         </Link>
       </div>
