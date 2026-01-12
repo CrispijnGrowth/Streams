@@ -1,0 +1,371 @@
+import streamlit as st
+import time
+import random
+import json
+import os
+
+# --- CONFIGURATION ---
+st.set_page_config(page_title="Mood Board Journey", layout="wide")
+
+# --- FILE PATHS FOR SAVING DATA ---
+def get_filename(username):
+    # Sanitize username to be safe for filenames
+    safe_name = "".join(x for x in username if x.isalnum())
+    return f"progress_{safe_name}.json"
+
+def save_data(username, data):
+    # We remove image objects before saving text data to JSON
+    # Images cannot be easily saved in a simple JSON file
+    data_to_save = {k: v for k, v in data.items() if not k.endswith('_img')}
+    with open(get_filename(username), 'w') as f:
+        json.dump(data_to_save, f)
+
+def load_data(username):
+    filename = get_filename(username)
+    if os.path.exists(filename):
+        with open(filename, 'r') as f:
+            return json.load(f)
+    return None
+
+# --- SESSION STATE SETUP ---
+if 'step' not in st.session_state: st.session_state.step = 0
+
+# Default Data Structure
+default_data = {
+    "step_progress": 0,
+    "intent_sentence": "",
+    "word_function": "", "word_emotion": "", "word_longevity": "",
+    "assoc_function": ["", "", ""],
+    "assoc_emotion": ["", "", ""],
+    "assoc_longevity": ["", "", ""],
+    "sensory_color": "", "sensory_material": "", "sensory_form": "",
+    "anchor_palette": "", "anchor_material": "", "anchor_form": "", "anchor_emotional": "",
+    "final_img": None # Note: Images are not saved to disk in this simple version
+}
+
+if 'data' not in st.session_state:
+    st.session_state.data = default_data.copy()
+
+# --- SIDEBAR SETTINGS ---
+st.sidebar.header("Settings / Instellingen")
+lang = st.sidebar.selectbox("Language / Taal:", ["English", "Nederlands", "Español"])
+user_selection = st.sidebar.radio("User / Gebruiker:", ["Maarten (Tester)", "Gissella (Founder)", "Guest"])
+current_user = user_selection.split()[0] # Get just the name
+
+# --- LOAD LOGIC ---
+# If the user changes, try to load their data
+if 'current_user_tracker' not in st.session_state:
+    st.session_state.current_user_tracker = current_user
+
+if st.session_state.current_user_tracker != current_user:
+    # User switched!
+    saved_data = load_data(current_user)
+    if saved_data:
+        st.session_state.data.update(saved_data)
+        st.session_state.step = saved_data.get("step_progress", 0)
+        st.toast(f"Welcome back {current_user}! Loaded your progress.", icon="📂")
+    else:
+        st.session_state.data = default_data.copy()
+        st.session_state.step = 0
+        st.toast(f"New session for {current_user}.", icon="🆕")
+    st.session_state.current_user_tracker = current_user
+
+# --- TEXT DICTIONARY (TRANSLATIONS) ---
+t = {
+    "English": {
+        "next": "Save & Next Step ➡️",
+        "save": "Save Progress 💾",
+        "payoff": ["Brilliant!", "That's deep!", "Great descriptive work!", "You are building the DNA!", "Keep this flow going!"],
+        # Steps
+        "s1_title": "Step 1: Define Your Intent",
+        "s1_desc": "Write one sentence that captures the essence. Focus on Function, Emotion, and Sustainability.",
+        "s1_label": "Your Intent Sentence:",
+        "s2_title": "Step 2: Your First Three Words",
+        "s2_desc": "Start with three words that define your vision.",
+        "s2_l1": "Function Word (Unique):",
+        "s2_l2": "Emotion Word (Feeling):",
+        "s2_l3": "Longevity Word (Why it lasts):",
+        "s3_title": "Step 3: Expand Your World (3x3)",
+        "s3_desc": "Expand each word into 3 associations. Think actions, textures, stories.",
+        "s4_title": "Step 4: Bring Words to Life",
+        "s4_desc": "Turn your 9 words into something you can see, touch, and feel.",
+        "s4_c": "Color: If these words were a palette, what would it look like?",
+        "s4_m": "Material: If you could touch these words, what would they feel like?",
+        "s4_f": "Form: If these words were a shape, what would they be?",
+        "s5_title": "Step 5: Choose Your Anchors",
+        "s5_desc": "From all your ideas, pick the 3-5 anchors that tell the strongest story.",
+        "s5_p": "The Color Palette:",
+        "s5_m": "The Materials:",
+        "s5_f": "The Form Principle:",
+        "s5_e": "The Emotional Anchor (Optional):",
+        "s6_title": "Step 6: Build Your Mood Board",
+        "s6_desc": "Visualize your concept. Upload the image that represents your Anchors.",
+        "final_title": "Your Creative DNA & Master Prompt",
+        "tab1": "Visual Summary",
+        "tab2": "Master Prompt"
+    },
+    "Nederlands": {
+        "next": "Opslaan & Volgende ➡️",
+        "save": "Opslaan 💾",
+        "payoff": ["Briljant!", "Dat is diepgaand!", "Mooi omschreven!", "Je bouwt nu het DNA!", "Hou dit vast!"],
+        # Steps
+        "s1_title": "Stap 1: Definieer je Intentie",
+        "s1_desc": "Schrijf één zin die de essentie vangt. Focus op Functie, Emotie en Duurzaamheid.",
+        "s1_label": "Je Intentie Zin:",
+        "s2_title": "Stap 2: Je Eerste Drie Woorden",
+        "s2_desc": "Begin met drie woorden die je visie definiëren.",
+        "s2_l1": "Functie Woord (Uniek):",
+        "s2_l2": "Emotie Woord (Gevoel):",
+        "s2_l3": "Langleven Woord (Waarom het blijft):",
+        "s3_title": "Stap 3: Vergroot je Wereld (3x3)",
+        "s3_desc": "Breid elk woord uit met 3 associaties. Denk aan acties, texturen, verhalen.",
+        "s4_title": "Stap 4: Breng Woorden tot Leven",
+        "s4_desc": "Vertaal je 9 woorden naar iets dat je kunt zien, voelen en aanraken.",
+        "s4_c": "Kleur: Als deze woorden een palet waren, hoe zag het eruit?",
+        "s4_m": "Materiaal: Als je deze woorden kon aanraken, hoe voelt het?",
+        "s4_f": "Vorm: Als deze woorden een vorm waren, wat zou het zijn?",
+        "s5_title": "Stap 5: Kies je Ankers",
+        "s5_desc": "Kies uit al je ideeën de 3-5 ankers die het sterkste verhaal vertellen.",
+        "s5_p": "Het Kleurenpalet:",
+        "s5_m": "De Materialen:",
+        "s5_f": "Het Vorm Principe:",
+        "s5_e": "Het Emotionele Anker (Optioneel):",
+        "s6_title": "Stap 6: Bouw je Moodboard",
+        "s6_desc": "Visualiseer je concept. Upload de afbeelding die je Ankers vertegenwoordigt.",
+        "final_title": "Jouw Creatief DNA & Master Prompt",
+        "tab1": "Visueel Overzicht",
+        "tab2": "Master Prompt"
+    },
+    "Español": {
+        "next": "Guardar y Siguiente ➡️",
+        "save": "Guardar Progreso 💾",
+        "payoff": ["¡Brillante!", "¡Muy profundo!", "¡Gran trabajo descriptivo!", "¡Estás construyendo el ADN!", "¡Sigue así!"],
+        # Steps
+        "s1_title": "Paso 1: Define tu Intención",
+        "s1_desc": "Escribe una frase que capture la esencia. Céntrate en Función, Emoción y Sostenibilidad.",
+        "s1_label": "Tu Frase de Intención:",
+        "s2_title": "Paso 2: Tus Primeras Tres Palabras",
+        "s2_desc": "Empieza con tres palabras que definan tu visión.",
+        "s2_l1": "Palabra de Función (Único):",
+        "s2_l2": "Palabra de Emoción (Sentimiento):",
+        "s2_l3": "Palabra de Longevidad (Por qué dura):",
+        "s3_title": "Paso 3: Expande tu Mundo (3x3)",
+        "s3_desc": "Expande cada palabra en 3 asociaciones. Piensa en acciones, texturas, historias.",
+        "s4_title": "Paso 4: Dale Vida a las Palabras",
+        "s4_desc": "Convierte tus 9 palabras en algo que puedas ver, tocar y sentir.",
+        "s4_c": "Color: Si estas palabras fueran una paleta, ¿cómo se vería?",
+        "s4_m": "Material: Si pudieras tocar estas palabras, ¿qué sentirías?",
+        "s4_f": "Forma: Si estas palabras fueran una forma, ¿cuál sería?",
+        "s5_title": "Paso 5: Elige tus Anclas",
+        "s5_desc": "De todas tus ideas, elige las 3-5 anclas que cuenten la historia más fuerte.",
+        "s5_p": "La Paleta de Colores:",
+        "s5_m": "Los Materiales:",
+        "s5_f": "El Principio de Forma:",
+        "s5_e": "El Ancla Emocional (Opcional):",
+        "s6_title": "Paso 6: Construye tu Mood Board",
+        "s6_desc": "Visualiza tu concepto. Sube la imagen que representa tus Anclas.",
+        "final_title": "Tu ADN Creativo & Prompt Maestro",
+        "tab1": "Resumen Visual",
+        "tab2": "Prompt Maestro"
+    }
+}
+txt = t[lang]
+
+# --- HELPER FUNCTIONS ---
+def celebrate():
+    msg = random.choice(txt["payoff"])
+    st.toast(msg, icon="✨")
+    time.sleep(0.5)
+
+def next_step():
+    # Save progress to file before moving on
+    st.session_state.data["step_progress"] = st.session_state.step + 1
+    save_data(current_user, st.session_state.data)
+    celebrate()
+    st.session_state.step += 1
+    st.rerun()
+
+def save_current_state():
+    st.session_state.data["step_progress"] = st.session_state.step
+    save_data(current_user, st.session_state.data)
+    st.toast("Progress Saved to Disk!", icon="💾")
+
+# --- APP FLOW ---
+
+# STEP 0: WELCOME
+if st.session_state.step == 0:
+    st.title("Mood Board Creation Journey")
+    st.subheader("3x3x3 Semantic Laddering")
+    st.info(f"User: {current_user}")
+    st.write("This tool follows the 'Semantic Laddering' process to build a deep, meaningful creative plan.")
+    if st.button("Start Journey"):
+        next_step()
+
+# STEP 1: DEFINE INTENT
+elif st.session_state.step == 1:
+    st.header(txt["s1_title"])
+    st.write(txt["s1_desc"])
+    
+    val = st.text_area(txt["s1_label"], value=st.session_state.data["intent_sentence"], height=100)
+    
+    col1, col2 = st.columns([1, 5])
+    if col1.button("Next ➡️"):
+        st.session_state.data["intent_sentence"] = val
+        next_step()
+    if col2.button(txt["save"]): save_current_state()
+
+# STEP 2: FIRST 3 WORDS
+elif st.session_state.step == 2:
+    st.header(txt["s2_title"])
+    st.write(txt["s2_desc"])
+    
+    f_word = st.text_input(txt["s2_l1"], value=st.session_state.data["word_function"])
+    e_word = st.text_input(txt["s2_l2"], value=st.session_state.data["word_emotion"])
+    l_word = st.text_input(txt["s2_l3"], value=st.session_state.data["word_longevity"])
+    
+    col1, col2 = st.columns([1, 5])
+    if col1.button("Next ➡️"):
+        if f_word and e_word and l_word:
+            st.session_state.data["word_function"] = f_word
+            st.session_state.data["word_emotion"] = e_word
+            st.session_state.data["word_longevity"] = l_word
+            next_step()
+        else:
+            st.warning("Please fill in all 3 words.")
+    if col2.button(txt["save"]): save_current_state()
+
+# STEP 3: EXPAND (3x3)
+elif st.session_state.step == 3:
+    st.header(txt["s3_title"])
+    st.write(txt["s3_desc"])
+    
+    st.markdown(f"### 1. {st.session_state.data['word_function']} (Function)")
+    f1 = st.text_input("Assoc 1:", value=st.session_state.data["assoc_function"][0], key="f1")
+    f2 = st.text_input("Assoc 2:", value=st.session_state.data["assoc_function"][1], key="f2")
+    f3 = st.text_input("Assoc 3:", value=st.session_state.data["assoc_function"][2], key="f3")
+    
+    st.markdown(f"### 2. {st.session_state.data['word_emotion']} (Emotion)")
+    e1 = st.text_input("Assoc 1:", value=st.session_state.data["assoc_emotion"][0], key="e1")
+    e2 = st.text_input("Assoc 2:", value=st.session_state.data["assoc_emotion"][1], key="e2")
+    e3 = st.text_input("Assoc 3:", value=st.session_state.data["assoc_emotion"][2], key="e3")
+    
+    st.markdown(f"### 3. {st.session_state.data['word_longevity']} (Longevity)")
+    l1 = st.text_input("Assoc 1:", value=st.session_state.data["assoc_longevity"][0], key="l1")
+    l2 = st.text_input("Assoc 2:", value=st.session_state.data["assoc_longevity"][1], key="l2")
+    l3 = st.text_input("Assoc 3:", value=st.session_state.data["assoc_longevity"][2], key="l3")
+
+    col1, col2 = st.columns([1, 5])
+    if col1.button("Next ➡️"):
+        st.session_state.data["assoc_function"] = [f1, f2, f3]
+        st.session_state.data["assoc_emotion"] = [e1, e2, e3]
+        st.session_state.data["assoc_longevity"] = [l1, l2, l3]
+        next_step()
+    if col2.button(txt["save"]): save_current_state()
+
+# STEP 4: SENSORY TRANSLATION
+elif st.session_state.step == 4:
+    st.header(txt["s4_title"])
+    st.write(txt["s4_desc"])
+    
+    # We display the 9 words for reference
+    all_words = st.session_state.data["assoc_function"] + st.session_state.data["assoc_emotion"] + st.session_state.data["assoc_longevity"]
+    st.info(f"Your Playground: {', '.join([w for w in all_words if w])}")
+    
+    c = st.text_area(txt["s4_c"], value=st.session_state.data["sensory_color"])
+    m = st.text_area(txt["s4_m"], value=st.session_state.data["sensory_material"])
+    f = st.text_area(txt["s4_f"], value=st.session_state.data["sensory_form"])
+
+    col1, col2 = st.columns([1, 5])
+    if col1.button("Next ➡️"):
+        st.session_state.data["sensory_color"] = c
+        st.session_state.data["sensory_material"] = m
+        st.session_state.data["sensory_form"] = f
+        next_step()
+    if col2.button(txt["save"]): save_current_state()
+
+# STEP 5: CHOOSE ANCHORS
+elif st.session_state.step == 5:
+    st.header(txt["s5_title"])
+    st.write(txt["s5_desc"])
+    
+    a_p = st.text_input(txt["s5_p"], value=st.session_state.data["anchor_palette"])
+    a_m = st.text_input(txt["s5_m"], value=st.session_state.data["anchor_material"])
+    a_f = st.text_input(txt["s5_f"], value=st.session_state.data["anchor_form"])
+    a_e = st.text_input(txt["s5_e"], value=st.session_state.data["anchor_emotional"])
+
+    col1, col2 = st.columns([1, 5])
+    if col1.button("Next ➡️"):
+        st.session_state.data["anchor_palette"] = a_p
+        st.session_state.data["anchor_material"] = a_m
+        st.session_state.data["anchor_form"] = a_f
+        st.session_state.data["anchor_emotional"] = a_e
+        next_step()
+    if col2.button(txt["save"]): save_current_state()
+
+# STEP 6: UPLOAD MOOD BOARD
+elif st.session_state.step == 6:
+    st.header(txt["s6_title"])
+    st.write(txt["s6_desc"])
+    st.markdown(f"**Anchors:** {st.session_state.data['anchor_palette']}, {st.session_state.data['anchor_material']}, {st.session_state.data['anchor_form']}")
+    
+    img = st.file_uploader("Upload Hero Image", type=['png', 'jpg', 'jpeg'])
+    
+    if img:
+        st.image(img, width=400)
+        st.session_state.data["final_img"] = img
+        if st.button("Finish Journey ✨"):
+            next_step()
+
+# STEP 7: OUTPUT
+elif st.session_state.step == 7:
+    st.balloons()
+    st.title(txt["final_title"])
+    save_current_state() # Save one last time
+    
+    d = st.session_state.data
+    
+    tab1, tab2 = st.tabs([txt["tab1"], txt["tab2"]])
+    
+    with tab1:
+        st.subheader("The DNA")
+        st.info(f"**Intent:** {d['intent_sentence']}")
+        
+        c1, c2, c3 = st.columns(3)
+        with c1: st.success(f"**Color Anchor:**\n{d['anchor_palette']}")
+        with c2: st.warning(f"**Material Anchor:**\n{d['anchor_material']}")
+        with c3: st.error(f"**Form Anchor:**\n{d['anchor_form']}")
+        
+        if d['final_img']:
+            st.image(d['final_img'], caption="Mood Board Hero")
+            
+    with tab2:
+        prompt = f"""
+Act as a Senior Design Director.
+I have completed a "3x3x3 Semantic Laddering" exercise for my product. 
+Below is the Strategic Creative DNA. Use this to write a detailed Design Manifesto and Product Brief.
+
+1. THE CORE INTENT
+"{d['intent_sentence']}"
+
+2. SEMANTIC FOUNDATION (The 3 Pillars)
+- Function: {d['word_function']} (Extended: {', '.join(d['assoc_function'])})
+- Emotion: {d['word_emotion']} (Extended: {', '.join(d['assoc_emotion'])})
+- Longevity: {d['word_longevity']} (Extended: {', '.join(d['assoc_longevity'])})
+
+3. SENSORY TRANSLATION
+- Colors imagined: {d['sensory_color']}
+- Textures imagined: {d['sensory_material']}
+- Forms imagined: {d['sensory_form']}
+
+4. FINAL DESIGN ANCHORS (The Rules)
+- Palette: {d['anchor_palette']}
+- Materials: {d['anchor_material']}
+- Form Principle: {d['anchor_form']}
+- Emotional Anchor: {d['anchor_emotional']}
+
+OUTPUT REQUIRED:
+1. A Design Manifesto titled "The Philosophy of [Insert Product Name]".
+2. A list of 3 Specific Design Guidelines for the manufacturing team based on the Anchors.
+3. A Marketing Storytelling angle based on the "Emotion" pillar.
+        """
+        st.code(prompt)
