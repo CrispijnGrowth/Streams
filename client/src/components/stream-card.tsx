@@ -176,7 +176,7 @@ export function StreamCard({ stream, onClick, onEdit, onMomentumClick, showDescr
       )}
 
       <div className="space-y-2 mt-3">
-        {stream.inProgressSolutions.slice(0, 3).map((sol) => (
+        {stream.inProgressSolutions.map((sol) => (
           <div key={sol.name} className="space-y-0.5">
             <div className="flex items-center justify-between gap-2">
               <span className={`text-xs line-clamp-1 flex-1 ${sol.isEarliest ? "font-medium" : "text-muted-foreground"}`}>
@@ -198,11 +198,6 @@ export function StreamCard({ stream, onClick, onEdit, onMomentumClick, showDescr
             </div>
           </div>
         ))}
-        {stream.inProgressSolutions.length > 3 && (
-          <span className="text-xs text-muted-foreground">
-            +{stream.inProgressSolutions.length - 3} more
-          </span>
-        )}
         {stream.inProgressSolutions.length === 0 && (
           <p className="text-xs text-muted-foreground italic">No active solutions</p>
         )}

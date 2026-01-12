@@ -114,9 +114,11 @@ export function SolutionsOverview({ showDescriptions }: SolutionsOverviewProps) 
       <div className="flex flex-col h-full p-6 space-y-4">
         <ClassNavigator currentLevel="solution" />
         <TimelineSkeleton />
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-4">
           {Array.from({ length: 8 }).map((_, i) => (
-            <SolutionCardSkeleton key={i} />
+            <div key={i} className="break-inside-avoid mb-4">
+              <SolutionCardSkeleton />
+            </div>
           ))}
         </div>
       </div>
@@ -187,19 +189,20 @@ export function SolutionsOverview({ showDescriptions }: SolutionsOverviewProps) 
             }
           />
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className="columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-4">
             {filteredAndSortedSolutions.map((solution) => {
               const stream = streamMap.get(solution.streamId);
               return (
-                <SolutionCard
-                  key={solution.id}
-                  solution={solution}
-                  onClick={() => handleSolutionClick(solution)}
-                  onEdit={() => setEditingSolution(solution)}
-                  showDescription={showDescriptions}
-                  streamName={stream?.name}
-                  onStreamClick={() => stream && setLocation(`/stream/${stream.id}`)}
-                />
+                <div key={solution.id} className="break-inside-avoid mb-4">
+                  <SolutionCard
+                    solution={solution}
+                    onClick={() => handleSolutionClick(solution)}
+                    onEdit={() => setEditingSolution(solution)}
+                    showDescription={showDescriptions}
+                    streamName={stream?.name}
+                    onStreamClick={() => stream && setLocation(`/stream/${stream.id}`)}
+                  />
+                </div>
               );
             })}
           </div>

@@ -223,9 +223,11 @@ export function StreamsOverview({ showDescriptions }: StreamsOverviewProps) {
     return (
       <div className="flex flex-col h-full">
         <div className="flex-1 overflow-auto px-6 pt-3 pb-6 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className="columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-4">
             {[1, 2, 3, 4, 5, 6].map((i) => (
-              <StreamCardSkeleton key={i} />
+              <div key={i} className="break-inside-avoid mb-4">
+                <StreamCardSkeleton />
+              </div>
             ))}
           </div>
           <TimelineSkeleton />
@@ -305,17 +307,18 @@ export function StreamsOverview({ showDescriptions }: StreamsOverviewProps) {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className="columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-4">
             {filteredAndSortedStreams.map((stream) => (
+              <div key={stream.id} className="break-inside-avoid mb-4">
                 <StreamCard
-                  key={stream.id}
                   stream={stream}
                   onClick={() => handleStreamClick(stream.id)}
                   onEdit={() => setEditingStream(stream)}
                   onMomentumClick={(newStatus) => updateStreamMomentum.mutate({ streamId: stream.id, momentumStatus: newStatus })}
                   showDescription={showDescriptions}
                 />
-              ))}
+              </div>
+            ))}
           </div>
 
           <EditStreamDialog
