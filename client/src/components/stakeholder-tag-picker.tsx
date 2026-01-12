@@ -45,7 +45,7 @@ export function StakeholderTagPicker({
       if (!searchQuery.trim()) return allStakeholders;
       const response = await fetch(`/api/stakeholders/search?q=${encodeURIComponent(searchQuery)}`, {
         credentials: "include",
-        headers: { "x-session-id": localStorage.getItem("sessionId") || "" },
+        headers: { "x-session-id": localStorage.getItem("streams-session-id") || "" },
       });
       if (!response.ok) throw new Error("Search failed");
       return response.json();
