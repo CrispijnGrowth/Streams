@@ -255,9 +255,9 @@ export class DatabaseStorage implements IStorage {
       let doingCount = 0;
       let blockedCount = 0;
       let delegatedCount = 0;
-      const inProgressSolutions: { name: string; progress: number; isEarliest: boolean; milestoneDate?: string }[] = [];
+      const inProgressSolutions: { name: string; progress: number; isEarliest: boolean; milestoneDate?: string; priority?: number }[] = [];
 
-      const inProgressWithDates: { name: string; progress: number; milestoneDate?: string }[] = [];
+      const inProgressWithDates: { name: string; progress: number; milestoneDate?: string; priority?: number }[] = [];
 
       for (const sol of streamSolutions) {
         const stats = await this.computeSolutionProgress(sol.id, userId);
@@ -271,6 +271,7 @@ export class DatabaseStorage implements IStorage {
             name: sol.name,
             progress: stats.progress,
             milestoneDate: sol.milestoneDate || undefined,
+            priority: sol.priority || undefined,
           });
         }
       }
@@ -290,6 +291,7 @@ export class DatabaseStorage implements IStorage {
           progress: sol.progress,
           isEarliest: sol.milestoneDate === earliestDate && earliestDate !== undefined,
           milestoneDate: sol.milestoneDate,
+          priority: sol.priority,
         });
       }
 

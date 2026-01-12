@@ -409,6 +409,7 @@ export interface InProgressSolutionInfo {
   progress: number;
   isEarliest: boolean;
   milestoneDate?: string;
+  priority?: number;
 }
 
 export interface StreamWithProgress extends Stream {

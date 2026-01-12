@@ -189,6 +189,11 @@ export function StreamCard({ stream, onClick, onEdit, onMomentumClick, showDescr
               )}
             </div>
             <div className="flex items-center gap-2">
+              {sol.priority && (
+                <span className="text-[10px] font-medium text-muted-foreground shrink-0 w-4 text-center">
+                  P{sol.priority}
+                </span>
+              )}
               <div className="flex-1">
                 <ProgressBar value={sol.progress} size="sm" showLabel={false} variant="stream" muted={isOnHold} />
               </div>
