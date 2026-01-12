@@ -1,4 +1,3 @@
-import { useRef } from "react";
 import { useLocation } from "wouter";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +8,6 @@ import { Calendar, MessageSquare } from "lucide-react";
 import { format } from "date-fns";
 import { useTeamMembers } from "@/hooks/use-suggestions";
 import { useMode } from "@/lib/mode-context";
-import { useHeroTransition } from "@/lib/hero-transition-context";
 import type { SolutionWithBreakdownAndComment, ActionStatusType, DeliverableBorderColorType } from "@shared/schema";
 import { SolutionStatus, ActionStatus } from "@shared/schema";
 
@@ -58,9 +56,7 @@ export function SolutionCard({
 }: SolutionCardProps) {
   const teamMembers = useTeamMembers();
   const { isEditMode } = useMode();
-  const { startTransition } = useHeroTransition();
   const [, setLocation] = useLocation();
-  const cardRef = useRef<HTMLDivElement>(null);
   const isOnHold = solution.status === SolutionStatus.ON_HOLD;
   const isOverdue =
     solution.milestoneDate &&
@@ -79,23 +75,7 @@ export function SolutionCard({
     if (isEditMode) {
       onEdit?.();
     } else {
-      if (cardRef.current) {
-        const rect = cardRef.current.getBoundingClientRect();
-        startTransition(
-          {
-            sourceRect: rect,
-            entityId: solution.id,
-            entityName: solution.name,
-            displayKey: solution.displayKey || "",
-            entityType: "solution",
-          },
-          () => {
-            setLocation(`/stream/${solution.streamId}/solution/${solution.id}`);
-          }
-        );
-      } else {
-        setLocation(`/stream/${solution.streamId}/solution/${solution.id}`);
-      }
+      setLocation(`/stream/${solution.streamId}/solution/${solution.id}`);
     }
   };
 
@@ -104,7 +84,6 @@ export function SolutionCard({
 
   return (
     <Card
-      ref={cardRef}
       className={`p-2.5 cursor-pointer hover-elevate active-elevate-2 transition-all group ${
         isDragging ? "shadow-xl scale-105 opacity-90" : ""
       } ${isOnHold ? "opacity-60 grayscale" : ""} ${
