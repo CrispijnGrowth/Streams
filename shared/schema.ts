@@ -124,6 +124,45 @@ export const teamMembers = pgTable("team_members", {
   isDeleted: boolean("is_deleted").notNull().default(false),
 });
 
+export const stakeholders = pgTable("stakeholders", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
+  createdAt: text("created_at").notNull(),
+});
+
+export const stakeholderTags = pgTable("stakeholder_tags", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  stakeholderId: text("stakeholder_id").notNull(),
+  entityType: text("entity_type").notNull(),
+  entityId: text("entity_id").notNull(),
+  createdAt: text("created_at").notNull(),
+});
+
+export const meetings = pgTable("meetings", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  title: text("title").notNull(),
+  scheduledAt: text("scheduled_at"),
+  notes: text("notes"),
+  status: text("status").notNull().default("planned"),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
+export const meetingItems = pgTable("meeting_items", {
+  id: text("id").primaryKey(),
+  meetingId: text("meeting_id").notNull(),
+  stakeholderId: text("stakeholder_id").notNull(),
+  entityType: text("entity_type").notNull(),
+  entityId: text("entity_id").notNull(),
+  discussionNotes: text("discussion_notes"),
+  isResolved: boolean("is_resolved").notNull().default(false),
+  createdAt: text("created_at").notNull(),
+});
+
 export const ActionStatus = {
   BACKLOG: "Backlog",
   TO_EXECUTE: "To Execute",
@@ -328,6 +367,62 @@ export interface TeamMember {
   isDeleted: boolean;
 }
 
+export const TagEntityType = {
+  STREAM: "stream",
+  SOLUTION: "solution",
+  ACTION: "action",
+  STEP: "step",
+} as const;
+
+export type TagEntityTypeValue = (typeof TagEntityType)[keyof typeof TagEntityType];
+
+export interface Stakeholder {
+  id: string;
+  userId: string;
+  firstName: string;
+  lastName: string;
+  createdAt: string;
+}
+
+export interface StakeholderTag {
+  id: string;
+  userId: string;
+  stakeholderId: string;
+  entityType: TagEntityTypeValue;
+  entityId: string;
+  createdAt: string;
+}
+
+export const MeetingStatus = {
+  PLANNED: "planned",
+  COMPLETED: "completed",
+  CANCELLED: "cancelled",
+} as const;
+
+export type MeetingStatusType = (typeof MeetingStatus)[keyof typeof MeetingStatus];
+
+export interface Meeting {
+  id: string;
+  userId: string;
+  title: string;
+  scheduledAt?: string;
+  notes?: string;
+  status: MeetingStatusType;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MeetingItem {
+  id: string;
+  meetingId: string;
+  stakeholderId: string;
+  entityType: TagEntityTypeValue;
+  entityId: string;
+  discussionNotes?: string;
+  isResolved: boolean;
+  createdAt: string;
+}
+
 export const insertStreamSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
@@ -396,6 +491,33 @@ export const insertTeamMemberSchema = z.object({
   photoData: z.string().optional(),
 });
 
+export const insertStakeholderSchema = z.object({
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+});
+
+export const insertStakeholderTagSchema = z.object({
+  stakeholderId: z.string().min(1, "Stakeholder is required"),
+  entityType: z.enum(["stream", "solution", "action", "step"]),
+  entityId: z.string().min(1, "Entity ID is required"),
+});
+
+export const insertMeetingSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  scheduledAt: z.string().optional(),
+  notes: z.string().optional(),
+  status: z.enum(["planned", "completed", "cancelled"]).default("planned"),
+});
+
+export const insertMeetingItemSchema = z.object({
+  meetingId: z.string().min(1, "Meeting ID is required"),
+  stakeholderId: z.string().min(1, "Stakeholder ID is required"),
+  entityType: z.enum(["stream", "solution", "action", "step"]),
+  entityId: z.string().min(1, "Entity ID is required"),
+  discussionNotes: z.string().optional(),
+  isResolved: z.boolean().default(false),
+});
+
 export type InsertStream = z.infer<typeof insertStreamSchema>;
 export type InsertSolution = z.infer<typeof insertSolutionSchema>;
 export type InsertDeliverable = z.infer<typeof insertDeliverableSchema>;
@@ -403,6 +525,10 @@ export type InsertAction = z.infer<typeof insertActionSchema>;
 export type InsertStep = z.infer<typeof insertStepSchema>;
 export type InsertComment = z.infer<typeof insertCommentSchema>;
 export type InsertTeamMember = z.infer<typeof insertTeamMemberSchema>;
+export type InsertStakeholder = z.infer<typeof insertStakeholderSchema>;
+export type InsertStakeholderTag = z.infer<typeof insertStakeholderTagSchema>;
+export type InsertMeeting = z.infer<typeof insertMeetingSchema>;
+export type InsertMeetingItem = z.infer<typeof insertMeetingItemSchema>;
 
 export interface InProgressSolutionInfo {
   name: string;
@@ -473,4 +599,28 @@ export interface ActionWithLastComment extends ActionWithProgress {
 
 export interface SolutionWithBreakdownAndComment extends SolutionWithDeliverableBreakdown {
   lastComment?: Comment;
+}
+
+export interface StakeholderWithTags extends Stakeholder {
+  tagCount: number;
+}
+
+export interface TaggedItem {
+  tag: StakeholderTag;
+  entityType: TagEntityTypeValue;
+  entityId: string;
+  entityName: string;
+  parentName?: string;
+  grandparentName?: string;
+}
+
+export interface MeetingWithItems extends Meeting {
+  items: MeetingItemWithEntity[];
+  stakeholderNames: string[];
+}
+
+export interface MeetingItemWithEntity extends MeetingItem {
+  entityName: string;
+  parentName?: string;
+  stakeholderName: string;
 }
