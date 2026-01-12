@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { MentionableTextArea } from "@/components/mentionable-textarea";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
@@ -673,16 +673,16 @@ export function MeetingsPage() {
 
                           {editingItemNotes?.id === item.id ? (
                             <div className="mt-2 space-y-2">
-                              <Textarea
+                              <MentionableTextArea
                                 value={editingItemNotes.notes}
-                                onChange={(e) =>
+                                onChange={(value) =>
                                   setEditingItemNotes({
                                     ...editingItemNotes,
-                                    notes: e.target.value,
+                                    notes: value,
                                   })
                                 }
                                 placeholder="Add discussion notes..."
-                                className="min-h-[80px]"
+                                rows={3}
                                 data-testid={`textarea-notes-${item.id}`}
                               />
                               <div className="flex gap-2">

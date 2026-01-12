@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { MentionableTextArea } from "@/components/mentionable-textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2 } from "lucide-react";
@@ -127,10 +127,10 @@ export function EditStepDialog({ step, open, onOpenChange, onDeleted }: EditStep
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="note">Note</Label>
-            <Textarea
-              id="note"
-              {...form.register("note")}
+            <Label htmlFor="note">Note (type @ to mention)</Label>
+            <MentionableTextArea
+              value={form.watch("note") || ""}
+              onChange={(value) => form.setValue("note", value)}
               rows={3}
               data-testid="input-step-note"
             />

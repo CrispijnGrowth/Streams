@@ -65,11 +65,15 @@ export function useStakeholderMentions() {
 }
 
 export function formatMention(stakeholder: Stakeholder): string {
+  return `@[${stakeholder.firstName} ${stakeholder.lastName}](stakeholder:${stakeholder.id})`;
+}
+
+export function formatMentionDisplay(stakeholder: Stakeholder): string {
   return `@${stakeholder.firstName}${stakeholder.lastName}`;
 }
 
-export function parseMentions(text: string, allStakeholders: Stakeholder[] = []): Array<{ text: string; isMention: boolean; stakeholderId?: string; displayName?: string }> {
-  const mentionRegex = /@([A-Z][a-z]+[A-Z][a-zA-Z]*)/g;
+export function parseMentions(text: string): Array<{ text: string; isMention: boolean; stakeholderId?: string; displayName?: string }> {
+  const mentionRegex = /@\[([^\]]+)\]\(stakeholder:([^)]+)\)/g;
   const parts: Array<{ text: string; isMention: boolean; stakeholderId?: string; displayName?: string }> = [];
   
   let lastIndex = 0;
@@ -80,16 +84,14 @@ export function parseMentions(text: string, allStakeholders: Stakeholder[] = [])
       parts.push({ text: text.slice(lastIndex, match.index), isMention: false });
     }
     
-    const mentionName = match[1];
-    const stakeholder = allStakeholders.find(s => 
-      `${s.firstName}${s.lastName}` === mentionName
-    );
+    const displayName = match[1];
+    const stakeholderId = match[2];
     
     parts.push({
       text: match[0],
       isMention: true,
-      displayName: mentionName,
-      stakeholderId: stakeholder?.id,
+      displayName: displayName.replace(/\s+/g, ""),
+      stakeholderId,
     });
     lastIndex = match.index + match[0].length;
   }
@@ -101,6 +103,17 @@ export function parseMentions(text: string, allStakeholders: Stakeholder[] = [])
   return parts;
 }
 
+export function canonicalToDisplay(text: string): string {
+  return text.replace(/@\[([^\]]+)\]\(stakeholder:[^)]+\)/g, (_, name) => {
+    const compactName = name.replace(/\s+/g, "");
+    return `@${compactName}`;
+  });
+}
+
+export function displayToCanonical(displayText: string, canonicalText: string): string {
+  return canonicalText;
+}
+
 export function getPlainTextFromMentions(text: string): string {
-  return text;
+  return text.replace(/@\[([^\]]+)\]\(stakeholder:[^)]+\)/g, "@$1");
 }

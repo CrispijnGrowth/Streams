@@ -406,12 +406,10 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted, initia
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="new-deliverable-description" className="text-xs">Description</Label>
-                    <Textarea
-                      id="new-deliverable-description"
-                      placeholder="Optional description..."
+                    <Label htmlFor="new-deliverable-description" className="text-xs">Description (type @ to mention)</Label>
+                    <MentionableTextArea
                       value={newDeliverableDescription}
-                      onChange={(e) => setNewDeliverableDescription(e.target.value)}
+                      onChange={(value) => setNewDeliverableDescription(value)}
                       rows={2}
                       data-testid="input-new-deliverable-description"
                     />

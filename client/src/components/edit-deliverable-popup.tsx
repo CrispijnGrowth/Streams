@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { MentionableTextArea } from "@/components/mentionable-textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -181,11 +181,10 @@ export function EditDeliverablePopup({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="edit-deliverable-description">Description</Label>
-            <Textarea
-              id="edit-deliverable-description"
+            <Label htmlFor="edit-deliverable-description">Description (type @ to mention)</Label>
+            <MentionableTextArea
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(value) => setDescription(value)}
               placeholder="Add a description..."
               rows={2}
               data-testid="input-edit-deliverable-description"

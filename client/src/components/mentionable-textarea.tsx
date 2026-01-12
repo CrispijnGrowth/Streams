@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, forwardRef } from "react";
+import { useState, useRef, useEffect, useCallback, forwardRef, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,7 @@ import { AtSign, UserPlus, Loader2 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Stakeholder } from "@shared/schema";
 import { cn } from "@/lib/utils";
-import { formatMention } from "@/hooks/use-stakeholder-mentions";
+import { formatMention, canonicalToDisplay } from "@/hooks/use-stakeholder-mentions";
 
 interface MentionableTextAreaProps {
   value: string;
