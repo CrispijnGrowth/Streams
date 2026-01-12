@@ -4,6 +4,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { StatusBadge } from "@/components/status-badge";
 import { ProgressBar } from "@/components/progress-bar";
+import { CardStakeholderTags } from "@/components/card-stakeholder-tags";
 import { Calendar, GripVertical, MessageSquare } from "lucide-react";
 import { format } from "date-fns";
 import { useTeamMembers } from "@/hooks/use-suggestions";
@@ -117,38 +118,41 @@ export function ActionCard({
         </div>
       )}
 
-      {action.owners.length > 0 && (
-        <div className="flex items-center -space-x-1">
-          {action.owners.slice(0, 3).map((owner) => {
-            const info = getOwnerInfo(owner);
-            return (
-              <Tooltip key={owner}>
-                <TooltipTrigger asChild>
-                  <Avatar className="h-5 w-5 border-2 border-background">
-                    {(info?.photoData || info?.photoUrl) ? (
-                      <AvatarImage src={info.photoData || info.photoUrl || ""} alt={owner} />
-                    ) : null}
-                    <AvatarFallback className="bg-primary/10 text-primary text-[9px]">
-                      {getInitials(owner)}
-                    </AvatarFallback>
-                  </Avatar>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p className="font-medium">{owner}</p>
-                  {info?.role && <p className="text-xs text-muted-foreground">{info.role}</p>}
-                </TooltipContent>
-              </Tooltip>
-            );
-          })}
-          {action.owners.length > 3 && (
-            <Avatar className="h-5 w-5 border-2 border-background">
-              <AvatarFallback className="bg-muted text-muted-foreground text-[9px]">
-                +{action.owners.length - 3}
-              </AvatarFallback>
-            </Avatar>
-          )}
-        </div>
-      )}
+      <div className="flex items-center justify-between gap-2">
+        <CardStakeholderTags entityType="action" entityId={action.id} />
+        {action.owners.length > 0 && (
+          <div className="flex items-center -space-x-1">
+            {action.owners.slice(0, 3).map((owner) => {
+              const info = getOwnerInfo(owner);
+              return (
+                <Tooltip key={owner}>
+                  <TooltipTrigger asChild>
+                    <Avatar className="h-5 w-5 border-2 border-background">
+                      {(info?.photoData || info?.photoUrl) ? (
+                        <AvatarImage src={info.photoData || info.photoUrl || ""} alt={owner} />
+                      ) : null}
+                      <AvatarFallback className="bg-primary/10 text-primary text-[9px]">
+                        {getInitials(owner)}
+                      </AvatarFallback>
+                    </Avatar>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="font-medium">{owner}</p>
+                    {info?.role && <p className="text-xs text-muted-foreground">{info.role}</p>}
+                  </TooltipContent>
+                </Tooltip>
+              );
+            })}
+            {action.owners.length > 3 && (
+              <Avatar className="h-5 w-5 border-2 border-background">
+                <AvatarFallback className="bg-muted text-muted-foreground text-[9px]">
+                  +{action.owners.length - 3}
+                </AvatarFallback>
+              </Avatar>
+            )}
+          </div>
+        )}
+      </div>
     </Card>
   );
 }

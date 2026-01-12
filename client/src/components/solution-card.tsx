@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ProgressBar } from "@/components/progress-bar";
+import { CardStakeholderTags } from "@/components/card-stakeholder-tags";
 import { Calendar, MessageSquare } from "lucide-react";
 import { format } from "date-fns";
 import { useTeamMembers } from "@/hooks/use-suggestions";
@@ -263,6 +264,10 @@ export function SolutionCard({
           </div>
         </div>
       )}
+
+      <div className="flex items-center justify-between mt-1.5 pt-1.5 border-t border-border/50">
+        <CardStakeholderTags entityType="solution" entityId={solution.id} />
+      </div>
     </Card>
   );
 }

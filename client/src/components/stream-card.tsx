@@ -4,6 +4,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { MomentumBadge } from "@/components/status-badge";
 import { ProgressBar } from "@/components/progress-bar";
+import { CardStakeholderTags } from "@/components/card-stakeholder-tags";
 import { Calendar } from "lucide-react";
 import { format } from "date-fns";
 import { useTeamMembers } from "@/hooks/use-suggestions";
@@ -201,6 +202,10 @@ export function StreamCard({ stream, onClick, onEdit, onMomentumClick, showDescr
         {stream.inProgressSolutions.length === 0 && (
           <p className="text-xs text-muted-foreground italic">No active solutions</p>
         )}
+      </div>
+
+      <div className="flex items-center justify-between mt-3 pt-2 border-t border-border/50">
+        <CardStakeholderTags entityType="stream" entityId={stream.id} />
       </div>
     </Card>
   );
