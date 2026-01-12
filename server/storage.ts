@@ -6,6 +6,12 @@ import {
   type Step,
   type Comment,
   type TeamMember,
+  type Stakeholder,
+  type StakeholderTag,
+  type Meeting,
+  type MeetingItem,
+  type MeetingWithItems,
+  type TaggedItem,
   type InsertStream,
   type InsertSolution,
   type InsertDeliverable,
@@ -13,6 +19,10 @@ import {
   type InsertStep,
   type InsertComment,
   type InsertTeamMember,
+  type InsertStakeholder,
+  type InsertStakeholderTag,
+  type InsertMeeting,
+  type InsertMeetingItem,
   type StreamWithProgress,
   type SolutionWithProgress,
   type SolutionWithDeliverableBreakdown,
@@ -22,6 +32,7 @@ import {
   type ActionWithProgress,
   type ActionWithLastComment,
   type CommentEntityTypeValue,
+  type TagEntityTypeValue,
   type MomentumStatusType,
   ActionStatus,
   MomentumStatus,
@@ -95,6 +106,30 @@ export interface IStorage {
   createTeamMember(userId: string, data: InsertTeamMember): Promise<TeamMember>;
   updateTeamMember(userId: string, id: string, data: Partial<InsertTeamMember>): Promise<TeamMember | undefined>;
   deleteTeamMember(userId: string, id: string): Promise<boolean>;
+
+  getStakeholders(userId: string): Promise<Stakeholder[]>;
+  getStakeholder(userId: string, id: string): Promise<Stakeholder | undefined>;
+  createStakeholder(userId: string, data: InsertStakeholder): Promise<Stakeholder>;
+  updateStakeholder(userId: string, id: string, data: Partial<InsertStakeholder>): Promise<Stakeholder>;
+  deleteStakeholder(userId: string, id: string): Promise<void>;
+  searchStakeholders(userId: string, query: string): Promise<Stakeholder[]>;
+
+  getTagsForEntity(userId: string, entityType: TagEntityTypeValue, entityId: string): Promise<StakeholderTag[]>;
+  getTagsByStakeholder(userId: string, stakeholderId: string): Promise<StakeholderTag[]>;
+  createTag(userId: string, data: InsertStakeholderTag): Promise<StakeholderTag>;
+  deleteTag(userId: string, tagId: string): Promise<void>;
+  deleteAllTagsForStakeholder(userId: string, stakeholderId: string): Promise<void>;
+  getTaggedItemsForStakeholder(userId: string, stakeholderId: string): Promise<TaggedItem[]>;
+
+  getMeetings(userId: string): Promise<MeetingWithItems[]>;
+  getMeeting(userId: string, id: string): Promise<MeetingWithItems | undefined>;
+  createMeeting(userId: string, data: InsertMeeting): Promise<Meeting>;
+  updateMeeting(userId: string, id: string, data: Partial<InsertMeeting>): Promise<Meeting>;
+  deleteMeeting(userId: string, id: string): Promise<void>;
+
+  addMeetingItem(userId: string, data: InsertMeetingItem): Promise<MeetingItem>;
+  updateMeetingItem(userId: string, itemId: string, data: { discussionNotes?: string; isResolved?: boolean }): Promise<MeetingItem>;
+  deleteMeetingItem(userId: string, itemId: string): Promise<void>;
 }
 
 export class MemStorage implements IStorage {

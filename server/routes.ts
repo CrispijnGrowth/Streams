@@ -15,12 +15,18 @@ import {
   insertStepSchema,
   insertCommentSchema,
   insertTeamMemberSchema,
+  insertStakeholderSchema,
+  insertStakeholderTagSchema,
+  insertMeetingSchema,
+  insertMeetingItemSchema,
   insertUserSchema,
   UserRole,
   CommentEntityType,
+  TagEntityType,
   ActionStatus,
   MomentumStatus,
   SolutionStatus,
+  type TagEntityTypeValue,
 } from "@shared/schema";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import { objectStorageClient, ObjectStorageService } from "./replit_integrations/object_storage/objectStorage";
@@ -1215,6 +1221,209 @@ export async function registerRoutes(
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: "Failed to delete team member" });
+    }
+  });
+
+  app.get("/api/stakeholders", authMiddleware, async (req, res) => {
+    try {
+      const stakeholders = await storage.getStakeholders(req.userId!);
+      res.json(stakeholders);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch stakeholders" });
+    }
+  });
+
+  app.get("/api/stakeholders/search", authMiddleware, async (req, res) => {
+    try {
+      const query = req.query.q as string;
+      if (!query) {
+        return res.status(400).json({ error: "Search query required" });
+      }
+      const stakeholders = await storage.searchStakeholders(req.userId!, query);
+      res.json(stakeholders);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to search stakeholders" });
+    }
+  });
+
+  app.post("/api/stakeholders", authMiddleware, async (req, res) => {
+    try {
+      const parsed = insertStakeholderSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid stakeholder data" });
+      }
+      const stakeholder = await storage.createStakeholder(req.userId!, parsed.data);
+      res.status(201).json(stakeholder);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create stakeholder" });
+    }
+  });
+
+  app.patch("/api/stakeholders/:id", authMiddleware, async (req, res) => {
+    try {
+      const stakeholder = await storage.updateStakeholder(req.userId!, req.params.id, req.body);
+      res.json(stakeholder);
+    } catch (error: any) {
+      if (error.message === "Stakeholder not found") {
+        return res.status(404).json({ error: "Stakeholder not found" });
+      }
+      res.status(500).json({ error: "Failed to update stakeholder" });
+    }
+  });
+
+  app.delete("/api/stakeholders/:id", authMiddleware, async (req, res) => {
+    try {
+      await storage.deleteStakeholder(req.userId!, req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete stakeholder" });
+    }
+  });
+
+  app.get("/api/stakeholders/:id/items", authMiddleware, async (req, res) => {
+    try {
+      const items = await storage.getTaggedItemsForStakeholder(req.userId!, req.params.id);
+      res.json(items);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch tagged items" });
+    }
+  });
+
+  app.delete("/api/stakeholders/:id/tags", authMiddleware, async (req, res) => {
+    try {
+      await storage.deleteAllTagsForStakeholder(req.userId!, req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete tags" });
+    }
+  });
+
+  app.get("/api/tags/:entityType/:entityId", authMiddleware, async (req, res) => {
+    try {
+      const entityType = req.params.entityType as TagEntityTypeValue;
+      const validTypes = [TagEntityType.STREAM, TagEntityType.SOLUTION, TagEntityType.ACTION, TagEntityType.STEP];
+      if (!validTypes.includes(entityType as any)) {
+        return res.status(400).json({ error: "Invalid entity type" });
+      }
+      const tags = await storage.getTagsForEntity(req.userId!, entityType, req.params.entityId);
+      res.json(tags);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch tags" });
+    }
+  });
+
+  app.post("/api/tags", authMiddleware, async (req, res) => {
+    try {
+      const parsed = insertStakeholderTagSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid tag data" });
+      }
+      const tag = await storage.createTag(req.userId!, parsed.data);
+      res.status(201).json(tag);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create tag" });
+    }
+  });
+
+  app.delete("/api/tags/:id", authMiddleware, async (req, res) => {
+    try {
+      await storage.deleteTag(req.userId!, req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete tag" });
+    }
+  });
+
+  app.get("/api/meetings", authMiddleware, async (req, res) => {
+    try {
+      const meetings = await storage.getMeetings(req.userId!);
+      res.json(meetings);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch meetings" });
+    }
+  });
+
+  app.get("/api/meetings/:id", authMiddleware, async (req, res) => {
+    try {
+      const meeting = await storage.getMeeting(req.userId!, req.params.id);
+      if (!meeting) {
+        return res.status(404).json({ error: "Meeting not found" });
+      }
+      res.json(meeting);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch meeting" });
+    }
+  });
+
+  app.post("/api/meetings", authMiddleware, async (req, res) => {
+    try {
+      const parsed = insertMeetingSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid meeting data" });
+      }
+      const meeting = await storage.createMeeting(req.userId!, parsed.data);
+      res.status(201).json(meeting);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create meeting" });
+    }
+  });
+
+  app.patch("/api/meetings/:id", authMiddleware, async (req, res) => {
+    try {
+      const meeting = await storage.updateMeeting(req.userId!, req.params.id, req.body);
+      res.json(meeting);
+    } catch (error: any) {
+      if (error.message === "Meeting not found") {
+        return res.status(404).json({ error: "Meeting not found" });
+      }
+      res.status(500).json({ error: "Failed to update meeting" });
+    }
+  });
+
+  app.delete("/api/meetings/:id", authMiddleware, async (req, res) => {
+    try {
+      await storage.deleteMeeting(req.userId!, req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete meeting" });
+    }
+  });
+
+  app.post("/api/meetings/:id/items", authMiddleware, async (req, res) => {
+    try {
+      const data = { ...req.body, meetingId: req.params.id };
+      const parsed = insertMeetingItemSchema.safeParse(data);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid meeting item data" });
+      }
+      const item = await storage.addMeetingItem(req.userId!, parsed.data);
+      res.status(201).json(item);
+    } catch (error: any) {
+      if (error.message === "Meeting not found") {
+        return res.status(404).json({ error: "Meeting not found" });
+      }
+      res.status(500).json({ error: "Failed to add meeting item" });
+    }
+  });
+
+  app.patch("/api/meeting-items/:id", authMiddleware, async (req, res) => {
+    try {
+      const item = await storage.updateMeetingItem(req.userId!, req.params.id, req.body);
+      res.json(item);
+    } catch (error: any) {
+      if (error.message === "Meeting item not found" || error.message === "Meeting not found or access denied") {
+        return res.status(404).json({ error: error.message });
+      }
+      res.status(500).json({ error: "Failed to update meeting item" });
+    }
+  });
+
+  app.delete("/api/meeting-items/:id", authMiddleware, async (req, res) => {
+    try {
+      await storage.deleteMeetingItem(req.userId!, req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete meeting item" });
     }
   });
 

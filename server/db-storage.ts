@@ -1,5 +1,5 @@
 import { drizzle } from "drizzle-orm/node-postgres";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, ilike, or } from "drizzle-orm";
 import { Pool } from "pg";
 import {
   type Stream,
@@ -9,6 +9,13 @@ import {
   type Step,
   type Comment,
   type TeamMember,
+  type Stakeholder,
+  type StakeholderTag,
+  type Meeting,
+  type MeetingItem,
+  type MeetingWithItems,
+  type MeetingItemWithEntity,
+  type TaggedItem,
   type InsertStream,
   type InsertSolution,
   type InsertDeliverable,
@@ -16,6 +23,10 @@ import {
   type InsertStep,
   type InsertComment,
   type InsertTeamMember,
+  type InsertStakeholder,
+  type InsertStakeholderTag,
+  type InsertMeeting,
+  type InsertMeetingItem,
   type StreamWithProgress,
   type SolutionWithProgress,
   type SolutionWithBreakdownAndComment,
@@ -24,10 +35,12 @@ import {
   type ActionWithProgress,
   type ActionWithLastComment,
   type CommentEntityTypeValue,
+  type TagEntityTypeValue,
   ActionStatus,
   MomentumStatus,
   SolutionStatus,
   CommentEntityType,
+  TagEntityType,
   streams,
   solutions,
   deliverables,
@@ -35,6 +48,10 @@ import {
   steps,
   comments,
   teamMembers,
+  stakeholders,
+  stakeholderTags,
+  meetings,
+  meetingItems,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import type { IStorage } from "./storage";
@@ -161,6 +178,53 @@ function mapTeamMemberFromDb(row: any): TeamMember {
     photoData: row.photoData || undefined,
     ordinal: row.ordinal,
     isDeleted: row.isDeleted,
+  };
+}
+
+function mapStakeholderFromDb(row: any): Stakeholder {
+  return {
+    id: row.id,
+    userId: row.userId,
+    firstName: row.firstName,
+    lastName: row.lastName,
+    createdAt: row.createdAt,
+  };
+}
+
+function mapStakeholderTagFromDb(row: any): StakeholderTag {
+  return {
+    id: row.id,
+    userId: row.userId,
+    stakeholderId: row.stakeholderId,
+    entityType: row.entityType as TagEntityTypeValue,
+    entityId: row.entityId,
+    createdAt: row.createdAt,
+  };
+}
+
+function mapMeetingFromDb(row: any): Meeting {
+  return {
+    id: row.id,
+    userId: row.userId,
+    title: row.title,
+    scheduledAt: row.scheduledAt || undefined,
+    notes: row.notes || undefined,
+    status: row.status,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+function mapMeetingItemFromDb(row: any): MeetingItem {
+  return {
+    id: row.id,
+    meetingId: row.meetingId,
+    stakeholderId: row.stakeholderId,
+    entityType: row.entityType as TagEntityTypeValue,
+    entityId: row.entityId,
+    discussionNotes: row.discussionNotes || undefined,
+    isResolved: row.isResolved,
+    createdAt: row.createdAt,
   };
 }
 
@@ -1464,5 +1528,351 @@ export class DatabaseStorage implements IStorage {
     
     await db.update(teamMembers).set({ isDeleted: true }).where(eq(teamMembers.id, id));
     return true;
+  }
+
+  async getStakeholders(userId: string): Promise<Stakeholder[]> {
+    const rows = await db.select().from(stakeholders).where(eq(stakeholders.userId, userId));
+    return rows.map(mapStakeholderFromDb);
+  }
+
+  async getStakeholder(userId: string, id: string): Promise<Stakeholder | undefined> {
+    const [row] = await db.select().from(stakeholders).where(
+      and(eq(stakeholders.id, id), eq(stakeholders.userId, userId))
+    );
+    return row ? mapStakeholderFromDb(row) : undefined;
+  }
+
+  async createStakeholder(userId: string, data: InsertStakeholder): Promise<Stakeholder> {
+    const id = randomUUID();
+    const newStakeholder = {
+      id,
+      userId,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      createdAt: new Date().toISOString(),
+    };
+    await db.insert(stakeholders).values(newStakeholder);
+    return mapStakeholderFromDb(newStakeholder);
+  }
+
+  async updateStakeholder(userId: string, id: string, data: Partial<InsertStakeholder>): Promise<Stakeholder> {
+    const [existing] = await db.select().from(stakeholders).where(
+      and(eq(stakeholders.id, id), eq(stakeholders.userId, userId))
+    );
+    if (!existing) {
+      throw new Error("Stakeholder not found");
+    }
+    const updateData: any = {};
+    if (data.firstName !== undefined) updateData.firstName = data.firstName;
+    if (data.lastName !== undefined) updateData.lastName = data.lastName;
+    
+    await db.update(stakeholders).set(updateData).where(eq(stakeholders.id, id));
+    const [updated] = await db.select().from(stakeholders).where(eq(stakeholders.id, id));
+    return mapStakeholderFromDb(updated);
+  }
+
+  async deleteStakeholder(userId: string, id: string): Promise<void> {
+    await db.delete(stakeholderTags).where(
+      and(eq(stakeholderTags.stakeholderId, id), eq(stakeholderTags.userId, userId))
+    );
+    await db.delete(stakeholders).where(
+      and(eq(stakeholders.id, id), eq(stakeholders.userId, userId))
+    );
+  }
+
+  async searchStakeholders(userId: string, query: string): Promise<Stakeholder[]> {
+    const searchPattern = `%${query}%`;
+    const rows = await db.select().from(stakeholders).where(
+      and(
+        eq(stakeholders.userId, userId),
+        or(
+          ilike(stakeholders.firstName, searchPattern),
+          ilike(stakeholders.lastName, searchPattern)
+        )
+      )
+    );
+    return rows.map(mapStakeholderFromDb);
+  }
+
+  async getTagsForEntity(userId: string, entityType: TagEntityTypeValue, entityId: string): Promise<StakeholderTag[]> {
+    const rows = await db.select().from(stakeholderTags).where(
+      and(
+        eq(stakeholderTags.userId, userId),
+        eq(stakeholderTags.entityType, entityType),
+        eq(stakeholderTags.entityId, entityId)
+      )
+    );
+    return rows.map(mapStakeholderTagFromDb);
+  }
+
+  async getTagsByStakeholder(userId: string, stakeholderId: string): Promise<StakeholderTag[]> {
+    const rows = await db.select().from(stakeholderTags).where(
+      and(eq(stakeholderTags.userId, userId), eq(stakeholderTags.stakeholderId, stakeholderId))
+    );
+    return rows.map(mapStakeholderTagFromDb);
+  }
+
+  async createTag(userId: string, data: InsertStakeholderTag): Promise<StakeholderTag> {
+    const id = randomUUID();
+    const newTag = {
+      id,
+      userId,
+      stakeholderId: data.stakeholderId,
+      entityType: data.entityType,
+      entityId: data.entityId,
+      createdAt: new Date().toISOString(),
+    };
+    await db.insert(stakeholderTags).values(newTag);
+    return mapStakeholderTagFromDb(newTag);
+  }
+
+  async deleteTag(userId: string, tagId: string): Promise<void> {
+    await db.delete(stakeholderTags).where(
+      and(eq(stakeholderTags.id, tagId), eq(stakeholderTags.userId, userId))
+    );
+  }
+
+  async deleteAllTagsForStakeholder(userId: string, stakeholderId: string): Promise<void> {
+    await db.delete(stakeholderTags).where(
+      and(eq(stakeholderTags.stakeholderId, stakeholderId), eq(stakeholderTags.userId, userId))
+    );
+  }
+
+  async getTaggedItemsForStakeholder(userId: string, stakeholderId: string): Promise<TaggedItem[]> {
+    const tags = await db.select().from(stakeholderTags).where(
+      and(eq(stakeholderTags.userId, userId), eq(stakeholderTags.stakeholderId, stakeholderId))
+    );
+    
+    const taggedItems: TaggedItem[] = [];
+    
+    for (const tag of tags) {
+      let entityName = "";
+      let parentName: string | undefined;
+      let grandparentName: string | undefined;
+      
+      if (tag.entityType === TagEntityType.STREAM) {
+        const [stream] = await db.select().from(streams).where(eq(streams.id, tag.entityId));
+        entityName = stream?.name || "Unknown Stream";
+      } else if (tag.entityType === TagEntityType.SOLUTION) {
+        const [solution] = await db.select().from(solutions).where(eq(solutions.id, tag.entityId));
+        entityName = solution?.name || "Unknown Solution";
+        if (solution?.streamId) {
+          const [stream] = await db.select().from(streams).where(eq(streams.id, solution.streamId));
+          parentName = stream?.name;
+        }
+      } else if (tag.entityType === TagEntityType.ACTION) {
+        const [action] = await db.select().from(actions).where(eq(actions.id, tag.entityId));
+        entityName = action?.name || "Unknown Action";
+        if (action?.solutionId) {
+          const [solution] = await db.select().from(solutions).where(eq(solutions.id, action.solutionId));
+          parentName = solution?.name;
+          if (solution?.streamId) {
+            const [stream] = await db.select().from(streams).where(eq(streams.id, solution.streamId));
+            grandparentName = stream?.name;
+          }
+        }
+      } else if (tag.entityType === TagEntityType.STEP) {
+        const [step] = await db.select().from(steps).where(eq(steps.id, tag.entityId));
+        entityName = step?.name || "Unknown Step";
+        if (step?.actionId) {
+          const [action] = await db.select().from(actions).where(eq(actions.id, step.actionId));
+          parentName = action?.name;
+          if (action?.solutionId) {
+            const [solution] = await db.select().from(solutions).where(eq(solutions.id, action.solutionId));
+            grandparentName = solution?.name;
+          }
+        }
+      }
+      
+      taggedItems.push({
+        tag: mapStakeholderTagFromDb(tag),
+        entityType: tag.entityType as TagEntityTypeValue,
+        entityId: tag.entityId,
+        entityName,
+        parentName,
+        grandparentName,
+      });
+    }
+    
+    return taggedItems;
+  }
+
+  private async buildMeetingWithItems(meeting: Meeting, userId: string): Promise<MeetingWithItems> {
+    const itemRows = await db.select().from(meetingItems).where(eq(meetingItems.meetingId, meeting.id));
+    
+    const items: MeetingItemWithEntity[] = [];
+    const stakeholderNames: string[] = [];
+    const stakeholderIds = new Set<string>();
+    
+    for (const item of itemRows) {
+      let entityName = "";
+      let parentName: string | undefined;
+      
+      if (item.entityType === TagEntityType.STREAM) {
+        const [stream] = await db.select().from(streams).where(eq(streams.id, item.entityId));
+        entityName = stream?.name || "Unknown Stream";
+      } else if (item.entityType === TagEntityType.SOLUTION) {
+        const [solution] = await db.select().from(solutions).where(eq(solutions.id, item.entityId));
+        entityName = solution?.name || "Unknown Solution";
+        if (solution?.streamId) {
+          const [stream] = await db.select().from(streams).where(eq(streams.id, solution.streamId));
+          parentName = stream?.name;
+        }
+      } else if (item.entityType === TagEntityType.ACTION) {
+        const [action] = await db.select().from(actions).where(eq(actions.id, item.entityId));
+        entityName = action?.name || "Unknown Action";
+        if (action?.solutionId) {
+          const [solution] = await db.select().from(solutions).where(eq(solutions.id, action.solutionId));
+          parentName = solution?.name;
+        }
+      } else if (item.entityType === TagEntityType.STEP) {
+        const [step] = await db.select().from(steps).where(eq(steps.id, item.entityId));
+        entityName = step?.name || "Unknown Step";
+        if (step?.actionId) {
+          const [action] = await db.select().from(actions).where(eq(actions.id, step.actionId));
+          parentName = action?.name;
+        }
+      }
+      
+      const [stakeholder] = await db.select().from(stakeholders).where(eq(stakeholders.id, item.stakeholderId));
+      const stakeholderName = stakeholder ? `${stakeholder.firstName} ${stakeholder.lastName}` : "Unknown";
+      
+      if (!stakeholderIds.has(item.stakeholderId)) {
+        stakeholderIds.add(item.stakeholderId);
+        stakeholderNames.push(stakeholderName);
+      }
+      
+      items.push({
+        ...mapMeetingItemFromDb(item),
+        entityName,
+        parentName,
+        stakeholderName,
+      });
+    }
+    
+    return {
+      ...meeting,
+      items,
+      stakeholderNames,
+    };
+  }
+
+  async getMeetings(userId: string): Promise<MeetingWithItems[]> {
+    const rows = await db.select().from(meetings).where(eq(meetings.userId, userId));
+    const results: MeetingWithItems[] = [];
+    for (const row of rows) {
+      const meeting = mapMeetingFromDb(row);
+      results.push(await this.buildMeetingWithItems(meeting, userId));
+    }
+    return results;
+  }
+
+  async getMeeting(userId: string, id: string): Promise<MeetingWithItems | undefined> {
+    const [row] = await db.select().from(meetings).where(
+      and(eq(meetings.id, id), eq(meetings.userId, userId))
+    );
+    if (!row) return undefined;
+    const meeting = mapMeetingFromDb(row);
+    return this.buildMeetingWithItems(meeting, userId);
+  }
+
+  async createMeeting(userId: string, data: InsertMeeting): Promise<Meeting> {
+    const id = randomUUID();
+    const now = new Date().toISOString();
+    const newMeeting = {
+      id,
+      userId,
+      title: data.title,
+      scheduledAt: data.scheduledAt || null,
+      notes: data.notes || null,
+      status: data.status || "planned",
+      createdAt: now,
+      updatedAt: now,
+    };
+    await db.insert(meetings).values(newMeeting);
+    return mapMeetingFromDb(newMeeting);
+  }
+
+  async updateMeeting(userId: string, id: string, data: Partial<InsertMeeting>): Promise<Meeting> {
+    const [existing] = await db.select().from(meetings).where(
+      and(eq(meetings.id, id), eq(meetings.userId, userId))
+    );
+    if (!existing) {
+      throw new Error("Meeting not found");
+    }
+    
+    const updateData: any = { updatedAt: new Date().toISOString() };
+    if (data.title !== undefined) updateData.title = data.title;
+    if (data.scheduledAt !== undefined) updateData.scheduledAt = data.scheduledAt || null;
+    if (data.notes !== undefined) updateData.notes = data.notes || null;
+    if (data.status !== undefined) updateData.status = data.status;
+    
+    await db.update(meetings).set(updateData).where(eq(meetings.id, id));
+    const [updated] = await db.select().from(meetings).where(eq(meetings.id, id));
+    return mapMeetingFromDb(updated);
+  }
+
+  async deleteMeeting(userId: string, id: string): Promise<void> {
+    await db.delete(meetingItems).where(eq(meetingItems.meetingId, id));
+    await db.delete(meetings).where(
+      and(eq(meetings.id, id), eq(meetings.userId, userId))
+    );
+  }
+
+  async addMeetingItem(userId: string, data: InsertMeetingItem): Promise<MeetingItem> {
+    const [meeting] = await db.select().from(meetings).where(
+      and(eq(meetings.id, data.meetingId), eq(meetings.userId, userId))
+    );
+    if (!meeting) {
+      throw new Error("Meeting not found");
+    }
+    
+    const id = randomUUID();
+    const newItem = {
+      id,
+      meetingId: data.meetingId,
+      stakeholderId: data.stakeholderId,
+      entityType: data.entityType,
+      entityId: data.entityId,
+      discussionNotes: data.discussionNotes || null,
+      isResolved: data.isResolved || false,
+      createdAt: new Date().toISOString(),
+    };
+    await db.insert(meetingItems).values(newItem);
+    return mapMeetingItemFromDb(newItem);
+  }
+
+  async updateMeetingItem(userId: string, itemId: string, data: { discussionNotes?: string; isResolved?: boolean }): Promise<MeetingItem> {
+    const [item] = await db.select().from(meetingItems).where(eq(meetingItems.id, itemId));
+    if (!item) {
+      throw new Error("Meeting item not found");
+    }
+    
+    const [meeting] = await db.select().from(meetings).where(
+      and(eq(meetings.id, item.meetingId), eq(meetings.userId, userId))
+    );
+    if (!meeting) {
+      throw new Error("Meeting not found or access denied");
+    }
+    
+    const updateData: any = {};
+    if (data.discussionNotes !== undefined) updateData.discussionNotes = data.discussionNotes || null;
+    if (data.isResolved !== undefined) updateData.isResolved = data.isResolved;
+    
+    await db.update(meetingItems).set(updateData).where(eq(meetingItems.id, itemId));
+    const [updated] = await db.select().from(meetingItems).where(eq(meetingItems.id, itemId));
+    return mapMeetingItemFromDb(updated);
+  }
+
+  async deleteMeetingItem(userId: string, itemId: string): Promise<void> {
+    const [item] = await db.select().from(meetingItems).where(eq(meetingItems.id, itemId));
+    if (!item) return;
+    
+    const [meeting] = await db.select().from(meetings).where(
+      and(eq(meetings.id, item.meetingId), eq(meetings.userId, userId))
+    );
+    if (!meeting) return;
+    
+    await db.delete(meetingItems).where(eq(meetingItems.id, itemId));
   }
 }
