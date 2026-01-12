@@ -28,7 +28,7 @@ export function useHeroTransition() {
 }
 
 // Animation duration
-const DURATION = 0.7;
+const DURATION = 0.5;
 const EASING = [0.32, 0.72, 0, 1];
 
 // Header height - the gray bar at the top
