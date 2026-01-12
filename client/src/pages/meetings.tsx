@@ -94,7 +94,7 @@ export function MeetingsPage() {
         const tag = taggedItems.find((t) => t.tag.id === tagId);
         if (tag) {
           await apiRequest("POST", `/api/meetings/${meeting.id}/items`, {
-            stakeholderTagId: tag.tag.id,
+            stakeholderId: tag.tag.stakeholderId,
             entityType: tag.entityType,
             entityId: tag.entityId,
           });
