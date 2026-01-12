@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { MentionableTextArea } from "@/components/mentionable-textarea";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -502,10 +503,10 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted, initia
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              {...form.register("description")}
+            <Label htmlFor="description">Description (type @ to mention)</Label>
+            <MentionableTextArea
+              value={form.watch("description") || ""}
+              onChange={(value) => form.setValue("description", value)}
               rows={3}
               data-testid="input-action-description"
             />
