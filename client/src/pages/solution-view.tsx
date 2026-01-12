@@ -413,6 +413,7 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
                     Last change: {new Date(solution.lastMovementAt).toLocaleDateString('en-GB')}
                   </span>
                 )}
+                <CardStakeholderTags entityType="solution" entityId={solutionId} />
               </div>
               
               <div className="flex items-center gap-4 flex-wrap">
@@ -450,7 +451,6 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
                 >
                   {solution.status === SolutionStatus.ON_HOLD ? "On Hold" : "In Progress"}
                 </Button>
-                <CardStakeholderTags entityType="solution" entityId={solutionId} />
                 {solution.owners && solution.owners.length > 0 && (
                   <div className="flex items-center -space-x-2">
                     {solution.owners.slice(0, 5).map((owner) => {

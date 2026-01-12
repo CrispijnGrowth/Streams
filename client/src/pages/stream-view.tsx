@@ -314,6 +314,7 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
                     Last change: {new Date(stream.lastMovementAt).toLocaleDateString('en-GB')}
                   </span>
                 )}
+                <CardStakeholderTags entityType="stream" entityId={streamId} />
               </div>
               
               <div className="flex items-center gap-4 flex-wrap">
@@ -337,7 +338,6 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
                 >
                   {(stream.status || "In Progress") === SolutionStatus.ON_HOLD ? "On Hold" : "In Progress"}
                 </Button>
-                <CardStakeholderTags entityType="stream" entityId={streamId} />
                 {stream.owners && stream.owners.length > 0 && (
                   <div className="flex items-center -space-x-2">
                     {stream.owners.slice(0, 5).map((owner) => {
