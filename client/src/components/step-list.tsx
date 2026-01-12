@@ -10,6 +10,7 @@ import { format } from "date-fns";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useMode } from "@/lib/mode-context";
+import { CardStakeholderTags } from "@/components/card-stakeholder-tags";
 import type { Step, Comment } from "@shared/schema";
 
 interface StepListProps {
@@ -367,6 +368,7 @@ function StepItem({ step, onToggle }: { step: Step; onToggle?: (stepId: string, 
                 Done
               </Badge>
             )}
+            <CardStakeholderTags entityType="step" entityId={step.id} />
           </div>
         )}
       </div>

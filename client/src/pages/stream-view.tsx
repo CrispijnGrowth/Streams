@@ -12,6 +12,7 @@ import { EmptyState } from "@/components/empty-state";
 import { SolutionCardSkeleton, TimelineSkeleton } from "@/components/loading-skeleton";
 import { EditStreamDialog, EditStreamFocusField } from "@/components/edit-stream-dialog";
 import { EditSolutionDialog } from "@/components/edit-solution-dialog";
+import { CardStakeholderTags } from "@/components/card-stakeholder-tags";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -336,6 +337,7 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
                 >
                   {(stream.status || "In Progress") === SolutionStatus.ON_HOLD ? "On Hold" : "In Progress"}
                 </Button>
+                <CardStakeholderTags entityType="stream" entityId={streamId} />
                 {stream.owners && stream.owners.length > 0 && (
                   <div className="flex items-center -space-x-2">
                     {stream.owners.slice(0, 5).map((owner) => {
