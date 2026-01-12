@@ -7,6 +7,7 @@ import { AtSign, UserPlus, Loader2 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Stakeholder } from "@shared/schema";
 import { cn } from "@/lib/utils";
+import { formatMention } from "@/hooks/use-stakeholder-mentions";
 
 interface MentionableTextAreaProps {
   value: string;
@@ -61,7 +62,7 @@ export const MentionableTextArea = forwardRef<HTMLTextAreaElement, MentionableTe
 
         const beforeMention = value.slice(0, mentionStartIndex);
         const afterMention = value.slice(mentionStartIndex + mentionQuery.length + 1);
-        const mentionText = `@${stakeholder.firstName} ${stakeholder.lastName}`;
+        const mentionText = formatMention(stakeholder);
         
         const newValue = beforeMention + mentionText + " " + afterMention;
         onChange(newValue);
