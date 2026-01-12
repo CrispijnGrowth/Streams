@@ -865,6 +865,12 @@ export class DatabaseStorage implements IStorage {
     if (data.isMilestoneLinked !== undefined) updateData.isMilestoneLinked = data.isMilestoneLinked;
     if (data.dueDate !== undefined) updateData.dueDate = data.dueDate || null;
     if (data.isDeleted !== undefined) updateData.isDeleted = data.isDeleted;
+    if (data.solutionId !== undefined) updateData.solutionId = data.solutionId;
+    
+    if (Object.keys(updateData).length === 0) {
+      const [current] = await db.select().from(deliverables).where(eq(deliverables.id, id));
+      return current ? mapDeliverableFromDb(current) : undefined;
+    }
     
     await db.update(deliverables).set(updateData).where(eq(deliverables.id, id));
     
