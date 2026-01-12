@@ -190,7 +190,15 @@ export function StreamCard({ stream, onClick, onEdit, onMomentumClick, showDescr
             </div>
             <div className="flex items-center gap-2">
               {sol.priority && (
-                <span className="text-[10px] font-medium text-muted-foreground shrink-0 w-4 text-center">
+                <span 
+                  className={`inline-flex items-center rounded-md border px-1 py-0 font-mono shrink-0 ${
+                    sol.priority === 1 ? "text-[10px] font-bold border-foreground/60 bg-foreground/15 text-foreground" :
+                    sol.priority === 2 ? "text-[10px] font-semibold border-foreground/50 bg-foreground/12 text-foreground/90" :
+                    sol.priority === 3 ? "text-[9px] font-medium border-foreground/40 bg-foreground/8 text-foreground/80" :
+                    sol.priority === 4 ? "text-[9px] font-normal border-foreground/30 bg-foreground/5 text-foreground/70" :
+                    "text-[9px] font-normal border-foreground/20 bg-foreground/3 text-foreground/60"
+                  }`}
+                >
                   P{sol.priority}
                 </span>
               )}
