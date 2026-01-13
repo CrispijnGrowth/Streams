@@ -439,7 +439,10 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
                 )}
                 <Button
                   size="sm"
-                  variant={solution.status === SolutionStatus.ON_HOLD ? "secondary" : "outline"}
+                  variant="outline"
+                  className={solution.status === SolutionStatus.ON_HOLD 
+                    ? "" 
+                    : "bg-[#0058AB] text-white border-[#0058AB] hover:bg-[#004a8f] hover:border-[#004a8f]"}
                   onClick={(e) => {
                     e.stopPropagation();
                     const newStatus = solution.status === SolutionStatus.ON_HOLD 
