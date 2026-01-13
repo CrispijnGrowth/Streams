@@ -7,7 +7,7 @@ import { ProgressBar } from "@/components/progress-bar";
 import { CardStakeholderTags } from "@/components/card-stakeholder-tags";
 import { Calendar, MessageSquare } from "lucide-react";
 import { format } from "date-fns";
-import { useTeamMembers } from "@/hooks/use-suggestions";
+import { useTeamMembers, getLabelColor } from "@/hooks/use-suggestions";
 import { useMode } from "@/lib/mode-context";
 import type { SolutionWithBreakdownAndComment, ActionStatusType, DeliverableBorderColorType } from "@shared/schema";
 import { SolutionStatus, ActionStatus } from "@shared/schema";
@@ -241,7 +241,7 @@ export function SolutionCard({
       {solution.labels.length > 0 && (
         <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
           {solution.labels.slice(0, 2).map((label) => (
-            <Badge key={label} variant="secondary" className="text-xs py-0 h-5">
+            <Badge key={label} variant="outline" className={`text-xs py-0 h-5 ${getLabelColor(label)}`}>
               {label}
             </Badge>
           ))}

@@ -21,7 +21,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { useMode } from "@/lib/mode-context";
-import { useTeamMembers } from "@/hooks/use-suggestions";
+import { useTeamMembers, getLabelColor } from "@/hooks/use-suggestions";
 import { format } from "date-fns";
 import type { ActionWithLastComment, Step, ActionStatusType, Comment } from "@shared/schema";
 import { ActionStatus } from "@shared/schema";
@@ -352,7 +352,7 @@ export function ActionView({ streamId, solutionId, actionId }: ActionViewProps) 
           <div className="flex items-center gap-1.5 flex-wrap">
             <Tag className="w-4 h-4 text-muted-foreground" />
             {action.labels.map((label) => (
-              <Badge key={label} variant="secondary" className="text-xs">
+              <Badge key={label} variant="outline" className={`text-xs ${getLabelColor(label)}`}>
                 {label}
               </Badge>
             ))}

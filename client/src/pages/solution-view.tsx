@@ -21,7 +21,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { useMode } from "@/lib/mode-context";
-import { useTeamMembers } from "@/hooks/use-suggestions";
+import { useTeamMembers, getLabelColor } from "@/hooks/use-suggestions";
 import type { SolutionWithProgress, ActionWithLastComment, Action, Deliverable, ActionStatusType, DeliverableBorderColorType, MomentumStatusType } from "@shared/schema";
 import { SolutionStatus, ActionStatus } from "@shared/schema";
 
@@ -497,7 +497,7 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
               <div className="flex items-center gap-1.5 flex-wrap">
                 <Tag className="w-4 h-4 text-muted-foreground" />
                 {solution.labels.map((label) => (
-                  <Badge key={label} variant="secondary" className="text-xs">
+                  <Badge key={label} variant="outline" className={`text-xs ${getLabelColor(label)}`}>
                     {label}
                   </Badge>
                 ))}
