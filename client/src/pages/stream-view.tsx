@@ -327,9 +327,7 @@ export function StreamView({ streamId, showDescriptions }: StreamViewProps) {
                 <Button
                   size="sm"
                   variant="outline"
-                  className={(stream.status || "In Progress") === SolutionStatus.ON_HOLD 
-                    ? "" 
-                    : "bg-[#0058AB] text-white border-[#0058AB] hover:bg-[#004a8f] hover:border-[#004a8f]"}
+                  className="bg-[#0058AB] text-white border-[#0058AB]"
                   onClick={(e) => {
                     e.stopPropagation();
                     const newStatus = (stream.status || "In Progress") === SolutionStatus.ON_HOLD 
