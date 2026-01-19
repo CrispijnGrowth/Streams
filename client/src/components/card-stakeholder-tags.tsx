@@ -12,6 +12,7 @@ import {
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Stakeholder, StakeholderTag, TagEntityTypeValue } from "@shared/schema";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 interface CardStakeholderTagsProps {
   entityType: TagEntityTypeValue;
@@ -29,6 +30,7 @@ export function CardStakeholderTags({
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newFirstName, setNewFirstName] = useState("");
   const [newLastName, setNewLastName] = useState("");
+  const { toast } = useToast();
 
   const { data: allStakeholders = [] } = useQuery<Stakeholder[]>({
     queryKey: ["/api/stakeholders"],
@@ -51,6 +53,14 @@ export function CardStakeholderTags({
       setNewLastName("");
       setShowCreateForm(false);
     },
+    onError: (error: Error) => {
+      console.error("Failed to create stakeholder:", error);
+      toast({
+        title: "Failed to create stakeholder",
+        description: error.message || "Please try again",
+        variant: "destructive",
+      });
+    },
   });
 
   const addTagMutation = useMutation({
@@ -65,6 +75,14 @@ export function CardStakeholderTags({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tags", entityType, entityId] });
       setSearchQuery("");
+    },
+    onError: (error: Error) => {
+      console.error("Failed to add tag:", error);
+      toast({
+        title: "Failed to tag stakeholder",
+        description: error.message || "Please try again",
+        variant: "destructive",
+      });
     },
   });
 
