@@ -19,14 +19,18 @@ import {
   insertStakeholderTagSchema,
   insertMeetingSchema,
   insertMeetingItemSchema,
+  insertViewerSchema,
+  type InsertViewer,
   insertUserSchema,
   UserRole,
   CommentEntityType,
   TagEntityType,
+  ViewerEntityType,
   ActionStatus,
   MomentumStatus,
   SolutionStatus,
   type TagEntityTypeValue,
+  type ViewerEntityTypeValue,
 } from "@shared/schema";
 import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 import { objectStorageClient, ObjectStorageService } from "./replit_integrations/object_storage/objectStorage";
@@ -1521,6 +1525,47 @@ export async function registerRoutes(
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: "Failed to delete meeting item" });
+    }
+  });
+
+  // Viewer management routes
+  app.get("/api/viewers/:entityType/:entityId", authMiddleware, async (req, res) => {
+    try {
+      const { entityType, entityId } = req.params;
+      if (entityType !== ViewerEntityType.STREAM && entityType !== ViewerEntityType.SOLUTION) {
+        return res.status(400).json({ error: "Invalid entity type" });
+      }
+      const viewers = await storage.getViewersForEntity(req.userId!, entityType as ViewerEntityTypeValue, entityId);
+      res.json(viewers);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch viewers" });
+    }
+  });
+
+  app.post("/api/viewers", authMiddleware, async (req, res) => {
+    try {
+      const parsed = insertViewerSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Invalid viewer data" });
+      }
+      const { viewerId, entityType, entityId } = parsed.data;
+      const viewer = await storage.addViewer(req.userId!, viewerId, entityType as ViewerEntityTypeValue, entityId);
+      res.status(201).json(viewer);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to add viewer" });
+    }
+  });
+
+  app.delete("/api/viewers/:entityType/:entityId/:viewerId", authMiddleware, async (req, res) => {
+    try {
+      const { entityType, entityId, viewerId } = req.params;
+      if (entityType !== ViewerEntityType.STREAM && entityType !== ViewerEntityType.SOLUTION) {
+        return res.status(400).json({ error: "Invalid entity type" });
+      }
+      const success = await storage.removeViewer(req.userId!, viewerId, entityType as ViewerEntityTypeValue, entityId);
+      res.json({ success });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to remove viewer" });
     }
   });
 

@@ -41,6 +41,9 @@ import {
   SolutionStatus,
   CommentEntityType,
   TagEntityType,
+  ViewerEntityType,
+  type Viewer,
+  type ViewerEntityTypeValue,
   streams,
   solutions,
   deliverables,
@@ -52,6 +55,7 @@ import {
   stakeholderTags,
   meetings,
   meetingItems,
+  viewers,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import type { IStorage } from "./storage";
@@ -224,6 +228,17 @@ function mapMeetingItemFromDb(row: any): MeetingItem {
     entityId: row.entityId,
     discussionNotes: row.discussionNotes || undefined,
     isResolved: row.isResolved,
+    createdAt: row.createdAt,
+  };
+}
+
+function mapViewerFromDb(row: any): Viewer {
+  return {
+    id: row.id,
+    ownerId: row.ownerId,
+    viewerId: row.viewerId,
+    entityType: row.entityType as ViewerEntityTypeValue,
+    entityId: row.entityId,
     createdAt: row.createdAt,
   };
 }
@@ -1912,5 +1927,74 @@ export class DatabaseStorage implements IStorage {
     if (!meeting) return;
     
     await db.delete(meetingItems).where(eq(meetingItems.id, itemId));
+  }
+
+  async getViewersForEntity(ownerId: string, entityType: ViewerEntityTypeValue, entityId: string): Promise<Viewer[]> {
+    const rows = await db.select().from(viewers).where(
+      and(
+        eq(viewers.ownerId, ownerId),
+        eq(viewers.entityType, entityType),
+        eq(viewers.entityId, entityId)
+      )
+    );
+    return rows.map(mapViewerFromDb);
+  }
+
+  async addViewer(ownerId: string, viewerId: string, entityType: ViewerEntityTypeValue, entityId: string): Promise<Viewer> {
+    const [existing] = await db.select().from(viewers).where(
+      and(
+        eq(viewers.ownerId, ownerId),
+        eq(viewers.viewerId, viewerId),
+        eq(viewers.entityType, entityType),
+        eq(viewers.entityId, entityId)
+      )
+    );
+    if (existing) {
+      return mapViewerFromDb(existing);
+    }
+    
+    const id = randomUUID();
+    const newViewer = {
+      id,
+      ownerId,
+      viewerId,
+      entityType,
+      entityId,
+      createdAt: new Date().toISOString(),
+    };
+    await db.insert(viewers).values(newViewer);
+    return mapViewerFromDb(newViewer);
+  }
+
+  async removeViewer(ownerId: string, viewerId: string, entityType: ViewerEntityTypeValue, entityId: string): Promise<boolean> {
+    const result = await db.delete(viewers).where(
+      and(
+        eq(viewers.ownerId, ownerId),
+        eq(viewers.viewerId, viewerId),
+        eq(viewers.entityType, entityType),
+        eq(viewers.entityId, entityId)
+      )
+    );
+    return true;
+  }
+
+  async getViewableStreamIds(viewerId: string): Promise<string[]> {
+    const rows = await db.select().from(viewers).where(
+      and(
+        eq(viewers.viewerId, viewerId),
+        eq(viewers.entityType, ViewerEntityType.STREAM)
+      )
+    );
+    return rows.map(row => row.entityId);
+  }
+
+  async getViewableSolutionIds(viewerId: string): Promise<string[]> {
+    const rows = await db.select().from(viewers).where(
+      and(
+        eq(viewers.viewerId, viewerId),
+        eq(viewers.entityType, ViewerEntityType.SOLUTION)
+      )
+    );
+    return rows.map(row => row.entityId);
   }
 }

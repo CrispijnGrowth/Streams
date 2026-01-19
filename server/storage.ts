@@ -34,6 +34,8 @@ import {
   type CommentEntityTypeValue,
   type TagEntityTypeValue,
   type MomentumStatusType,
+  type Viewer,
+  type ViewerEntityTypeValue,
   ActionStatus,
   MomentumStatus,
   SolutionStatus,
@@ -120,6 +122,13 @@ export interface IStorage {
   deleteTag(userId: string, tagId: string): Promise<void>;
   deleteAllTagsForStakeholder(userId: string, stakeholderId: string): Promise<void>;
   getTaggedItemsForStakeholder(userId: string, stakeholderId: string): Promise<TaggedItem[]>;
+
+  // Viewer management
+  getViewersForEntity(ownerId: string, entityType: ViewerEntityTypeValue, entityId: string): Promise<Viewer[]>;
+  addViewer(ownerId: string, viewerId: string, entityType: ViewerEntityTypeValue, entityId: string): Promise<Viewer>;
+  removeViewer(ownerId: string, viewerId: string, entityType: ViewerEntityTypeValue, entityId: string): Promise<boolean>;
+  getViewableStreamIds(viewerId: string): Promise<string[]>;
+  getViewableSolutionIds(viewerId: string): Promise<string[]>;
 
   getMeetings(userId: string): Promise<MeetingWithItems[]>;
   getMeeting(userId: string, id: string): Promise<MeetingWithItems | undefined>;
