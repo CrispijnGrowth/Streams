@@ -164,6 +164,22 @@ export const meetingItems = pgTable("meeting_items", {
   createdAt: text("created_at").notNull(),
 });
 
+export const viewers = pgTable("viewers", {
+  id: text("id").primaryKey(),
+  ownerId: text("owner_id").notNull(),
+  viewerId: text("viewer_id").notNull(),
+  entityType: text("entity_type").notNull(),
+  entityId: text("entity_id").notNull(),
+  createdAt: text("created_at").notNull(),
+});
+
+export const ViewerEntityType = {
+  STREAM: "stream",
+  SOLUTION: "solution",
+} as const;
+
+export type ViewerEntityTypeValue = (typeof ViewerEntityType)[keyof typeof ViewerEntityType];
+
 export const ActionStatus = {
   BACKLOG: "Backlog",
   TO_EXECUTE: "To Execute",
@@ -520,6 +536,12 @@ export const insertMeetingItemSchema = z.object({
   isResolved: z.boolean().default(false),
 });
 
+export const insertViewerSchema = z.object({
+  viewerId: z.string().min(1, "Viewer is required"),
+  entityType: z.enum(["stream", "solution"]),
+  entityId: z.string().min(1, "Entity ID is required"),
+});
+
 export type InsertStream = z.infer<typeof insertStreamSchema>;
 export type InsertSolution = z.infer<typeof insertSolutionSchema>;
 export type InsertDeliverable = z.infer<typeof insertDeliverableSchema>;
@@ -531,6 +553,8 @@ export type InsertStakeholder = z.infer<typeof insertStakeholderSchema>;
 export type InsertStakeholderTag = z.infer<typeof insertStakeholderTagSchema>;
 export type InsertMeeting = z.infer<typeof insertMeetingSchema>;
 export type InsertMeetingItem = z.infer<typeof insertMeetingItemSchema>;
+export type InsertViewer = z.infer<typeof insertViewerSchema>;
+export type Viewer = typeof viewers.$inferSelect;
 
 export interface InProgressSolutionInfo {
   name: string;
