@@ -84,6 +84,21 @@ export async function registerRoutes(
       }
       const existing = await authStorage.getUserByEmail(email);
       if (existing) {
+        // If user was deactivated, reactivate them with new credentials
+        if (existing.isDeactivated) {
+          const reactivated = await authStorage.reactivateUserWithNewPassword(existing.id, name, password);
+          if (!reactivated) {
+            return res.status(500).json({ error: "Failed to reactivate account" });
+          }
+          // Notify admin about reactivation request
+          sendNewUserNotification(name, email).catch(err => 
+            console.error("[Auth] Failed to notify admin:", err)
+          );
+          return res.status(201).json({ 
+            message: "Account reactivated. Awaiting admin approval.",
+            user: { id: reactivated.id, email: reactivated.email, name: reactivated.name, role: reactivated.role }
+          });
+        }
         return res.status(400).json({ error: "Email already registered" });
       }
       const user = await authStorage.createUser({ email, name }, password);

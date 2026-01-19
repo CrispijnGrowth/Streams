@@ -153,6 +153,21 @@ class AuthStorage {
     return this.dbUserToUser(updated);
   }
 
+  async reactivateUserWithNewPassword(userId: string, name: string, password: string): Promise<User | undefined> {
+    const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+    const [updated] = await db.update(users)
+      .set({ 
+        isDeactivated: false, 
+        role: UserRole.PENDING,
+        name,
+        passwordHash
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    if (!updated) return undefined;
+    return this.dbUserToUser(updated);
+  }
+
   async createMagicToken(email: string): Promise<string> {
     const token = randomBytes(32).toString("hex");
     const hashedToken = createHash("sha256").update(token).digest("hex");
