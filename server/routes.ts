@@ -372,6 +372,18 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/users", authMiddleware, async (req, res) => {
+    try {
+      const allUsers = await authStorage.getActiveUsers();
+      const filteredUsers = allUsers
+        .filter(u => u.id !== req.userId && !u.isDeactivated && u.role !== UserRole.PENDING)
+        .map(u => ({ id: u.id, email: u.email, name: u.name }));
+      res.json(filteredUsers);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch users" });
+    }
+  });
+
   app.get("/api/streams", authMiddleware, async (req, res) => {
     try {
       const streams = await storage.getStreams(req.userId!);
@@ -1549,6 +1561,25 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Invalid viewer data" });
       }
       const { viewerId, entityType, entityId } = parsed.data;
+      
+      // Prevent users from adding themselves as viewers
+      if (viewerId === req.userId) {
+        return res.status(400).json({ error: "Cannot add yourself as a viewer" });
+      }
+      
+      // Verify the user owns the entity before adding a viewer
+      if (entityType === ViewerEntityType.STREAM) {
+        const stream = await storage.getStream(req.userId!, entityId);
+        if (!stream || stream.userId !== req.userId) {
+          return res.status(403).json({ error: "You can only add viewers to your own streams" });
+        }
+      } else if (entityType === ViewerEntityType.SOLUTION) {
+        const solution = await storage.getSolution(req.userId!, entityId);
+        if (!solution || solution.userId !== req.userId) {
+          return res.status(403).json({ error: "You can only add viewers to your own solutions" });
+        }
+      }
+      
       const viewer = await storage.addViewer(req.userId!, viewerId, entityType as ViewerEntityTypeValue, entityId);
       res.status(201).json(viewer);
     } catch (error) {
@@ -1562,8 +1593,25 @@ export async function registerRoutes(
       if (entityType !== ViewerEntityType.STREAM && entityType !== ViewerEntityType.SOLUTION) {
         return res.status(400).json({ error: "Invalid entity type" });
       }
+      
+      // Verify the user owns the entity before removing a viewer
+      if (entityType === ViewerEntityType.STREAM) {
+        const stream = await storage.getStream(req.userId!, entityId);
+        if (!stream || stream.userId !== req.userId) {
+          return res.status(403).json({ error: "You can only remove viewers from your own streams" });
+        }
+      } else if (entityType === ViewerEntityType.SOLUTION) {
+        const solution = await storage.getSolution(req.userId!, entityId);
+        if (!solution || solution.userId !== req.userId) {
+          return res.status(403).json({ error: "You can only remove viewers from your own solutions" });
+        }
+      }
+      
       const success = await storage.removeViewer(req.userId!, viewerId, entityType as ViewerEntityTypeValue, entityId);
-      res.json({ success });
+      if (!success) {
+        return res.status(404).json({ error: "Viewer not found" });
+      }
+      res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: "Failed to remove viewer" });
     }

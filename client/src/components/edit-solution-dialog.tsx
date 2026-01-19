@@ -29,6 +29,8 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useOwnerSuggestions, useLabelSuggestions } from "@/hooks/use-suggestions";
 import { StakeholderTagPicker } from "@/components/stakeholder-tag-picker";
+import { ViewerPicker } from "@/components/viewer-picker";
+import { useAuth } from "@/lib/auth-context";
 import type { Solution, Comment } from "@shared/schema";
 import { SolutionStatus } from "@shared/schema";
 import { format } from "date-fns";
@@ -54,6 +56,7 @@ interface EditSolutionDialogProps {
 
 export function EditSolutionDialog({ solution, open, onOpenChange, onDeleted }: EditSolutionDialogProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const ownerSuggestions = useOwnerSuggestions();
   const labelSuggestions = useLabelSuggestions();
   const [newComment, setNewComment] = useState("");
@@ -282,6 +285,16 @@ export function EditSolutionDialog({ solution, open, onOpenChange, onDeleted }: 
             <div className="space-y-2">
               <Label>Tagged Stakeholders</Label>
               <StakeholderTagPicker
+                entityType="solution"
+                entityId={solution.id}
+              />
+            </div>
+          )}
+
+          {solution?.id && solution?.userId === user?.id && (
+            <div className="space-y-2">
+              <Label>Viewers (can view this solution)</Label>
+              <ViewerPicker
                 entityType="solution"
                 entityId={solution.id}
               />

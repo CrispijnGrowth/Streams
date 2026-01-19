@@ -21,6 +21,8 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useOwnerSuggestions, useLabelSuggestions } from "@/hooks/use-suggestions";
 import { StakeholderTagPicker } from "@/components/stakeholder-tag-picker";
+import { ViewerPicker } from "@/components/viewer-picker";
+import { useAuth } from "@/lib/auth-context";
 import type { Stream } from "@shared/schema";
 
 export type EditStreamFocusField = "owner" | "label" | null;
@@ -44,6 +46,7 @@ interface EditStreamDialogProps {
 
 export function EditStreamDialog({ stream, open, onOpenChange, onDeleted, initialFocus }: EditStreamDialogProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const ownerSuggestions = useOwnerSuggestions();
   const labelSuggestions = useLabelSuggestions();
 
@@ -167,6 +170,16 @@ export function EditStreamDialog({ stream, open, onOpenChange, onDeleted, initia
             <div className="space-y-2">
               <Label>Tagged Stakeholders</Label>
               <StakeholderTagPicker
+                entityType="stream"
+                entityId={stream.id}
+              />
+            </div>
+          )}
+
+          {stream?.id && stream?.userId === user?.id && (
+            <div className="space-y-2">
+              <Label>Viewers (can view this stream)</Label>
+              <ViewerPicker
                 entityType="stream"
                 entityId={stream.id}
               />

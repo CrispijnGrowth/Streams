@@ -872,8 +872,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getDeliverablesBySolution(userId: string, solutionId: string): Promise<DeliverableWithActions[]> {
+    const [solution] = await db.select().from(solutions).where(
+      and(eq(solutions.id, solutionId), eq(solutions.isDeleted, false))
+    );
+    if (!solution) return [];
+    
+    const viewableSolutionIds = await this.getViewableSolutionIds(userId);
+    const viewableStreamIds = await this.getViewableStreamIds(userId);
+    
+    const hasAccess = solution.userId === userId || 
+      viewableSolutionIds.includes(solutionId) ||
+      viewableStreamIds.includes(solution.streamId);
+    
+    if (!hasAccess) return [];
+    
+    const ownerUserId = solution.userId;
     const rows = await db.select().from(deliverables).where(
-      and(eq(deliverables.solutionId, solutionId), eq(deliverables.userId, userId), eq(deliverables.isDeleted, false))
+      and(eq(deliverables.solutionId, solutionId), eq(deliverables.userId, ownerUserId), eq(deliverables.isDeleted, false))
     );
     rows.sort((a, b) => a.ordinal - b.ordinal);
     
@@ -881,13 +896,13 @@ export class DatabaseStorage implements IStorage {
     for (const row of rows) {
       const del = mapDeliverableFromDb(row);
       const delActions = await db.select().from(actions).where(
-        and(eq(actions.deliverableId, del.id), eq(actions.userId, userId), eq(actions.isDeleted, false))
+        and(eq(actions.deliverableId, del.id), eq(actions.userId, ownerUserId), eq(actions.isDeleted, false))
       );
       delActions.sort((a, b) => a.kanbanOrder - b.kanbanOrder);
       
       const actionsWithProgress: ActionWithProgress[] = [];
       for (const action of delActions) {
-        const stats = await this.computeActionProgress(action.id, userId);
+        const stats = await this.computeActionProgress(action.id, ownerUserId);
         actionsWithProgress.push({ ...mapActionFromDb(action), ...stats });
       }
       
@@ -898,9 +913,21 @@ export class DatabaseStorage implements IStorage {
 
   async getDeliverable(userId: string, id: string): Promise<Deliverable | undefined> {
     const [row] = await db.select().from(deliverables).where(
-      and(eq(deliverables.id, id), eq(deliverables.userId, userId), eq(deliverables.isDeleted, false))
+      and(eq(deliverables.id, id), eq(deliverables.isDeleted, false))
     );
-    return row ? mapDeliverableFromDb(row) : undefined;
+    if (!row) return undefined;
+    
+    if (row.userId === userId) {
+      return mapDeliverableFromDb(row);
+    }
+    
+    const viewableSolutionIds = await this.getViewableSolutionIds(userId);
+    const viewableStreamIds = await this.getViewableStreamIds(userId);
+    
+    const hasAccess = viewableSolutionIds.includes(row.solutionId) ||
+      viewableStreamIds.includes(row.streamId);
+    
+    return hasAccess ? mapDeliverableFromDb(row) : undefined;
   }
 
   async createDeliverable(userId: string, data: InsertDeliverable): Promise<Deliverable> {
@@ -1034,16 +1061,31 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getActionsBySolution(userId: string, solutionId: string): Promise<ActionWithLastComment[]> {
+    const [solution] = await db.select().from(solutions).where(
+      and(eq(solutions.id, solutionId), eq(solutions.isDeleted, false))
+    );
+    if (!solution) return [];
+    
+    const viewableSolutionIds = await this.getViewableSolutionIds(userId);
+    const viewableStreamIds = await this.getViewableStreamIds(userId);
+    
+    const hasAccess = solution.userId === userId || 
+      viewableSolutionIds.includes(solutionId) ||
+      viewableStreamIds.includes(solution.streamId);
+    
+    if (!hasAccess) return [];
+    
+    const ownerUserId = solution.userId;
     const rows = await db.select().from(actions).where(
-      and(eq(actions.solutionId, solutionId), eq(actions.userId, userId), eq(actions.isDeleted, false))
+      and(eq(actions.solutionId, solutionId), eq(actions.userId, ownerUserId), eq(actions.isDeleted, false))
     );
     rows.sort((a, b) => a.kanbanOrder - b.kanbanOrder);
     
     const result: ActionWithLastComment[] = [];
     for (const row of rows) {
       const action = mapActionFromDb(row);
-      const stats = await this.computeActionProgress(action.id, userId);
-      const lastComment = await this.getLastComment(userId, "action", action.id);
+      const stats = await this.computeActionProgress(action.id, ownerUserId);
+      const lastComment = await this.getLastComment(ownerUserId, "action", action.id);
       result.push({ ...action, ...stats, lastComment });
     }
     return result;
@@ -1051,13 +1093,24 @@ export class DatabaseStorage implements IStorage {
 
   async getAction(userId: string, id: string): Promise<ActionWithLastComment | undefined> {
     const [row] = await db.select().from(actions).where(
-      and(eq(actions.id, id), eq(actions.userId, userId), eq(actions.isDeleted, false))
+      and(eq(actions.id, id), eq(actions.isDeleted, false))
     );
     if (!row) return undefined;
     
+    const ownerUserId = row.userId;
+    if (ownerUserId !== userId) {
+      const viewableSolutionIds = await this.getViewableSolutionIds(userId);
+      const viewableStreamIds = await this.getViewableStreamIds(userId);
+      
+      const hasAccess = viewableSolutionIds.includes(row.solutionId) ||
+        viewableStreamIds.includes(row.streamId);
+      
+      if (!hasAccess) return undefined;
+    }
+    
     const action = mapActionFromDb(row);
-    const stats = await this.computeActionProgress(action.id, userId);
-    const lastComment = await this.getLastComment(userId, "action", action.id);
+    const stats = await this.computeActionProgress(action.id, ownerUserId);
+    const lastComment = await this.getLastComment(ownerUserId, "action", action.id);
     return { ...action, ...stats, lastComment };
   }
 
@@ -1159,8 +1212,24 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getStepsByAction(userId: string, actionId: string): Promise<Step[]> {
+    const [action] = await db.select().from(actions).where(
+      and(eq(actions.id, actionId), eq(actions.isDeleted, false))
+    );
+    if (!action) return [];
+    
+    const ownerUserId = action.userId;
+    if (ownerUserId !== userId) {
+      const viewableSolutionIds = await this.getViewableSolutionIds(userId);
+      const viewableStreamIds = await this.getViewableStreamIds(userId);
+      
+      const hasAccess = viewableSolutionIds.includes(action.solutionId) ||
+        viewableStreamIds.includes(action.streamId);
+      
+      if (!hasAccess) return [];
+    }
+    
     const rows = await db.select().from(steps).where(
-      and(eq(steps.actionId, actionId), eq(steps.userId, userId), eq(steps.isDeleted, false))
+      and(eq(steps.actionId, actionId), eq(steps.userId, ownerUserId), eq(steps.isDeleted, false))
     );
     rows.sort((a, b) => a.ordinal - b.ordinal);
     return rows.map(mapStepFromDb);
@@ -1168,9 +1237,27 @@ export class DatabaseStorage implements IStorage {
 
   async getStep(userId: string, id: string): Promise<Step | undefined> {
     const [row] = await db.select().from(steps).where(
-      and(eq(steps.id, id), eq(steps.userId, userId), eq(steps.isDeleted, false))
+      and(eq(steps.id, id), eq(steps.isDeleted, false))
     );
-    return row ? mapStepFromDb(row) : undefined;
+    if (!row) return undefined;
+    
+    const ownerUserId = row.userId;
+    if (ownerUserId !== userId) {
+      const [action] = await db.select().from(actions).where(
+        and(eq(actions.id, row.actionId), eq(actions.isDeleted, false))
+      );
+      if (!action) return undefined;
+      
+      const viewableSolutionIds = await this.getViewableSolutionIds(userId);
+      const viewableStreamIds = await this.getViewableStreamIds(userId);
+      
+      const hasAccess = viewableSolutionIds.includes(action.solutionId) ||
+        viewableStreamIds.includes(action.streamId);
+      
+      if (!hasAccess) return undefined;
+    }
+    
+    return mapStepFromDb(row);
   }
 
   async createStep(userId: string, data: InsertStep): Promise<Step> {
@@ -1544,17 +1631,91 @@ export class DatabaseStorage implements IStorage {
     return userStreams.some(s => s.name.includes("[Example]"));
   }
 
+  private async getEntityOwnerAndAccess(userId: string, entityType: CommentEntityTypeValue, entityId: string): Promise<{ ownerUserId: string | null; hasAccess: boolean }> {
+    // Handles all CommentEntityType values: solution, action, deliverable, step
+    if (entityType === "solution") {
+      const [solution] = await db.select().from(solutions).where(
+        and(eq(solutions.id, entityId), eq(solutions.isDeleted, false))
+      );
+      if (!solution) return { ownerUserId: null, hasAccess: false };
+      
+      if (solution.userId === userId) return { ownerUserId: solution.userId, hasAccess: true };
+      
+      const viewableSolutionIds = await this.getViewableSolutionIds(userId);
+      const viewableStreamIds = await this.getViewableStreamIds(userId);
+      const hasAccess = viewableSolutionIds.includes(entityId) || viewableStreamIds.includes(solution.streamId);
+      return { ownerUserId: solution.userId, hasAccess };
+    }
+    
+    if (entityType === "action") {
+      const [action] = await db.select().from(actions).where(
+        and(eq(actions.id, entityId), eq(actions.isDeleted, false))
+      );
+      if (!action) return { ownerUserId: null, hasAccess: false };
+      
+      if (action.userId === userId) return { ownerUserId: action.userId, hasAccess: true };
+      
+      const viewableSolutionIds = await this.getViewableSolutionIds(userId);
+      const viewableStreamIds = await this.getViewableStreamIds(userId);
+      const hasAccess = viewableSolutionIds.includes(action.solutionId) || viewableStreamIds.includes(action.streamId);
+      return { ownerUserId: action.userId, hasAccess };
+    }
+    
+    if (entityType === "deliverable") {
+      const [deliverable] = await db.select().from(deliverables).where(
+        and(eq(deliverables.id, entityId), eq(deliverables.isDeleted, false))
+      );
+      if (!deliverable) return { ownerUserId: null, hasAccess: false };
+      
+      if (deliverable.userId === userId) return { ownerUserId: deliverable.userId, hasAccess: true };
+      
+      const viewableSolutionIds = await this.getViewableSolutionIds(userId);
+      const viewableStreamIds = await this.getViewableStreamIds(userId);
+      const hasAccess = viewableSolutionIds.includes(deliverable.solutionId) || viewableStreamIds.includes(deliverable.streamId);
+      return { ownerUserId: deliverable.userId, hasAccess };
+    }
+    
+    if (entityType === "step") {
+      const [step] = await db.select().from(steps).where(
+        and(eq(steps.id, entityId), eq(steps.isDeleted, false))
+      );
+      if (!step) return { ownerUserId: null, hasAccess: false };
+      
+      if (step.userId === userId) return { ownerUserId: step.userId, hasAccess: true };
+      
+      const [action] = await db.select().from(actions).where(
+        and(eq(actions.id, step.actionId), eq(actions.isDeleted, false))
+      );
+      if (!action) return { ownerUserId: null, hasAccess: false };
+      
+      const viewableSolutionIds = await this.getViewableSolutionIds(userId);
+      const viewableStreamIds = await this.getViewableStreamIds(userId);
+      const hasAccess = viewableSolutionIds.includes(action.solutionId) || viewableStreamIds.includes(action.streamId);
+      return { ownerUserId: step.userId, hasAccess };
+    }
+    
+    // This should never be reached since entityType is typed as CommentEntityTypeValue
+    // All valid values (solution, action, deliverable, step) are handled above
+    throw new Error(`Unknown entity type: ${entityType}`);
+  }
+
   async getComments(userId: string, entityType: CommentEntityTypeValue, entityId: string): Promise<Comment[]> {
+    const { ownerUserId, hasAccess } = await this.getEntityOwnerAndAccess(userId, entityType, entityId);
+    if (!hasAccess || !ownerUserId) return [];
+    
     const rows = await db.select().from(comments).where(
-      and(eq(comments.userId, userId), eq(comments.entityType, entityType), eq(comments.entityId, entityId))
+      and(eq(comments.userId, ownerUserId), eq(comments.entityType, entityType), eq(comments.entityId, entityId))
     );
     rows.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
     return rows.map(mapCommentFromDb);
   }
 
   async getLastComment(userId: string, entityType: CommentEntityTypeValue, entityId: string): Promise<Comment | undefined> {
+    const { ownerUserId, hasAccess } = await this.getEntityOwnerAndAccess(userId, entityType, entityId);
+    if (!hasAccess || !ownerUserId) return undefined;
+    
     const rows = await db.select().from(comments).where(
-      and(eq(comments.userId, userId), eq(comments.entityType, entityType), eq(comments.entityId, entityId))
+      and(eq(comments.userId, ownerUserId), eq(comments.entityType, entityType), eq(comments.entityId, entityId))
     );
     if (rows.length === 0) return undefined;
     rows.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -2041,7 +2202,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async removeViewer(ownerId: string, viewerId: string, entityType: ViewerEntityTypeValue, entityId: string): Promise<boolean> {
-    const result = await db.delete(viewers).where(
+    // Check if viewer exists first
+    const [existing] = await db.select().from(viewers).where(
+      and(
+        eq(viewers.ownerId, ownerId),
+        eq(viewers.viewerId, viewerId),
+        eq(viewers.entityType, entityType),
+        eq(viewers.entityId, entityId)
+      )
+    );
+    
+    if (!existing) {
+      return false;
+    }
+    
+    await db.delete(viewers).where(
       and(
         eq(viewers.ownerId, ownerId),
         eq(viewers.viewerId, viewerId),
