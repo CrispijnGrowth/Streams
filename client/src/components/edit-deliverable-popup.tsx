@@ -81,6 +81,7 @@ export function EditDeliverablePopup({
       queryClient.invalidateQueries({ queryKey: ["/api/deliverables"] });
       queryClient.invalidateQueries({ queryKey: ["/api/solutions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
       toast({ title: "Deliverable moved successfully" });
       onOpenChange(false);
     },

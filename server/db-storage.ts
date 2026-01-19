@@ -874,6 +874,30 @@ export class DatabaseStorage implements IStorage {
     
     await db.update(deliverables).set(updateData).where(eq(deliverables.id, id));
     
+    // When moving a deliverable to a different solution, also move all its child actions
+    if (data.solutionId !== undefined && data.solutionId !== existing.solutionId) {
+      // Get the target solution to find its streamId
+      const [targetSolution] = await db.select().from(solutions).where(
+        and(eq(solutions.id, data.solutionId), eq(solutions.userId, userId))
+      );
+      
+      if (targetSolution) {
+        // Update the deliverable's streamId to match the target solution's stream
+        await db.update(deliverables).set({ streamId: targetSolution.streamId }).where(eq(deliverables.id, id));
+        
+        // Update all child actions' solutionId and streamId
+        const childActions = await db.select().from(actions).where(
+          and(eq(actions.deliverableId, id), eq(actions.userId, userId))
+        );
+        for (const action of childActions) {
+          await db.update(actions).set({ 
+            solutionId: data.solutionId,
+            streamId: targetSolution.streamId 
+          }).where(eq(actions.id, action.id));
+        }
+      }
+    }
+    
     const [updated] = await db.select().from(deliverables).where(eq(deliverables.id, id));
     return updated ? mapDeliverableFromDb(updated) : undefined;
   }
