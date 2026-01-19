@@ -247,6 +247,7 @@ export interface User {
   showDescriptions: boolean;
   themePreference: "light" | "dark" | "system";
   isDeactivated: boolean;
+  avatarData?: string | null;
   createdAt: string;
 }
 

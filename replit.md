@@ -56,6 +56,19 @@ New users automatically receive example data upon approval or first login, inclu
 ### Team Members System
 Manages team members with names, roles, and photos (stored as base64 data URIs in PostgreSQL). Team member avatars are displayed on Stream, Solution, and Action cards.
 
+**User-Team Member Linking:**
+- Team members can be linked to registered users via the `linkedUserId` field
+- During admin approval, if a pending user's name matches an existing team member, the admin is prompted to link them
+- Linked users gain ownership-based access to streams/solutions where their team member name appears in the `owners` array
+- `getLinkedTeamMemberForUser(userId)` retrieves the linked team member for a user
+
+### User Avatar System
+Users can upload and manage their profile avatars:
+- `POST /api/auth/avatar` - Upload avatar (2MB max, images only: jpeg, png, gif, webp)
+- `DELETE /api/auth/avatar` - Remove avatar
+- Avatars stored as base64 data URIs in the `avatarData` column
+- Settings page displays current avatar with upload/change/remove options
+
 ### Edit/Operate Mode System
 A toggle allows switching between "Operate" (default, navigates to detail view) and "Edit" (opens edit dialogs) modes. The system automatically switches to Edit mode for empty pages.
 

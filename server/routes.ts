@@ -139,7 +139,7 @@ export async function registerRoutes(
       await storage.seedExampleData(user.id);
       res.json({ 
         sessionId: session.id, 
-        user: { id: user.id, email: user.email, name: user.name, role: user.role, showDescriptions: user.showDescriptions, themePreference: user.themePreference }
+        user: { id: user.id, email: user.email, name: user.name, role: user.role, showDescriptions: user.showDescriptions, themePreference: user.themePreference, avatarData: user.avatarData }
       });
     } catch (error) {
       res.status(500).json({ error: "Login failed" });
@@ -246,7 +246,7 @@ export async function registerRoutes(
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
-    res.json({ id: user.id, email: user.email, name: user.name, role: user.role, showDescriptions: user.showDescriptions, themePreference: user.themePreference });
+    res.json({ id: user.id, email: user.email, name: user.name, role: user.role, showDescriptions: user.showDescriptions, themePreference: user.themePreference, avatarData: user.avatarData });
   });
 
   app.patch("/api/auth/preferences", async (req, res) => {
@@ -262,7 +262,73 @@ export async function registerRoutes(
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
-    res.json({ id: user.id, email: user.email, name: user.name, role: user.role, showDescriptions: user.showDescriptions, themePreference: user.themePreference });
+    res.json({ id: user.id, email: user.email, name: user.name, role: user.role, showDescriptions: user.showDescriptions, themePreference: user.themePreference, avatarData: user.avatarData });
+  });
+
+  const avatarUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 2 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+      const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+      if (allowedTypes.includes(file.mimetype)) {
+        cb(null, true);
+      } else {
+        cb(new Error("Only JPEG, PNG, GIF, and WebP images are allowed"));
+      }
+    },
+  });
+
+  app.post("/api/auth/avatar", authMiddleware, avatarUpload.single("avatar"), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No image file provided" });
+      }
+      const base64Data = req.file.buffer.toString("base64");
+      const avatarData = `data:${req.file.mimetype};base64,${base64Data}`;
+      const user = await authStorage.updateUserAvatar(req.userId!, avatarData);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      res.json({ 
+        id: user.id, 
+        email: user.email, 
+        name: user.name, 
+        role: user.role, 
+        showDescriptions: user.showDescriptions, 
+        themePreference: user.themePreference,
+        avatarData: user.avatarData 
+      });
+    } catch (error) {
+      if (error instanceof multer.MulterError) {
+        if (error.code === "LIMIT_FILE_SIZE") {
+          return res.status(400).json({ error: "File size must be less than 2MB" });
+        }
+      }
+      if (error instanceof Error) {
+        return res.status(400).json({ error: error.message });
+      }
+      res.status(500).json({ error: "Failed to upload avatar" });
+    }
+  });
+
+  app.delete("/api/auth/avatar", authMiddleware, async (req, res) => {
+    try {
+      const user = await authStorage.updateUserAvatar(req.userId!, null);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      res.json({ 
+        id: user.id, 
+        email: user.email, 
+        name: user.name, 
+        role: user.role, 
+        showDescriptions: user.showDescriptions, 
+        themePreference: user.themePreference,
+        avatarData: user.avatarData 
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to remove avatar" });
+    }
   });
 
   app.get("/api/admin/pending-users", authMiddleware, adminMiddleware, async (req, res) => {

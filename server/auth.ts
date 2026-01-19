@@ -25,6 +25,7 @@ class AuthStorage {
       showDescriptions: dbUser.showDescriptions,
       themePreference: dbUser.themePreference as User["themePreference"],
       isDeactivated: dbUser.isDeactivated,
+      avatarData: dbUser.avatarData,
       createdAt,
     };
   }
@@ -162,6 +163,15 @@ class AuthStorage {
         name,
         passwordHash
       })
+      .where(eq(users.id, userId))
+      .returning();
+    if (!updated) return undefined;
+    return this.dbUserToUser(updated);
+  }
+
+  async updateUserAvatar(userId: string, avatarData: string | null): Promise<User | undefined> {
+    const [updated] = await db.update(users)
+      .set({ avatarData })
       .where(eq(users.id, userId))
       .returning();
     if (!updated) return undefined;

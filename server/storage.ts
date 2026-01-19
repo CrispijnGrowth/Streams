@@ -110,6 +110,7 @@ export interface IStorage {
   deleteTeamMember(userId: string, id: string): Promise<boolean>;
   findMatchingTeamMembers(userName: string): Promise<TeamMember[]>;
   linkUserToTeamMember(userId: string, teamMemberId: string): Promise<TeamMember | undefined>;
+  getLinkedTeamMemberForUser(userId: string): Promise<TeamMember | null>;
 
   getStakeholders(userId: string): Promise<Stakeholder[]>;
   getStakeholder(userId: string, id: string): Promise<Stakeholder | undefined>;
@@ -1389,6 +1390,118 @@ export class MemStorage implements IStorage {
     if (!member || member.userId !== userId) return false;
     member.isDeleted = true;
     return true;
+  }
+
+  async findMatchingTeamMembers(_userName: string): Promise<TeamMember[]> {
+    return [];
+  }
+
+  async linkUserToTeamMember(_userId: string, _teamMemberId: string): Promise<TeamMember | undefined> {
+    return undefined;
+  }
+
+  async getLinkedTeamMemberForUser(_userId: string): Promise<TeamMember | null> {
+    return null;
+  }
+
+  async getStakeholders(_userId: string): Promise<Stakeholder[]> {
+    return [];
+  }
+
+  async getStakeholder(_userId: string, _id: string): Promise<Stakeholder | undefined> {
+    return undefined;
+  }
+
+  async createStakeholder(_userId: string, _data: InsertStakeholder): Promise<Stakeholder> {
+    throw new Error("Not implemented");
+  }
+
+  async updateStakeholder(_userId: string, _id: string, _data: Partial<InsertStakeholder>): Promise<Stakeholder> {
+    throw new Error("Not implemented");
+  }
+
+  async deleteStakeholder(_userId: string, _id: string): Promise<void> {
+    throw new Error("Not implemented");
+  }
+
+  async searchStakeholders(_userId: string, _query: string): Promise<Stakeholder[]> {
+    return [];
+  }
+
+  async getTagsForEntity(_userId: string, _entityType: TagEntityTypeValue, _entityId: string): Promise<StakeholderTag[]> {
+    return [];
+  }
+
+  async getTagsByStakeholder(_userId: string, _stakeholderId: string): Promise<StakeholderTag[]> {
+    return [];
+  }
+
+  async createTag(_userId: string, _data: InsertStakeholderTag): Promise<StakeholderTag> {
+    throw new Error("Not implemented");
+  }
+
+  async deleteTag(_userId: string, _tagId: string): Promise<void> {
+    throw new Error("Not implemented");
+  }
+
+  async deleteAllTagsForStakeholder(_userId: string, _stakeholderId: string): Promise<void> {
+    throw new Error("Not implemented");
+  }
+
+  async getTaggedItemsForStakeholder(_userId: string, _stakeholderId: string): Promise<TaggedItem[]> {
+    return [];
+  }
+
+  async getViewersForEntity(_ownerId: string, _entityType: ViewerEntityTypeValue, _entityId: string): Promise<Viewer[]> {
+    return [];
+  }
+
+  async addViewer(_ownerId: string, _viewerId: string, _entityType: ViewerEntityTypeValue, _entityId: string): Promise<Viewer> {
+    throw new Error("Not implemented");
+  }
+
+  async removeViewer(_ownerId: string, _viewerId: string, _entityType: ViewerEntityTypeValue, _entityId: string): Promise<boolean> {
+    return false;
+  }
+
+  async getViewableStreamIds(_viewerId: string): Promise<string[]> {
+    return [];
+  }
+
+  async getViewableSolutionIds(_viewerId: string): Promise<string[]> {
+    return [];
+  }
+
+  async getMeetings(_userId: string): Promise<MeetingWithItems[]> {
+    return [];
+  }
+
+  async getMeeting(_userId: string, _id: string): Promise<MeetingWithItems | undefined> {
+    return undefined;
+  }
+
+  async createMeeting(_userId: string, _data: InsertMeeting): Promise<Meeting> {
+    throw new Error("Not implemented");
+  }
+
+  async updateMeeting(_userId: string, _id: string, _data: Partial<InsertMeeting>): Promise<Meeting> {
+    throw new Error("Not implemented");
+  }
+
+  async deleteMeeting(_userId: string, _id: string): Promise<void> {
+    throw new Error("Not implemented");
+  }
+
+  async addMeetingItem(_userId: string, _data: InsertMeetingItem): Promise<MeetingItem> {
+    throw new Error("Not implemented");
+  }
+
+  async updateMeetingItem(_userId: string, _itemId: string, _data: { discussionNotes?: string; isResolved?: boolean }): Promise<MeetingItem> {
+    throw new Error("Not implemented");
+  }
+
+  async deleteMeetingItem(_userId: string, _itemId: string): Promise<void> {
+    throw new Error("Not implemented");
   }
 }
 

@@ -54,6 +54,8 @@ export function SettingsPage() {
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const editPhotoInputRef = useRef<HTMLInputElement>(null);
   const addPhotoInputRef = useRef<HTMLInputElement>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   
   const [matchingDialogOpen, setMatchingDialogOpen] = useState(false);
   const [matchingTeamMembers, setMatchingTeamMembers] = useState<TeamMember[]>([]);
@@ -95,6 +97,51 @@ export function SettingsPage() {
       toast({ title: "Failed to save preferences", variant: "destructive" });
     },
   });
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingAvatar(true);
+    try {
+      const formData = new FormData();
+      formData.append("avatar", file);
+      const res = await fetch("/api/auth/avatar", {
+        method: "POST",
+        headers: getSessionHeaders(),
+        body: formData,
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Upload failed");
+      }
+      const updatedUser = await res.json();
+      updateUser(updatedUser);
+      toast({ title: "Avatar updated" });
+    } catch (err) {
+      toast({ title: err instanceof Error ? err.message : "Failed to upload avatar", variant: "destructive" });
+    } finally {
+      setIsUploadingAvatar(false);
+      if (avatarInputRef.current) avatarInputRef.current.value = "";
+    }
+  };
+
+  const handleRemoveAvatar = async () => {
+    setIsUploadingAvatar(true);
+    try {
+      const res = await fetch("/api/auth/avatar", {
+        method: "DELETE",
+        headers: getSessionHeaders(),
+      });
+      if (!res.ok) throw new Error("Failed to remove avatar");
+      const updatedUser = await res.json();
+      updateUser(updatedUser);
+      toast({ title: "Avatar removed" });
+    } catch (err) {
+      toast({ title: "Failed to remove avatar", variant: "destructive" });
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
 
   const approveMutation = useMutation({
     mutationFn: async ({ userId, teamMemberId }: { userId: string; teamMemberId?: string }) => {
@@ -388,6 +435,54 @@ export function SettingsPage() {
           <CardDescription>Your account information</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="flex items-center gap-4">
+            <Avatar className="h-16 w-16">
+              {user.avatarData ? (
+                <AvatarImage src={user.avatarData} alt={user.name} />
+              ) : null}
+              <AvatarFallback className="bg-primary/10 text-primary text-lg">
+                {getInitials(user.name)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="space-y-2">
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/gif,image/webp"
+                onChange={handleAvatarUpload}
+                className="hidden"
+                data-testid="input-avatar-file"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => avatarInputRef.current?.click()}
+                disabled={isUploadingAvatar}
+                data-testid="button-change-avatar"
+              >
+                {isUploadingAvatar ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Upload className="h-4 w-4 mr-2" />
+                )}
+                {user.avatarData ? "Change Avatar" : "Upload Avatar"}
+              </Button>
+              {user.avatarData && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleRemoveAvatar}
+                  disabled={isUploadingAvatar}
+                  className="text-muted-foreground"
+                  data-testid="button-remove-avatar"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Remove
+                </Button>
+              )}
+            </div>
+          </div>
+          <Separator />
           <div className="flex items-center justify-between gap-4">
             <div>
               <Label className="text-muted-foreground">Name</Label>

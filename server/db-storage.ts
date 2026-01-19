@@ -1,5 +1,5 @@
 import { drizzle } from "drizzle-orm/node-postgres";
-import { eq, and, desc, ilike, or, inArray } from "drizzle-orm";
+import { eq, and, desc, ilike, or, inArray, sql } from "drizzle-orm";
 import { Pool } from "pg";
 import {
   type Stream,
@@ -2290,6 +2290,16 @@ export class DatabaseStorage implements IStorage {
     return true;
   }
 
+  async getLinkedTeamMemberForUser(userId: string): Promise<TeamMember | null> {
+    const [row] = await db.select().from(teamMembers).where(
+      and(
+        eq(teamMembers.linkedUserId, userId),
+        eq(teamMembers.isDeleted, false)
+      )
+    );
+    return row ? mapTeamMemberFromDb(row) : null;
+  }
+
   async getViewableStreamIds(viewerId: string): Promise<string[]> {
     // Get direct stream viewer permissions
     const directStreamRows = await db.select().from(viewers).where(
@@ -2317,8 +2327,24 @@ export class DatabaseStorage implements IStorage {
       parentStreamIds = solutionRows.map(row => row.streamId);
     }
     
+    // Get streams where user's linked team member name is in the owners array
+    let ownershipStreamIds: string[] = [];
+    const linkedTeamMember = await this.getLinkedTeamMemberForUser(viewerId);
+    if (linkedTeamMember) {
+      const ownershipRows = await db.select({ id: streams.id })
+        .from(streams)
+        .where(
+          and(
+            eq(streams.isDeleted, false),
+            eq(streams.userId, linkedTeamMember.userId),
+            sql`${streams.owners} @> ARRAY[${linkedTeamMember.name}]::text[]`
+          )
+        );
+      ownershipStreamIds = ownershipRows.map(row => row.id);
+    }
+    
     // Combine and deduplicate
-    const allStreamIds = [...new Set([...directStreamIds, ...parentStreamIds])];
+    const allStreamIds = [...new Set([...directStreamIds, ...parentStreamIds, ...ownershipStreamIds])];
     return allStreamIds;
   }
   
@@ -2344,12 +2370,33 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getViewableSolutionIds(viewerId: string): Promise<string[]> {
+    // Get direct solution viewer permissions
     const rows = await db.select().from(viewers).where(
       and(
         eq(viewers.viewerId, viewerId),
         eq(viewers.entityType, ViewerEntityType.SOLUTION)
       )
     );
-    return rows.map(row => row.entityId);
+    const directSolutionIds = rows.map(row => row.entityId);
+    
+    // Get solutions where user's linked team member name is in the owners array
+    let ownershipSolutionIds: string[] = [];
+    const linkedTeamMember = await this.getLinkedTeamMemberForUser(viewerId);
+    if (linkedTeamMember) {
+      const ownershipRows = await db.select({ id: solutions.id })
+        .from(solutions)
+        .where(
+          and(
+            eq(solutions.isDeleted, false),
+            eq(solutions.userId, linkedTeamMember.userId),
+            sql`${solutions.owners} @> ARRAY[${linkedTeamMember.name}]::text[]`
+          )
+        );
+      ownershipSolutionIds = ownershipRows.map(row => row.id);
+    }
+    
+    // Combine and deduplicate
+    const allSolutionIds = [...new Set([...directSolutionIds, ...ownershipSolutionIds])];
+    return allSolutionIds;
   }
 }
