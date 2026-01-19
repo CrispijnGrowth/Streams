@@ -315,25 +315,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getStreams(userId: string): Promise<StreamWithProgress[]> {
-    try {
-      console.log(`[getStreams] Starting for userId: ${userId}`);
-      const viewableStreamIds = await this.getViewableStreamIds(userId);
-      console.log(`[getStreams] viewableStreamIds: ${viewableStreamIds.length}`);
-      const viewableSolutionIds = await this.getViewableSolutionIds(userId);
-      console.log(`[getStreams] viewableSolutionIds: ${viewableSolutionIds.length}`);
-      
-      // Pre-fetch direct stream viewer IDs to avoid N+1 queries
-      const directStreamViewerIds = await this.getDirectStreamViewerIds(userId);
-      console.log(`[getStreams] directStreamViewerIds: ${directStreamViewerIds.length}`);
-      
-      const whereCondition = and(
-        eq(streams.isDeleted, false),
-        viewableStreamIds.length > 0
-          ? or(eq(streams.userId, userId), inArray(streams.id, viewableStreamIds))
-          : eq(streams.userId, userId)
-      );
-      const rows = await db.select().from(streams).where(whereCondition);
-      console.log(`[getStreams] Found ${rows.length} streams`);
+    const viewableStreamIds = await this.getViewableStreamIds(userId);
+    const viewableSolutionIds = await this.getViewableSolutionIds(userId);
+    
+    // Pre-fetch direct stream viewer IDs to avoid N+1 queries
+    const directStreamViewerIds = await this.getDirectStreamViewerIds(userId);
+    
+    const whereCondition = and(
+      eq(streams.isDeleted, false),
+      viewableStreamIds.length > 0
+        ? or(eq(streams.userId, userId), inArray(streams.id, viewableStreamIds))
+        : eq(streams.userId, userId)
+    );
+    const rows = await db.select().from(streams).where(whereCondition);
       
       // Sort by ordinal to ensure consistent display key numbering
       rows.sort((a, b) => a.ordinal - b.ordinal);
@@ -415,12 +409,7 @@ export class DatabaseStorage implements IStorage {
       displayIndex++;
     }
     
-    console.log(`[getStreams] Completed successfully with ${result.length} streams`);
     return result;
-    } catch (error) {
-      console.error(`[getStreams] ERROR for userId ${userId}:`, error);
-      throw error;
-    }
   }
 
   async getStream(userId: string, id: string): Promise<Stream | undefined> {
@@ -523,16 +512,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getSolutions(userId: string): Promise<SolutionWithProgress[]> {
-    try {
-      console.log(`[getSolutions] Starting for userId: ${userId}`);
-      const viewableSolutionIds = await this.getViewableSolutionIds(userId);
-      console.log(`[getSolutions] viewableSolutionIds: ${viewableSolutionIds.length}`);
-      // Use DIRECT stream viewer IDs (not cascaded) for "show all solutions" access
-      const directStreamViewerIds = await this.getDirectStreamViewerIds(userId);
-      console.log(`[getSolutions] directStreamViewerIds: ${directStreamViewerIds.length}`);
-      // Use ALL viewable stream IDs (including cascaded) for stream ordering
-      const allViewableStreamIds = await this.getViewableStreamIds(userId);
-      console.log(`[getSolutions] allViewableStreamIds: ${allViewableStreamIds.length}`);
+    const viewableSolutionIds = await this.getViewableSolutionIds(userId);
+    // Use DIRECT stream viewer IDs (not cascaded) for "show all solutions" access
+    const directStreamViewerIds = await this.getDirectStreamViewerIds(userId);
+    // Use ALL viewable stream IDs (including cascaded) for stream ordering
+    const allViewableStreamIds = await this.getViewableStreamIds(userId);
     
     // Build conditions for solutions where user is:
     // 1. Owner of the solution
@@ -590,12 +574,7 @@ export class DatabaseStorage implements IStorage {
         displayIndex++;
       }
     }
-    console.log(`[getSolutions] Completed successfully with ${result.length} solutions`);
     return result;
-    } catch (error) {
-      console.error(`[getSolutions] ERROR for userId ${userId}:`, error);
-      throw error;
-    }
   }
 
   async getSolutionsByStream(userId: string, streamId: string): Promise<SolutionWithProgress[]> {
@@ -804,36 +783,29 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getSolution(userId: string, id: string): Promise<Solution | undefined> {
-    try {
-      console.log(`[getSolution] Starting for userId: ${userId}, id: ${id}`);
-      const viewableSolutionIds = await this.getViewableSolutionIds(userId);
-      // Use DIRECT stream viewer IDs (not cascaded) for full stream access
-      const directStreamViewerIds = await this.getDirectStreamViewerIds(userId);
-      
-      // Build conditions for solutions where user is:
-      // 1. Owner of the solution
-      // 2. Direct solution viewer
-      // 3. Direct STREAM viewer (can see ALL solutions in that stream)
-      const orConditions: any[] = [eq(solutions.userId, userId)];
-      if (viewableSolutionIds.length > 0) {
-        orConditions.push(inArray(solutions.id, viewableSolutionIds));
-      }
-      if (directStreamViewerIds.length > 0) {
-        orConditions.push(inArray(solutions.streamId, directStreamViewerIds));
-      }
-      
-      const whereCondition = and(
-        eq(solutions.id, id),
-        eq(solutions.isDeleted, false),
-        orConditions.length > 1 ? or(...orConditions) : orConditions[0]
-      );
-      const [row] = await db.select().from(solutions).where(whereCondition);
-      console.log(`[getSolution] Found: ${row ? 'yes' : 'no'}`);
-      return row ? mapSolutionFromDb(row) : undefined;
-    } catch (error) {
-      console.error(`[getSolution] ERROR for userId ${userId}, id ${id}:`, error);
-      throw error;
+    const viewableSolutionIds = await this.getViewableSolutionIds(userId);
+    // Use DIRECT stream viewer IDs (not cascaded) for full stream access
+    const directStreamViewerIds = await this.getDirectStreamViewerIds(userId);
+    
+    // Build conditions for solutions where user is:
+    // 1. Owner of the solution
+    // 2. Direct solution viewer
+    // 3. Direct STREAM viewer (can see ALL solutions in that stream)
+    const orConditions: any[] = [eq(solutions.userId, userId)];
+    if (viewableSolutionIds.length > 0) {
+      orConditions.push(inArray(solutions.id, viewableSolutionIds));
     }
+    if (directStreamViewerIds.length > 0) {
+      orConditions.push(inArray(solutions.streamId, directStreamViewerIds));
+    }
+    
+    const whereCondition = and(
+      eq(solutions.id, id),
+      eq(solutions.isDeleted, false),
+      orConditions.length > 1 ? or(...orConditions) : orConditions[0]
+    );
+    const [row] = await db.select().from(solutions).where(whereCondition);
+    return row ? mapSolutionFromDb(row) : undefined;
   }
 
   async createSolution(userId: string, data: InsertSolution): Promise<Solution> {
