@@ -1,5 +1,5 @@
 import { drizzle } from "drizzle-orm/node-postgres";
-import { eq, and, desc, ilike, or } from "drizzle-orm";
+import { eq, and, desc, ilike, or, inArray } from "drizzle-orm";
 import { Pool } from "pg";
 import {
   type Stream,
@@ -315,9 +315,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getStreams(userId: string): Promise<StreamWithProgress[]> {
-    const rows = await db.select().from(streams).where(
-      and(eq(streams.userId, userId), eq(streams.isDeleted, false))
+    const viewableStreamIds = await this.getViewableStreamIds(userId);
+    const whereCondition = and(
+      eq(streams.isDeleted, false),
+      viewableStreamIds.length > 0
+        ? or(eq(streams.userId, userId), inArray(streams.id, viewableStreamIds))
+        : eq(streams.userId, userId)
     );
+    const rows = await db.select().from(streams).where(whereCondition);
     
     // Sort by ordinal to ensure consistent display key numbering
     rows.sort((a, b) => a.ordinal - b.ordinal);
@@ -326,8 +331,10 @@ export class DatabaseStorage implements IStorage {
     let displayIndex = 1;
     for (const row of rows) {
       const stream = mapStreamFromDb(row);
+      // Use the stream's owner userId for computing progress, not the viewing user
+      const ownerUserId = row.userId;
       const streamSolutions = await db.select().from(solutions).where(
-        and(eq(solutions.streamId, stream.id), eq(solutions.userId, userId), eq(solutions.isDeleted, false))
+        and(eq(solutions.streamId, stream.id), eq(solutions.userId, ownerUserId), eq(solutions.isDeleted, false))
       );
       
       let totalProgress = 0;
@@ -339,7 +346,7 @@ export class DatabaseStorage implements IStorage {
       const inProgressWithDates: { name: string; progress: number; milestoneDate?: string; priority?: number }[] = [];
 
       for (const sol of streamSolutions) {
-        const stats = await this.computeSolutionProgress(sol.id, userId);
+        const stats = await this.computeSolutionProgress(sol.id, ownerUserId);
         totalProgress += stats.progress;
         doingCount += stats.doingCount;
         blockedCount += stats.blockedCount;
@@ -391,9 +398,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getStream(userId: string, id: string): Promise<Stream | undefined> {
-    const [row] = await db.select().from(streams).where(
-      and(eq(streams.id, id), eq(streams.userId, userId), eq(streams.isDeleted, false))
+    const viewableStreamIds = await this.getViewableStreamIds(userId);
+    const whereCondition = and(
+      eq(streams.id, id),
+      eq(streams.isDeleted, false),
+      viewableStreamIds.length > 0
+        ? or(eq(streams.userId, userId), inArray(streams.id, viewableStreamIds))
+        : eq(streams.userId, userId)
     );
+    const [row] = await db.select().from(streams).where(whereCondition);
     return row ? mapStreamFromDb(row) : undefined;
   }
 
@@ -484,9 +497,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getSolutions(userId: string): Promise<SolutionWithProgress[]> {
-    const rows = await db.select().from(solutions).where(
-      and(eq(solutions.userId, userId), eq(solutions.isDeleted, false))
+    const viewableSolutionIds = await this.getViewableSolutionIds(userId);
+    const viewableStreamIds = await this.getViewableStreamIds(userId);
+    
+    // Build conditions for solutions where user is owner OR viewer of solution OR viewer of parent stream
+    const orConditions: any[] = [eq(solutions.userId, userId)];
+    if (viewableSolutionIds.length > 0) {
+      orConditions.push(inArray(solutions.id, viewableSolutionIds));
+    }
+    if (viewableStreamIds.length > 0) {
+      orConditions.push(inArray(solutions.streamId, viewableStreamIds));
+    }
+    
+    const whereCondition = and(
+      eq(solutions.isDeleted, false),
+      orConditions.length > 1 ? or(...orConditions) : orConditions[0]
     );
+    const rows = await db.select().from(solutions).where(whereCondition);
     
     // Group by streamId and sort by ordinal within each stream
     const byStream = new Map<string, typeof rows>();
@@ -496,10 +523,14 @@ export class DatabaseStorage implements IStorage {
       byStream.set(row.streamId, group);
     }
     
-    // Get stream ordinals for consistent ordering
-    const streamRows = await db.select().from(streams).where(
-      and(eq(streams.userId, userId), eq(streams.isDeleted, false))
+    // Get stream ordinals for consistent ordering - include viewable streams
+    const streamWhereCondition = and(
+      eq(streams.isDeleted, false),
+      viewableStreamIds.length > 0
+        ? or(eq(streams.userId, userId), inArray(streams.id, viewableStreamIds))
+        : eq(streams.userId, userId)
     );
+    const streamRows = await db.select().from(streams).where(streamWhereCondition);
     const streamOrdinalMap = new Map(streamRows.map(s => [s.id, s.ordinal]));
     
     // Sort stream groups by stream ordinal for consistent global ordering
@@ -514,7 +545,9 @@ export class DatabaseStorage implements IStorage {
       let displayIndex = 1;
       for (const row of streamRows) {
         const sol = mapSolutionFromDb(row);
-        const stats = await this.computeSolutionProgress(sol.id, userId);
+        // Use the solution's owner userId for computing progress, not the viewing user
+        const ownerUserId = row.userId;
+        const stats = await this.computeSolutionProgress(sol.id, ownerUserId);
         result.push({ ...sol, ...stats, displayKey: `Solution ${displayIndex}` });
         displayIndex++;
       }
@@ -523,8 +556,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getSolutionsByStream(userId: string, streamId: string): Promise<SolutionWithProgress[]> {
+    const viewableStreamIds = await this.getViewableStreamIds(userId);
+    
+    // Check if user owns the stream or is a viewer
+    const [stream] = await db.select().from(streams).where(eq(streams.id, streamId));
+    if (!stream) return [];
+    
+    const isOwner = stream.userId === userId;
+    const isViewer = viewableStreamIds.includes(streamId);
+    if (!isOwner && !isViewer) return [];
+    
+    // Get solutions owned by the stream's owner
     const rows = await db.select().from(solutions).where(
-      and(eq(solutions.streamId, streamId), eq(solutions.userId, userId), eq(solutions.isDeleted, false))
+      and(eq(solutions.streamId, streamId), eq(solutions.userId, stream.userId), eq(solutions.isDeleted, false))
     );
     
     // Sort by ordinal to ensure consistent display key numbering
@@ -534,7 +578,9 @@ export class DatabaseStorage implements IStorage {
     let displayIndex = 1;
     for (const row of rows) {
       const sol = mapSolutionFromDb(row);
-      const stats = await this.computeSolutionProgress(sol.id, userId);
+      // Use the solution's owner userId for computing progress
+      const ownerUserId = row.userId;
+      const stats = await this.computeSolutionProgress(sol.id, ownerUserId);
       result.push({ ...sol, ...stats, displayKey: `Solution ${displayIndex}` });
       displayIndex++;
     }
@@ -542,8 +588,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getSolutionsByStreamWithBreakdown(userId: string, streamId: string): Promise<SolutionWithBreakdownAndComment[]> {
+    const viewableStreamIds = await this.getViewableStreamIds(userId);
+    
+    // Check if user owns the stream or is a viewer
+    const [stream] = await db.select().from(streams).where(eq(streams.id, streamId));
+    if (!stream) return [];
+    
+    const isOwner = stream.userId === userId;
+    const isViewer = viewableStreamIds.includes(streamId);
+    if (!isOwner && !isViewer) return [];
+    
+    // Get solutions owned by the stream's owner
+    const ownerUserId = stream.userId;
     const rows = await db.select().from(solutions).where(
-      and(eq(solutions.streamId, streamId), eq(solutions.userId, userId), eq(solutions.isDeleted, false))
+      and(eq(solutions.streamId, streamId), eq(solutions.userId, ownerUserId), eq(solutions.isDeleted, false))
     );
     
     // Sort by ordinal to ensure consistent display key numbering
@@ -555,15 +613,16 @@ export class DatabaseStorage implements IStorage {
     
     for (const row of rows) {
       const sol = mapSolutionFromDb(row);
-      const stats = await this.computeSolutionProgress(sol.id, userId);
+      // Use the solution's owner userId for computing progress
+      const stats = await this.computeSolutionProgress(sol.id, ownerUserId);
       
       const solutionDeliverables = await db.select().from(deliverables).where(
-        and(eq(deliverables.solutionId, sol.id), eq(deliverables.userId, userId), eq(deliverables.isDeleted, false))
+        and(eq(deliverables.solutionId, sol.id), eq(deliverables.userId, ownerUserId), eq(deliverables.isDeleted, false))
       );
       solutionDeliverables.sort((a, b) => a.ordinal - b.ordinal);
       
       const solutionActions = await db.select().from(actions).where(
-        and(eq(actions.solutionId, sol.id), eq(actions.userId, userId), eq(actions.isDeleted, false))
+        and(eq(actions.solutionId, sol.id), eq(actions.userId, ownerUserId), eq(actions.isDeleted, false))
       );
       
       const deliverableBreakdown: DeliverableBreakdown[] = solutionDeliverables.map((del) => {
@@ -600,7 +659,7 @@ export class DatabaseStorage implements IStorage {
         });
       }
       
-      const lastComment = await this.getLastComment(userId, CommentEntityType.SOLUTION, sol.id);
+      const lastComment = await this.getLastComment(ownerUserId, CommentEntityType.SOLUTION, sol.id);
       
       results.push({ ...sol, ...stats, deliverableBreakdown, lastComment, displayKey: `Solution ${displayIndex}` });
       displayIndex++;
@@ -688,9 +747,24 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getSolution(userId: string, id: string): Promise<Solution | undefined> {
-    const [row] = await db.select().from(solutions).where(
-      and(eq(solutions.id, id), eq(solutions.userId, userId), eq(solutions.isDeleted, false))
+    const viewableSolutionIds = await this.getViewableSolutionIds(userId);
+    const viewableStreamIds = await this.getViewableStreamIds(userId);
+    
+    // Build conditions for solutions where user is owner OR viewer of solution OR viewer of parent stream
+    const orConditions: any[] = [eq(solutions.userId, userId)];
+    if (viewableSolutionIds.length > 0) {
+      orConditions.push(inArray(solutions.id, viewableSolutionIds));
+    }
+    if (viewableStreamIds.length > 0) {
+      orConditions.push(inArray(solutions.streamId, viewableStreamIds));
+    }
+    
+    const whereCondition = and(
+      eq(solutions.id, id),
+      eq(solutions.isDeleted, false),
+      orConditions.length > 1 ? or(...orConditions) : orConditions[0]
     );
+    const [row] = await db.select().from(solutions).where(whereCondition);
     return row ? mapSolutionFromDb(row) : undefined;
   }
 
