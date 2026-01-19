@@ -250,7 +250,7 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
 
   const deleteDeliverable = useMutation({
     mutationFn: async (id: string) => {
-      return apiRequest("PATCH", `/api/deliverables/${id}`, { isDeleted: true });
+      return apiRequest("DELETE", `/api/deliverables/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/solutions", solutionId, "deliverables"] });
