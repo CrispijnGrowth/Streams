@@ -876,10 +876,14 @@ export class DatabaseStorage implements IStorage {
     
     // When moving a deliverable to a different solution, also move all its child actions
     if (data.solutionId !== undefined && data.solutionId !== existing.solutionId) {
+      console.log(`[MOVE DELIVERABLE] Moving deliverable ${id} from solution ${existing.solutionId} to ${data.solutionId}`);
+      
       // Get the target solution to find its streamId
       const [targetSolution] = await db.select().from(solutions).where(
         and(eq(solutions.id, data.solutionId), eq(solutions.userId, userId))
       );
+      
+      console.log(`[MOVE DELIVERABLE] Target solution found: ${!!targetSolution}, streamId: ${targetSolution?.streamId}`);
       
       if (targetSolution) {
         // Update the deliverable's streamId to match the target solution's stream
@@ -889,7 +893,11 @@ export class DatabaseStorage implements IStorage {
         const childActions = await db.select().from(actions).where(
           and(eq(actions.deliverableId, id), eq(actions.userId, userId))
         );
+        
+        console.log(`[MOVE DELIVERABLE] Found ${childActions.length} child actions to move`);
+        
         for (const action of childActions) {
+          console.log(`[MOVE DELIVERABLE] Moving action ${action.id} (${action.name})`);
           await db.update(actions).set({ 
             solutionId: data.solutionId,
             streamId: targetSolution.streamId 
