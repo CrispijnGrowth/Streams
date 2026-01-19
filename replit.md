@@ -74,6 +74,16 @@ Implements a universal `@mention` system within description fields. Mentions are
 ### Viewer Sharing System
 Allows owners to grant read-only access to streams or solutions for other registered users. Viewers can see shared data but cannot modify it. Access control ensures ownership validation for all viewer operations.
 
+**Cascading Permissions:**
+- **Stream Viewers**: Can see the stream AND all solutions within it
+- **Solution Viewers**: Can see the parent stream AND only their authorized solution(s) within it. Progress/counts on stream cards reflect only visible solutions.
+
+**Implementation Details:**
+- `getViewableStreamIds()`: Returns direct stream viewer IDs plus parent stream IDs from solution viewer permissions
+- `getDirectStreamViewerIds()`: Returns only direct stream viewer IDs (used for full stream access checks)
+- `isDirectStreamViewer()`: Checks if user has direct stream-level viewer access
+- Solution queries filter based on viewer type to prevent data leakage
+
 ## External Dependencies
 
 ### Database
