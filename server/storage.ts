@@ -1349,9 +1349,13 @@ export class MemStorage implements IStorage {
   }
 
   private getEmailDomain(email: string): string | null {
-    const atIndex = email.indexOf('@');
-    if (atIndex === -1) return null;
-    return email.substring(atIndex + 1).toLowerCase();
+    if (!email || !email.includes('@')) return null;
+    const domain = email.split('@')[1]?.toLowerCase();
+    // Validate domain format: must contain at least one dot, no wildcards
+    if (!domain || !domain.includes('.') || domain.length < 3) return null;
+    // Basic DNS label validation
+    if (!/^[a-z0-9][a-z0-9.-]*[a-z0-9]$/.test(domain)) return null;
+    return domain;
   }
 
   async getTeamMembers(userId: string, userEmail: string): Promise<TeamMember[]> {
@@ -1397,7 +1401,9 @@ export class MemStorage implements IStorage {
     if (!domain) return undefined;
     const member = this.teamMembers.get(id);
     if (!member || member.domain !== domain || member.isDeleted) return undefined;
-    const updated = { ...member, ...data };
+    // Strip domain from updates - it can only be set during creation
+    const { domain: _, ...safeData } = data;
+    const updated = { ...member, ...safeData };
     this.teamMembers.set(id, updated);
     return updated;
   }

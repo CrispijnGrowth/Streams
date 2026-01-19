@@ -189,9 +189,13 @@ function mapTeamMemberFromDb(row: any): TeamMember {
 }
 
 export function getEmailDomain(email: string): string | null {
-  const atIndex = email.indexOf('@');
-  if (atIndex === -1) return null;
-  return email.substring(atIndex + 1).toLowerCase();
+  if (!email || !email.includes('@')) return null;
+  const domain = email.split('@')[1]?.toLowerCase();
+  // Validate domain format: must contain at least one dot, no wildcards
+  if (!domain || !domain.includes('.') || domain.length < 3) return null;
+  // Basic DNS label validation
+  if (!/^[a-z0-9][a-z0-9.-]*[a-z0-9]$/.test(domain)) return null;
+  return domain;
 }
 
 function mapStakeholderFromDb(row: any): Stakeholder {
@@ -1856,11 +1860,14 @@ export class DatabaseStorage implements IStorage {
     );
     if (!existing) return undefined;
     
+    // Strip domain from updates - it can only be set during creation
+    const { domain: _, ...safeData } = data;
+    
     const updateData: any = {};
-    if (data.name !== undefined) updateData.name = data.name;
-    if (data.role !== undefined) updateData.role = data.role || null;
-    if (data.photoUrl !== undefined) updateData.photoUrl = data.photoUrl || null;
-    if (data.photoData !== undefined) updateData.photoData = data.photoData || null;
+    if (safeData.name !== undefined) updateData.name = safeData.name;
+    if (safeData.role !== undefined) updateData.role = safeData.role || null;
+    if (safeData.photoUrl !== undefined) updateData.photoUrl = safeData.photoUrl || null;
+    if (safeData.photoData !== undefined) updateData.photoData = safeData.photoData || null;
     
     await db.update(teamMembers).set(updateData).where(eq(teamMembers.id, id));
     
