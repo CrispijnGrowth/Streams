@@ -60,6 +60,11 @@ export function SettingsPage() {
     queryKey: ["/api/admin/pending-users"],
     enabled: isAdmin && !!sessionId,
   });
+
+  const { data: allUsers = [], isLoading: loadingUsers } = useQuery<User[]>({
+    queryKey: ["/api/admin/users"],
+    enabled: isAdmin && !!sessionId,
+  });
   
   const { data: teamMembers = [], isLoading: loadingTeamMembers } = useQuery<TeamMember[]>({
     queryKey: ["/api/team-members"],
@@ -96,10 +101,54 @@ export function SettingsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
       toast({ title: "User approved" });
     },
     onError: () => {
       toast({ title: "Failed to approve user", variant: "destructive" });
+    },
+  });
+
+  const updateRoleMutation = useMutation({
+    mutationFn: async ({ userId, role }: { userId: string; role: "admin" | "member" }) => {
+      const res = await fetch(`/api/admin/users/${userId}/role`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...getSessionHeaders() },
+        body: JSON.stringify({ role }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to update role");
+      }
+      return res.json();
+    },
+    onSuccess: (_, { role }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({ title: role === "admin" ? "User promoted to admin" : "Admin role removed" });
+    },
+    onError: (error: Error) => {
+      toast({ title: error.message, variant: "destructive" });
+    },
+  });
+
+  const deactivateMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const res = await fetch(`/api/admin/users/${userId}/deactivate`, {
+        method: "POST",
+        headers: getSessionHeaders(),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to remove user");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({ title: "User removed" });
+    },
+    onError: (error: Error) => {
+      toast({ title: error.message, variant: "destructive" });
     },
   });
 
@@ -887,51 +936,153 @@ export function SettingsPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
-              <UserPlus className="h-5 w-5" />
-              Pending Approvals
+              <Users className="h-5 w-5" />
+              User Management
             </CardTitle>
-            <CardDescription>Users waiting for access approval</CardDescription>
+            <CardDescription>Manage user access and permissions</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-6">
             {loadingPending ? (
               <div className="flex justify-center py-4">
                 <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
               </div>
-            ) : pendingUsers.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                No pending approval requests
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {pendingUsers.map((pendingUser) => (
-                  <div
-                    key={pendingUser.id}
-                    className="flex items-center justify-between gap-4 p-3 bg-muted rounded-md"
-                    data-testid={`pending-user-${pendingUser.id}`}
-                  >
-                    <div>
-                      <p className="font-medium">{pendingUser.name}</p>
-                      <p className="text-sm text-muted-foreground">{pendingUser.email}</p>
-                    </div>
-                    <Button
-                      size="sm"
-                      onClick={() => approveMutation.mutate(pendingUser.id)}
-                      disabled={approveMutation.isPending}
-                      data-testid={`button-approve-${pendingUser.id}`}
+            ) : pendingUsers.length > 0 && (
+              <div>
+                <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
+                  <UserPlus className="h-4 w-4" />
+                  Pending Approvals ({pendingUsers.length})
+                </h4>
+                <div className="space-y-2">
+                  {pendingUsers.map((pendingUser) => (
+                    <div
+                      key={pendingUser.id}
+                      className="flex items-center justify-between gap-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-md"
+                      data-testid={`pending-user-${pendingUser.id}`}
                     >
-                      {approveMutation.isPending ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <>
-                          <Check className="h-4 w-4 mr-1" />
-                          Approve
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                ))}
+                      <div>
+                        <p className="font-medium">{pendingUser.name}</p>
+                        <p className="text-sm text-muted-foreground">{pendingUser.email}</p>
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={() => approveMutation.mutate(pendingUser.id)}
+                        disabled={approveMutation.isPending}
+                        data-testid={`button-approve-${pendingUser.id}`}
+                      >
+                        {approveMutation.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <>
+                            <Check className="h-4 w-4 mr-1" />
+                            Approve
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
+
+            <div>
+              <h4 className="text-sm font-medium mb-3">Active Users ({allUsers.filter(u => u.role !== "pending").length})</h4>
+              {loadingUsers ? (
+                <div className="flex justify-center py-4">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : allUsers.filter(u => u.role !== "pending").length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  No active users
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {allUsers
+                    .filter(u => u.role !== "pending")
+                    .sort((a, b) => {
+                      if (a.role === "admin" && b.role !== "admin") return -1;
+                      if (a.role !== "admin" && b.role === "admin") return 1;
+                      return a.name.localeCompare(b.name);
+                    })
+                    .map((managedUser) => (
+                      <div
+                        key={managedUser.id}
+                        className="flex items-center justify-between gap-4 p-3 bg-muted rounded-md"
+                        data-testid={`user-${managedUser.id}`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium">{managedUser.name}</p>
+                              {managedUser.role === "admin" && (
+                                <Badge variant="secondary" className="text-xs">
+                                  <Shield className="h-3 w-3 mr-1" />
+                                  Admin
+                                </Badge>
+                              )}
+                              {managedUser.id === user?.id && (
+                                <Badge variant="outline" className="text-xs">You</Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground">{managedUser.email}</p>
+                          </div>
+                        </div>
+                        {managedUser.id !== user?.id && (
+                          <div className="flex items-center gap-2">
+                            {managedUser.role === "admin" ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => updateRoleMutation.mutate({ userId: managedUser.id, role: "member" })}
+                                disabled={updateRoleMutation.isPending}
+                                data-testid={`button-remove-admin-${managedUser.id}`}
+                              >
+                                {updateRoleMutation.isPending ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  "Remove Admin"
+                                )}
+                              </Button>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => updateRoleMutation.mutate({ userId: managedUser.id, role: "admin" })}
+                                disabled={updateRoleMutation.isPending}
+                                data-testid={`button-make-admin-${managedUser.id}`}
+                              >
+                                {updateRoleMutation.isPending ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <>
+                                    <Shield className="h-4 w-4 mr-1" />
+                                    Make Admin
+                                  </>
+                                )}
+                              </Button>
+                            )}
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => deactivateMutation.mutate(managedUser.id)}
+                              disabled={deactivateMutation.isPending}
+                              data-testid={`button-remove-user-${managedUser.id}`}
+                            >
+                              {deactivateMutation.isPending ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <>
+                                  <Trash2 className="h-4 w-4 mr-1" />
+                                  Remove
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
       )}

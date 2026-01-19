@@ -9,6 +9,7 @@ export const users = pgTable("users", {
   role: text("role").notNull().default("pending"),
   showDescriptions: boolean("show_descriptions").notNull().default(true),
   themePreference: text("theme_preference").notNull().default("system"),
+  isDeactivated: boolean("is_deactivated").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -227,6 +228,7 @@ export interface User {
   role: UserRoleType;
   showDescriptions: boolean;
   themePreference: "light" | "dark" | "system";
+  isDeactivated: boolean;
   createdAt: string;
 }
 

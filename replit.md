@@ -80,13 +80,27 @@ Progress is computed automatically by rolling up completion percentages from ste
 - **First Admin**: Hardcoded as `maarten.bal@capgemini.com` (auto-approved on registration)
 - **User Roles**: `admin` (full access + user management), `member` (standard access), `pending` (awaiting approval)
 - **Email Service**: Postmark integration for password reset links, admin notifications, and approval emails
+- **User Deactivation**: Soft-delete via `isDeactivated` field - deactivated users cannot log in and their sessions are revoked
 - **Key Files**: 
   - `server/auth.ts` - AuthStorage class with user, session, password hashing, and token management
   - `server/email.ts` - Postmark email service for transactional emails
   - `client/src/lib/auth-context.tsx` - React context for authentication state
   - `client/src/pages/login.tsx` - Login/registration forms with password fields
   - `client/src/pages/reset-password.tsx` - Password reset page
-  - `client/src/pages/settings.tsx` - User preferences and admin approval panel
+  - `client/src/pages/settings.tsx` - User preferences and admin user management panel
+
+### Admin User Management
+- **User Management Section**: Admin-only section in Settings page for managing all users
+- **View All Users**: Admins can see list of active users with their roles and status
+- **Role Management**: Promote users to admin or demote admins to regular members
+- **User Removal**: Soft-delete users (deactivation) - removes access without deleting data
+- **Guardrails**: Cannot change own role, cannot deactivate self, cannot remove/demote last admin
+- **API Endpoints**:
+  - `GET /api/admin/users` - List all active users
+  - `PATCH /api/admin/users/:userId/role` - Update user role (admin/member)
+  - `POST /api/admin/users/:userId/deactivate` - Soft-delete user
+  - `POST /api/admin/users/:userId/reactivate` - Restore deactivated user
+- **Visibility**: Normal users do not see the User Management section
 
 ### Example Data Seeding
 - **Automatic Seeding**: New users receive example data when approved or on first login

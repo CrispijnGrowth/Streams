@@ -271,6 +271,88 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/admin/users", authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+      const users = await authStorage.getActiveUsers();
+      res.json(users);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch users" });
+    }
+  });
+
+  app.patch("/api/admin/users/:userId/role", authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+      const { role } = req.body;
+      if (role !== "admin" && role !== "member") {
+        return res.status(400).json({ error: "Invalid role. Must be 'admin' or 'member'" });
+      }
+
+      const targetUserId = req.params.userId;
+      
+      if (targetUserId === req.userId) {
+        return res.status(400).json({ error: "You cannot change your own role" });
+      }
+
+      if (role === "member") {
+        const adminCount = await authStorage.countAdmins();
+        const targetUser = await authStorage.getUserById(targetUserId);
+        if (targetUser?.role === "admin" && adminCount <= 1) {
+          return res.status(400).json({ error: "Cannot remove the last admin" });
+        }
+      }
+
+      const user = await authStorage.updateUserRole(targetUserId, role);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      res.json({ message: `User role updated to ${role}`, user });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update user role" });
+    }
+  });
+
+  app.post("/api/admin/users/:userId/deactivate", authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+      const targetUserId = req.params.userId;
+      
+      if (targetUserId === req.userId) {
+        return res.status(400).json({ error: "You cannot deactivate yourself" });
+      }
+
+      const targetUser = await authStorage.getUserById(targetUserId);
+      if (!targetUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      if (targetUser.role === "admin") {
+        const adminCount = await authStorage.countAdmins();
+        if (adminCount <= 1) {
+          return res.status(400).json({ error: "Cannot deactivate the last admin" });
+        }
+      }
+
+      const user = await authStorage.deactivateUser(targetUserId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      res.json({ message: "User deactivated", user });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to deactivate user" });
+    }
+  });
+
+  app.post("/api/admin/users/:userId/reactivate", authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+      const user = await authStorage.reactivateUser(req.params.userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      res.json({ message: "User reactivated", user });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to reactivate user" });
+    }
+  });
+
   app.get("/api/streams", authMiddleware, async (req, res) => {
     try {
       const streams = await storage.getStreams(req.userId!);

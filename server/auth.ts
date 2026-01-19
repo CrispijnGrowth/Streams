@@ -24,6 +24,7 @@ class AuthStorage {
       role: dbUser.role as User["role"],
       showDescriptions: dbUser.showDescriptions,
       themePreference: dbUser.themePreference as User["themePreference"],
+      isDeactivated: dbUser.isDeactivated,
       createdAt,
     };
   }
@@ -71,6 +72,7 @@ class AuthStorage {
     if (result.length === 0) return null;
     const dbUser = result[0];
     if (!dbUser.passwordHash) return null;
+    if (dbUser.isDeactivated) return null;
     const isValid = await bcrypt.compare(password, dbUser.passwordHash);
     if (!isValid) return null;
     return this.dbUserToUser(dbUser);
@@ -107,6 +109,44 @@ class AuthStorage {
     }
     const [updated] = await db.update(users)
       .set(updateData)
+      .where(eq(users.id, userId))
+      .returning();
+    if (!updated) return undefined;
+    return this.dbUserToUser(updated);
+  }
+
+  async getActiveUsers(): Promise<User[]> {
+    const result = await db.select().from(users).where(eq(users.isDeactivated, false));
+    return result.map(u => this.dbUserToUser(u));
+  }
+
+  async countAdmins(): Promise<number> {
+    const result = await db.select().from(users).where(eq(users.role, UserRole.ADMIN));
+    return result.filter(u => !u.isDeactivated).length;
+  }
+
+  async updateUserRole(userId: string, newRole: "admin" | "member"): Promise<User | undefined> {
+    const [updated] = await db.update(users)
+      .set({ role: newRole })
+      .where(eq(users.id, userId))
+      .returning();
+    if (!updated) return undefined;
+    return this.dbUserToUser(updated);
+  }
+
+  async deactivateUser(userId: string): Promise<User | undefined> {
+    const [updated] = await db.update(users)
+      .set({ isDeactivated: true })
+      .where(eq(users.id, userId))
+      .returning();
+    if (!updated) return undefined;
+    await db.delete(sessions).where(eq(sessions.userId, userId));
+    return this.dbUserToUser(updated);
+  }
+
+  async reactivateUser(userId: string): Promise<User | undefined> {
+    const [updated] = await db.update(users)
+      .set({ isDeactivated: false })
       .where(eq(users.id, userId))
       .returning();
     if (!updated) return undefined;
