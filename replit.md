@@ -1,180 +1,99 @@
 # Streams App - Project Orchestration
 
 ## Overview
-
-Streams App is a personal project orchestration tool designed for managing "Sovereign Cloud Streams" with visual timelines and Kanban boards. The application follows a hierarchical data model: Streams → Solutions → Deliverables → Actions → Steps, allowing users to track progress at multiple levels of granularity.
-
-The app is built as a full-stack TypeScript application with a React frontend and Express backend, using PostgreSQL for data persistence. It emphasizes a utility-first design approach with Linear-inspired aesthetics focused on clarity, efficiency, and data visibility.
+Streams App is a personal project orchestration tool designed for managing "Sovereign Cloud Streams" with visual timelines and Kanban boards. It enables users to track progress at multiple levels of granularity through a hierarchical data model: Streams → Solutions → Deliverables → Actions → Steps. The application is a full-stack TypeScript application with a React frontend and Express backend, utilizing PostgreSQL for data persistence. It emphasizes a utility-first design approach with Linear-inspired aesthetics, focusing on clarity, efficiency, and comprehensive data visibility.
 
 ## User Preferences
-
 Preferred communication style: Simple, everyday language.
 
 ## System Architecture
 
-### Frontend Architecture
+### Frontend
 - **Framework**: React 18 with TypeScript
-- **Routing**: Wouter (lightweight React router)
-- **State Management**: TanStack Query (React Query) for server state
-- **UI Components**: shadcn/ui component library built on Radix UI primitives
+- **Routing**: Wouter
+- **State Management**: TanStack Query (React Query)
+- **UI Components**: shadcn/ui (built on Radix UI)
 - **Styling**: Tailwind CSS with custom design tokens and CSS variables for theming
-- **Build Tool**: Vite with hot module replacement
+- **Build Tool**: Vite
 
-### Backend Architecture
+### Backend
 - **Framework**: Express.js with TypeScript
-- **API Design**: RESTful endpoints under `/api/*` prefix
-- **Server**: Node.js HTTP server with Vite middleware in development
-- **Static Serving**: Built client assets served from `dist/public` in production
+- **API Design**: RESTful endpoints
+- **Server**: Node.js
+- **Static Serving**: Built client assets
 
 ### Data Model
 The application uses a five-level hierarchy with per-user data isolation:
-1. **Streams**: Top-level project containers with phases, owners, and labels
-2. **Solutions**: Major milestones within streams with target dates (renamed from original "Deliverables")
-3. **Deliverables**: Work packages within solutions, grouping related actions
-4. **Actions**: Trackable tasks with Kanban status (Backlog, To Execute, Executing, Blocked, Delegated, Done, Archive)
-5. **Steps**: Granular checklist items within actions
+1. **Streams**: Top-level project containers.
+2. **Solutions**: Major milestones within streams.
+3. **Deliverables**: Work packages within solutions, grouping related actions.
+4. **Actions**: Trackable tasks with Kanban status.
+5. **Steps**: Granular checklist items within actions.
 
-**Kanban Board**: Actions are displayed in a grouped Kanban layout when deliverables exist - each deliverable row has a fluorescent border and contains its actions across status columns. Drag-and-drop supports both status changes and moving actions between deliverables.
-
-**Data Isolation**: Each entity (Stream, Solution, Deliverable, Action, Step) includes a `userId` field. All CRUD operations are scoped to the authenticated user, and parent ownership is validated when creating or updating child entities. Users can only see and modify their own data.
-
-Progress is computed automatically by rolling up completion percentages from steps → actions → solutions → streams.
+Progress is automatically computed by rolling up completion percentages from steps to streams. The Kanban board displays actions grouped by deliverables, supporting drag-and-drop for status and deliverable changes. All CRUD operations are scoped to the authenticated user, ensuring data isolation.
 
 ### Key Design Patterns
-- **Shared Schema**: Types and validation schemas defined in `shared/schema.ts` using Zod, shared between frontend and backend
-- **Storage Abstraction**: `IStorage` interface in `server/storage.ts` allows swapping data persistence implementations
-- **Path Aliases**: `@/` for client source, `@shared/` for shared code, configured in both TypeScript and Vite
+- **Shared Schema**: Types and validation using Zod, shared between frontend and backend.
+- **Storage Abstraction**: `IStorage` interface for flexible data persistence.
+- **Path Aliases**: `@/` for client source, `@shared/` for shared code.
 
 ### Theming System
-- Light and dark mode support via CSS variables
-- Theme preference persisted to localStorage
-- Status colors for action states (backlog, executing, blocked, etc.)
-- Momentum indicators (Active, Slowing, Stalled) for stream health
+Supports light and dark modes via CSS variables, with preference persisted in localStorage. Includes status colors for action states and momentum indicators for stream health.
+
+### Authentication System
+- **Method**: Password-based authentication with bcrypt hashing.
+- **Approval Flow**: New user registrations require admin approval.
+- **Password Reset**: Magic links sent via email.
+- **Session Management**: In-memory session storage with a 7-day TTL.
+- **User Roles**: `admin`, `member`, `pending`.
+
+### Admin User Management
+Provides an admin-only section for managing users, including role assignment, deactivation/reactivation, and a list of active users.
+
+### Example Data Seeding
+New users automatically receive example data upon approval or first login, including three pre-populated streams with full hierarchies.
+
+### Team Members System
+Manages team members with names, roles, and photos (stored as base64 data URIs in PostgreSQL). Team member avatars are displayed on Stream, Solution, and Action cards.
+
+### Edit/Operate Mode System
+A toggle allows switching between "Operate" (default, navigates to detail view) and "Edit" (opens edit dialogs) modes. The system automatically switches to Edit mode for empty pages.
+
+### Excel Import/Export System
+Allows exporting all project data to an Excel file and importing data from an Excel template. The import function supports updating existing records by matching names within the hierarchy.
+
+### Stakeholder Tagging System
+Enables tagging stakeholders on streams, solutions, actions, and steps. Uses an `@mention-style` UI for searching, creating, and tagging stakeholders within edit dialogs.
+
+### Meetings System
+Facilitates meeting management with a three-column layout: stakeholder search, tagged items management, and past meetings list. Supports creating meetings from tagged items, adding discussion notes, and marking items as resolved.
+
+### @Mention System
+Implements a universal `@mention` system within description fields. Mentions are stored in a canonical format and rendered visually with a `MentionHighlighter` component.
+
+### Viewer Sharing System
+Allows owners to grant read-only access to streams or solutions for other registered users. Viewers can see shared data but cannot modify it. Access control ensures ownership validation for all viewer operations.
 
 ## External Dependencies
 
 ### Database
-- **PostgreSQL**: Primary data store configured via `DATABASE_URL` environment variable
-- **Drizzle ORM**: Type-safe database operations with schema defined in `shared/schema.ts`
-- **Drizzle Kit**: Database migration tooling with `db:push` command
+- **PostgreSQL**: Primary data store.
+- **Drizzle ORM**: Type-safe database operations.
+- **Drizzle Kit**: Database migration tooling.
 
 ### UI Libraries
-- **Radix UI**: Comprehensive set of accessible, unstyled primitives (dialog, dropdown, tooltip, tabs, etc.)
-- **Lucide React**: Icon library
-- **date-fns**: Date formatting and manipulation
-- **Embla Carousel**: Carousel/slider functionality
-- **cmdk**: Command palette component
-- **Vaul**: Drawer component
+- **Radix UI**: Accessible, unstyled primitives.
+- **Lucide React**: Icon library.
+- **date-fns**: Date formatting and manipulation.
+- **Embla Carousel**: Carousel functionality.
+- **cmdk**: Command palette component.
+- **Vaul**: Drawer component.
 
 ### Build & Development
-- **Vite**: Frontend bundler with React plugin
-- **esbuild**: Server bundling for production
-- **tsx**: TypeScript execution for development server
-- **Tailwind CSS**: Utility-first CSS framework with PostCSS
+- **Vite**: Frontend bundler.
+- **esbuild**: Server bundling.
+- **tsx**: TypeScript execution for development server.
+- **Tailwind CSS**: Utility-first CSS framework.
 
-### Authentication System
-- **Password-Based Authentication**: Email and password login with bcrypt hashing (12 rounds)
-- **Admin Approval Flow**: New user registrations require admin approval before access
-- **Password Reset**: Magic links sent via email for password recovery (Postmark integration)
-- **Session Management**: In-memory session storage with 7-day TTL, using `x-session-id` header
-- **First Admin**: Hardcoded as `maarten.bal@capgemini.com` (auto-approved on registration)
-- **User Roles**: `admin` (full access + user management), `member` (standard access), `pending` (awaiting approval)
-- **Email Service**: Postmark integration for password reset links, admin notifications, and approval emails
-- **User Deactivation**: Soft-delete via `isDeactivated` field - deactivated users cannot log in and their sessions are revoked
-- **Key Files**: 
-  - `server/auth.ts` - AuthStorage class with user, session, password hashing, and token management
-  - `server/email.ts` - Postmark email service for transactional emails
-  - `client/src/lib/auth-context.tsx` - React context for authentication state
-  - `client/src/pages/login.tsx` - Login/registration forms with password fields
-  - `client/src/pages/reset-password.tsx` - Password reset page
-  - `client/src/pages/settings.tsx` - User preferences and admin user management panel
-
-### Admin User Management
-- **User Management Section**: Admin-only section in Settings page for managing all users
-- **View All Users**: Admins can see list of active users with their roles and status
-- **Role Management**: Promote users to admin or demote admins to regular members
-- **User Removal**: Soft-delete users (deactivation) - removes access without deleting data
-- **Guardrails**: Cannot change own role, cannot deactivate self, cannot remove/demote last admin
-- **API Endpoints**:
-  - `GET /api/admin/users` - List all active users
-  - `PATCH /api/admin/users/:userId/role` - Update user role (admin/member)
-  - `POST /api/admin/users/:userId/deactivate` - Soft-delete user
-  - `POST /api/admin/users/:userId/reactivate` - Restore deactivated user
-- **Visibility**: Normal users do not see the User Management section
-
-### Example Data Seeding
-- **Automatic Seeding**: New users receive example data when approved or on first login
-- **Three Example Streams**: "[Example] Marketing Campaign Launch", "[Example] Build a Sailboat", "[Example] Company Christmas Party"
-- **Full Hierarchy**: Each stream contains solutions, deliverables, actions (with varied statuses), and steps
-- **Methods**: `storage.seedExampleData(userId)` and `storage.hasExampleData(userId)` for one-time seeding
-- **Trigger Points**: Called in `/api/admin/approve/:userId` and `/api/auth/login` routes
-
-### Team Members System
-- **Team Members Table**: `team_members` table with id, userId, name, role, photoUrl, photoData, ordinal, isDeleted fields
-- **Photo Storage**: Uses portable base64 data URIs stored in `photoData` column (max ~500KB per photo after base64 encoding). No external object storage required - works uniformly across Replit dev, Azure production, and any other platform
-- **Management UI**: Settings page includes Team Members section for adding/editing/deleting team members
-- **Owner Selection**: Forms for Stream/Solution/Action use team member names as owner suggestions
-- **Avatar Display**: Stream, Solution, and Action cards display owner avatars (uses photoData as primary source, photoUrl as legacy fallback)
-- **Key Hook**: `useTeamMembers()` in `client/src/hooks/use-suggestions.ts` fetches team members for current user
-
-### Edit/Operate Mode System
-- **Mode Toggle**: Header contains Edit/Operate mode toggle button
-- **Operate Mode** (default): Clicking cards navigates to detail view
-- **Edit Mode**: Clicking cards opens edit dialog, cards show dashed primary border
-- **Auto-Edit for Empty States**: When a page has no data (no streams, solutions, or actions), mode automatically switches to Edit so users can clearly see where to add items
-- **Key File**: `client/src/lib/mode-context.tsx` - ModeProvider with setAutoEditForEmptyState API
-
-### Excel Import/Export System
-- **Export**: Download all data (streams, solutions, deliverables, actions, steps) as Excel file with descriptions
-- **Import**: Upload Excel file to create new data - uses template with hierarchical keys for relationships
-- **Update Mode**: Toggle in import UI to update existing records by matching names (within parent hierarchy)
-- **Template Download**: Provides example template with expected column headers for each sheet
-- **Matching Logic**: Streams by name, Solutions by name+stream, Deliverables by name+solution, Actions by name+solution+deliverable
-- **Stats Display**: Shows counts for both created and updated records after import
-
-### Stakeholder Tagging System
-- **Stakeholders Table**: `stakeholders` table with id, userId, firstName, lastName, email, organization, role, isDeleted fields
-- **Stakeholder Tags Table**: `stakeholder_tags` table linking stakeholders to entities (stream, solution, action, step) via entityType and entityId
-- **StakeholderTagPicker Component**: @mention-style UI in edit dialogs for search, create-on-the-fly, and tagging stakeholders - only visible when editing existing entities
-- **Integration**: Stakeholder tagging available in stream, solution, action, and step edit forms
-- **Key Files**: 
-  - `client/src/components/stakeholder-tag-picker.tsx` - Inline search and tagging component
-  - `shared/schema.ts` - Schema definitions for stakeholders and stakeholder_tags tables
-
-### Meetings System
-- **Meetings Table**: `meetings` table with id, userId, title, description, scheduledAt, status fields
-- **Meeting Items Table**: `meeting_items` table linking stakeholder_tags to meetings with discussionNotes and resolved status
-- **Three-Column Layout**: Stakeholder search (left), tagged items management with bulk select/untag (center), past meetings list (right)
-- **Meeting Workflow**: Search stakeholders → view their tagged items → select items → create meeting → add discussion notes → mark resolved
-- **CRUD Operations**: Full create, view, edit, delete functionality for meetings and meeting items
-- **Key Files**:
-  - `client/src/pages/meetings.tsx` - Meetings page with full workflow
-  - `server/routes.ts` - API routes for stakeholders, tags, meetings, and meeting items
-
-### @Mention System
-- **Canonical Format**: Mentions stored as `@[FirstName LastName](stakeholder:uuid)` to preserve stakeholder IDs
-- **MentionableTextArea Component**: Replaces Textarea in edit dialogs, triggers popover on @ typing with keyboard navigation (↑↓ to select, Enter to insert, Tab to create new)
-- **MentionHighlighter Component**: Parses and renders mentions with visual styling (primary color pill with @ icon)
-- **Key Files**:
-  - `client/src/hooks/use-stakeholder-mentions.ts` - Hook with formatMention/parseMentions utilities
-  - `client/src/components/mentionable-textarea.tsx` - Controlled textarea with mention detection
-  - `client/src/components/mention-highlighter.tsx` - Display component for rendering mentions
-
-### Recent Changes
-- 2026-01-12: Added universal @mention system - type @ in description fields to tag stakeholders inline with popover search and creation
-- 2026-01-12: Added Stakeholder Tagging System - tag stakeholders on streams, solutions, actions, and steps for tracking discussion items
-- 2026-01-12: Added Meetings page - three-column layout for managing stakeholder-tagged items with discussion notes and resolution tracking
-- 2026-01-12: Added Steps section to EditActionDialog - inline view, create, toggle completion, and delete of steps within action edit form
-- 2026-01-10: Refined hero transition - card expansion now stops 5px below ClassNavigator breadcrumb instead of filling entire viewport
-- 2026-01-08: Replaced object storage with portable database photo storage - team member photos now stored as base64 data URIs in PostgreSQL (photoData column), works uniformly across all deployment platforms
-- 2026-01-08: Added update mode for Excel import - can now update existing records by matching names
-- 2026-01-07: Added auto-edit mode for empty states - pages switch to Edit mode when no data exists
-- 2026-01-07: Improved multi-owner display - all owners now shown as smaller stacked avatars in top-right corner
-- 2026-01-07: Added Team Members system - manage team members with photos and roles, displayed as avatars on cards
-- 2026-01-04: Added example data seeding system with three pre-populated streams for new users
-- 2026-01-04: Added new Deliverable entity between Solution and Action - actions can now be grouped by deliverable in Kanban view with fluorescent row borders
-- 2026-01-04: Renamed "Deliverable" to "Solution" throughout the application - Solutions are now milestones within Streams
-- 2026-01-04: Implemented user-specific data isolation - each user has private streams, solutions, deliverables, actions, and steps
-- 2026-01-04: Changed from magic-link to password-based authentication with password reset via email
-- 2026-01-04: Added Postmark email integration for password reset and admin notifications
-- 2026-01-03: Implemented custom magic-link authentication system with admin approval workflow
+### Authentication
+- **Postmark**: Email service for transactional emails (password resets, admin notifications).
