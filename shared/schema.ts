@@ -10,6 +10,7 @@ export const users = pgTable("users", {
   showDescriptions: boolean("show_descriptions").notNull().default(true),
   themePreference: text("theme_preference").notNull().default("system"),
   isDeactivated: boolean("is_deactivated").notNull().default(false),
+  avatarData: text("avatar_data"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -121,6 +122,7 @@ export const teamMembers = pgTable("team_members", {
   role: text("role"),
   photoUrl: text("photo_url"),
   photoData: text("photo_data"),
+  linkedUserId: text("linked_user_id"),
   ordinal: integer("ordinal").notNull(),
   isDeleted: boolean("is_deleted").notNull().default(false),
 });
@@ -381,6 +383,7 @@ export interface TeamMember {
   role?: string;
   photoUrl?: string;
   photoData?: string;
+  linkedUserId?: string;
   ordinal: number;
   isDeleted: boolean;
 }
