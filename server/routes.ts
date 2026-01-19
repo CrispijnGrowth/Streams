@@ -346,7 +346,11 @@ export async function registerRoutes(
       if (!pendingUser) {
         return res.status(404).json({ error: "User not found" });
       }
-      const matchingTeamMembers = await storage.findMatchingTeamMembers(pendingUser.name);
+      const admin = await authStorage.getUserById(req.userId!);
+      if (!admin) {
+        return res.status(401).json({ error: "Admin user not found" });
+      }
+      const matchingTeamMembers = await storage.findMatchingTeamMembers(admin.email);
       res.json(matchingTeamMembers);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch matching team members" });
@@ -362,7 +366,7 @@ export async function registerRoutes(
       }
       
       if (teamMemberId) {
-        await storage.linkUserToTeamMember(user.id, teamMemberId);
+        await storage.linkUserToTeamMember(user.id, user.email, teamMemberId);
       }
       
       await storage.seedExampleData(user.id);
@@ -1378,7 +1382,11 @@ export async function registerRoutes(
   // Team Members API
   app.get("/api/team-members", authMiddleware, async (req, res) => {
     try {
-      const members = await storage.getTeamMembers(req.userId!);
+      const user = await authStorage.getUserById(req.userId!);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      const members = await storage.getTeamMembers(req.userId!, user.email);
       res.json(members);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch team members" });
@@ -1387,11 +1395,15 @@ export async function registerRoutes(
 
   app.post("/api/team-members", authMiddleware, async (req, res) => {
     try {
+      const user = await authStorage.getUserById(req.userId!);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
       const parsed = insertTeamMemberSchema.safeParse(req.body);
       if (!parsed.success) {
         return res.status(400).json({ error: "Invalid team member data" });
       }
-      const member = await storage.createTeamMember(req.userId!, parsed.data);
+      const member = await storage.createTeamMember(req.userId!, user.email, parsed.data);
       res.status(201).json(member);
     } catch (error) {
       res.status(500).json({ error: "Failed to create team member" });
@@ -1400,7 +1412,11 @@ export async function registerRoutes(
 
   app.patch("/api/team-members/:id", authMiddleware, async (req, res) => {
     try {
-      const member = await storage.updateTeamMember(req.userId!, req.params.id, req.body);
+      const user = await authStorage.getUserById(req.userId!);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      const member = await storage.updateTeamMember(req.userId!, req.params.id, req.body, user.email);
       if (!member) {
         return res.status(404).json({ error: "Team member not found" });
       }
@@ -1412,7 +1428,11 @@ export async function registerRoutes(
 
   app.delete("/api/team-members/:id", authMiddleware, async (req, res) => {
     try {
-      const success = await storage.deleteTeamMember(req.userId!, req.params.id);
+      const user = await authStorage.getUserById(req.userId!);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      const success = await storage.deleteTeamMember(req.userId!, req.params.id, user.email);
       if (!success) {
         return res.status(404).json({ error: "Team member not found" });
       }

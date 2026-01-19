@@ -103,14 +103,14 @@ export interface IStorage {
   updateComment(userId: string, id: string, content: string): Promise<Comment | undefined>;
   deleteComment(userId: string, id: string): Promise<boolean>;
 
-  getTeamMembers(userId: string): Promise<TeamMember[]>;
-  getTeamMember(userId: string, id: string): Promise<TeamMember | undefined>;
-  createTeamMember(userId: string, data: InsertTeamMember): Promise<TeamMember>;
-  updateTeamMember(userId: string, id: string, data: Partial<InsertTeamMember>): Promise<TeamMember | undefined>;
-  deleteTeamMember(userId: string, id: string): Promise<boolean>;
-  findMatchingTeamMembers(userName: string): Promise<TeamMember[]>;
-  linkUserToTeamMember(userId: string, teamMemberId: string): Promise<TeamMember | undefined>;
-  getLinkedTeamMemberForUser(userId: string): Promise<TeamMember | null>;
+  getTeamMembers(userId: string, userEmail: string): Promise<TeamMember[]>;
+  getTeamMember(userId: string, id: string, userEmail: string): Promise<TeamMember | undefined>;
+  createTeamMember(userId: string, userEmail: string, data: InsertTeamMember): Promise<TeamMember>;
+  updateTeamMember(userId: string, id: string, data: Partial<InsertTeamMember>, userEmail: string): Promise<TeamMember | undefined>;
+  deleteTeamMember(userId: string, id: string, userEmail: string): Promise<boolean>;
+  findMatchingTeamMembers(adminEmail: string): Promise<TeamMember[]>;
+  linkUserToTeamMember(userId: string, userEmail: string, teamMemberId: string): Promise<TeamMember | undefined>;
+  getLinkedTeamMemberForUser(userId: string, userEmail: string): Promise<TeamMember | null>;
 
   getStakeholders(userId: string): Promise<Stakeholder[]>;
   getStakeholder(userId: string, id: string): Promise<Stakeholder | undefined>;
@@ -1348,25 +1348,40 @@ export class MemStorage implements IStorage {
     return true;
   }
 
-  async getTeamMembers(userId: string): Promise<TeamMember[]> {
+  private getEmailDomain(email: string): string | null {
+    const atIndex = email.indexOf('@');
+    if (atIndex === -1) return null;
+    return email.substring(atIndex + 1).toLowerCase();
+  }
+
+  async getTeamMembers(userId: string, userEmail: string): Promise<TeamMember[]> {
+    const domain = this.getEmailDomain(userEmail);
+    if (!domain) return [];
     return Array.from(this.teamMembers.values())
-      .filter((m) => m.userId === userId && !m.isDeleted)
+      .filter((m) => m.domain === domain && !m.isDeleted)
       .sort((a, b) => a.ordinal - b.ordinal);
   }
 
-  async getTeamMember(userId: string, id: string): Promise<TeamMember | undefined> {
+  async getTeamMember(userId: string, id: string, userEmail: string): Promise<TeamMember | undefined> {
+    const domain = this.getEmailDomain(userEmail);
+    if (!domain) return undefined;
     const member = this.teamMembers.get(id);
-    if (!member || member.userId !== userId || member.isDeleted) return undefined;
+    if (!member || member.domain !== domain || member.isDeleted) return undefined;
     return member;
   }
 
-  async createTeamMember(userId: string, data: InsertTeamMember): Promise<TeamMember> {
+  async createTeamMember(userId: string, userEmail: string, data: InsertTeamMember): Promise<TeamMember> {
     const id = randomUUID();
-    const userMembers = Array.from(this.teamMembers.values()).filter((m) => m.userId === userId);
-    const ordinal = userMembers.length + 1;
+    const domain = this.getEmailDomain(userEmail);
+    if (!domain) {
+      throw new Error("Invalid email domain");
+    }
+    const domainMembers = Array.from(this.teamMembers.values()).filter((m) => m.domain === domain);
+    const ordinal = domainMembers.length + 1;
     const member: TeamMember = {
       id,
       userId,
+      domain,
       name: data.name,
       role: data.role,
       photoUrl: data.photoUrl,
@@ -1377,30 +1392,37 @@ export class MemStorage implements IStorage {
     return member;
   }
 
-  async updateTeamMember(userId: string, id: string, data: Partial<InsertTeamMember>): Promise<TeamMember | undefined> {
+  async updateTeamMember(userId: string, id: string, data: Partial<InsertTeamMember>, userEmail: string): Promise<TeamMember | undefined> {
+    const domain = this.getEmailDomain(userEmail);
+    if (!domain) return undefined;
     const member = this.teamMembers.get(id);
-    if (!member || member.userId !== userId || member.isDeleted) return undefined;
+    if (!member || member.domain !== domain || member.isDeleted) return undefined;
     const updated = { ...member, ...data };
     this.teamMembers.set(id, updated);
     return updated;
   }
 
-  async deleteTeamMember(userId: string, id: string): Promise<boolean> {
+  async deleteTeamMember(userId: string, id: string, userEmail: string): Promise<boolean> {
+    const domain = this.getEmailDomain(userEmail);
+    if (!domain) return false;
     const member = this.teamMembers.get(id);
-    if (!member || member.userId !== userId) return false;
+    if (!member || member.domain !== domain) return false;
     member.isDeleted = true;
     return true;
   }
 
-  async findMatchingTeamMembers(_userName: string): Promise<TeamMember[]> {
-    return [];
+  async findMatchingTeamMembers(adminEmail: string): Promise<TeamMember[]> {
+    const domain = this.getEmailDomain(adminEmail);
+    if (!domain) return [];
+    return Array.from(this.teamMembers.values())
+      .filter((m) => m.domain === domain && !m.isDeleted);
   }
 
-  async linkUserToTeamMember(_userId: string, _teamMemberId: string): Promise<TeamMember | undefined> {
+  async linkUserToTeamMember(_userId: string, _userEmail: string, _teamMemberId: string): Promise<TeamMember | undefined> {
     return undefined;
   }
 
-  async getLinkedTeamMemberForUser(_userId: string): Promise<TeamMember | null> {
+  async getLinkedTeamMemberForUser(_userId: string, _userEmail: string): Promise<TeamMember | null> {
     return null;
   }
 

@@ -1,5 +1,5 @@
 import { drizzle } from "drizzle-orm/node-postgres";
-import { eq, and, desc, ilike, or, inArray, sql } from "drizzle-orm";
+import { eq, and, desc, ilike, or, inArray, sql, like } from "drizzle-orm";
 import { Pool } from "pg";
 import {
   type Stream,
@@ -56,6 +56,7 @@ import {
   meetings,
   meetingItems,
   viewers,
+  users,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import type { IStorage } from "./storage";
@@ -176,6 +177,7 @@ function mapTeamMemberFromDb(row: any): TeamMember {
   return {
     id: row.id,
     userId: row.userId,
+    domain: row.domain,
     name: row.name,
     role: row.role || undefined,
     photoUrl: row.photoUrl || undefined,
@@ -184,6 +186,12 @@ function mapTeamMemberFromDb(row: any): TeamMember {
     ordinal: row.ordinal,
     isDeleted: row.isDeleted,
   };
+}
+
+export function getEmailDomain(email: string): string | null {
+  const atIndex = email.indexOf('@');
+  if (atIndex === -1) return null;
+  return email.substring(atIndex + 1).toLowerCase();
 }
 
 function mapStakeholderFromDb(row: any): Stakeholder {
@@ -1796,29 +1804,38 @@ export class DatabaseStorage implements IStorage {
     return true;
   }
 
-  async getTeamMembers(userId: string): Promise<TeamMember[]> {
+  async getTeamMembers(userId: string, userEmail: string): Promise<TeamMember[]> {
+    const domain = getEmailDomain(userEmail);
+    if (!domain) return [];
     const rows = await db.select().from(teamMembers).where(
-      and(eq(teamMembers.userId, userId), eq(teamMembers.isDeleted, false))
+      and(eq(teamMembers.domain, domain), eq(teamMembers.isDeleted, false))
     );
     return rows.sort((a, b) => a.ordinal - b.ordinal).map(mapTeamMemberFromDb);
   }
 
-  async getTeamMember(userId: string, id: string): Promise<TeamMember | undefined> {
+  async getTeamMember(userId: string, id: string, userEmail: string): Promise<TeamMember | undefined> {
+    const domain = getEmailDomain(userEmail);
+    if (!domain) return undefined;
     const [row] = await db.select().from(teamMembers).where(
-      and(eq(teamMembers.id, id), eq(teamMembers.userId, userId), eq(teamMembers.isDeleted, false))
+      and(eq(teamMembers.id, id), eq(teamMembers.domain, domain), eq(teamMembers.isDeleted, false))
     );
     if (!row) return undefined;
     return mapTeamMemberFromDb(row);
   }
 
-  async createTeamMember(userId: string, data: InsertTeamMember): Promise<TeamMember> {
+  async createTeamMember(userId: string, userEmail: string, data: InsertTeamMember): Promise<TeamMember> {
     const id = randomUUID();
-    const userMembers = await db.select().from(teamMembers).where(eq(teamMembers.userId, userId));
-    const ordinal = userMembers.length + 1;
+    const domain = getEmailDomain(userEmail);
+    if (!domain) {
+      throw new Error("Invalid email domain");
+    }
+    const domainMembers = await db.select().from(teamMembers).where(eq(teamMembers.domain, domain));
+    const ordinal = domainMembers.length + 1;
     
     const newMember = {
       id,
       userId,
+      domain,
       name: data.name,
       role: data.role || null,
       photoUrl: data.photoUrl || null,
@@ -1831,9 +1848,11 @@ export class DatabaseStorage implements IStorage {
     return mapTeamMemberFromDb(newMember);
   }
 
-  async updateTeamMember(userId: string, id: string, data: Partial<InsertTeamMember>): Promise<TeamMember | undefined> {
+  async updateTeamMember(userId: string, id: string, data: Partial<InsertTeamMember>, userEmail: string): Promise<TeamMember | undefined> {
+    const domain = getEmailDomain(userEmail);
+    if (!domain) return undefined;
     const [existing] = await db.select().from(teamMembers).where(
-      and(eq(teamMembers.id, id), eq(teamMembers.userId, userId), eq(teamMembers.isDeleted, false))
+      and(eq(teamMembers.id, id), eq(teamMembers.domain, domain), eq(teamMembers.isDeleted, false))
     );
     if (!existing) return undefined;
     
@@ -1849,9 +1868,11 @@ export class DatabaseStorage implements IStorage {
     return mapTeamMemberFromDb(updated);
   }
 
-  async deleteTeamMember(userId: string, id: string): Promise<boolean> {
+  async deleteTeamMember(userId: string, id: string, userEmail: string): Promise<boolean> {
+    const domain = getEmailDomain(userEmail);
+    if (!domain) return false;
     const [existing] = await db.select().from(teamMembers).where(
-      and(eq(teamMembers.id, id), eq(teamMembers.userId, userId))
+      and(eq(teamMembers.id, id), eq(teamMembers.domain, domain))
     );
     if (!existing) return false;
     
@@ -1859,21 +1880,30 @@ export class DatabaseStorage implements IStorage {
     return true;
   }
 
-  async findMatchingTeamMembers(userName: string): Promise<TeamMember[]> {
+  async findMatchingTeamMembers(adminEmail: string): Promise<TeamMember[]> {
+    const domain = getEmailDomain(adminEmail);
+    if (!domain) return [];
     const rows = await db.select().from(teamMembers).where(
       and(
-        ilike(teamMembers.name, userName),
+        eq(teamMembers.domain, domain),
         eq(teamMembers.isDeleted, false)
       )
     );
     return rows.map(mapTeamMemberFromDb);
   }
 
-  async linkUserToTeamMember(userId: string, teamMemberId: string): Promise<TeamMember | undefined> {
+  async linkUserToTeamMember(userId: string, userEmail: string, teamMemberId: string): Promise<TeamMember | undefined> {
+    // Validate domain match for security
+    const userDomain = getEmailDomain(userEmail);
+    if (!userDomain) return undefined;
+
     const [existing] = await db.select().from(teamMembers).where(
       and(eq(teamMembers.id, teamMemberId), eq(teamMembers.isDeleted, false))
     );
     if (!existing) return undefined;
+    
+    // Ensure team member's domain matches user's domain
+    if (existing.domain !== userDomain) return undefined;
     
     await db.update(teamMembers).set({ linkedUserId: userId }).where(eq(teamMembers.id, teamMemberId));
     
@@ -2290,14 +2320,21 @@ export class DatabaseStorage implements IStorage {
     return true;
   }
 
-  async getLinkedTeamMemberForUser(userId: string): Promise<TeamMember | null> {
+  async getLinkedTeamMemberForUser(userId: string, userEmail: string): Promise<TeamMember | null> {
+    const userDomain = getEmailDomain(userEmail);
+    if (!userDomain) return null;
+
     const [row] = await db.select().from(teamMembers).where(
       and(
         eq(teamMembers.linkedUserId, userId),
         eq(teamMembers.isDeleted, false)
       )
     );
-    return row ? mapTeamMemberFromDb(row) : null;
+    
+    // Verify the linked team member's domain matches the user's email domain
+    if (!row || row.domain !== userDomain) return null;
+    
+    return mapTeamMemberFromDb(row);
   }
 
   async getViewableStreamIds(viewerId: string): Promise<string[]> {
@@ -2328,19 +2365,24 @@ export class DatabaseStorage implements IStorage {
     }
     
     // Get streams where user's linked team member name is in the owners array
+    // Filter by team member's domain and owners array
     let ownershipStreamIds: string[] = [];
-    const linkedTeamMember = await this.getLinkedTeamMemberForUser(viewerId);
-    if (linkedTeamMember) {
-      const ownershipRows = await db.select({ id: streams.id })
-        .from(streams)
-        .where(
-          and(
-            eq(streams.isDeleted, false),
-            eq(streams.userId, linkedTeamMember.userId),
-            sql`${streams.owners} @> ARRAY[${linkedTeamMember.name}]::text[]`
-          )
-        );
-      ownershipStreamIds = ownershipRows.map(row => row.id);
+    const [viewer] = await db.select({ email: users.email }).from(users).where(eq(users.id, viewerId));
+    if (viewer) {
+      const linkedTeamMember = await this.getLinkedTeamMemberForUser(viewerId, viewer.email);
+      if (linkedTeamMember) {
+        const ownershipRows = await db.select({ id: streams.id })
+          .from(streams)
+          .innerJoin(users, eq(streams.userId, users.id))
+          .where(
+            and(
+              eq(streams.isDeleted, false),
+              like(users.email, `%@${linkedTeamMember.domain}`),
+              sql`${streams.owners} @> ARRAY[${linkedTeamMember.name}]::text[]`
+            )
+          );
+        ownershipStreamIds = ownershipRows.map(row => row.id);
+      }
     }
     
     // Combine and deduplicate
@@ -2380,19 +2422,24 @@ export class DatabaseStorage implements IStorage {
     const directSolutionIds = rows.map(row => row.entityId);
     
     // Get solutions where user's linked team member name is in the owners array
+    // Filter by team member's domain and owners array
     let ownershipSolutionIds: string[] = [];
-    const linkedTeamMember = await this.getLinkedTeamMemberForUser(viewerId);
-    if (linkedTeamMember) {
-      const ownershipRows = await db.select({ id: solutions.id })
-        .from(solutions)
-        .where(
-          and(
-            eq(solutions.isDeleted, false),
-            eq(solutions.userId, linkedTeamMember.userId),
-            sql`${solutions.owners} @> ARRAY[${linkedTeamMember.name}]::text[]`
-          )
-        );
-      ownershipSolutionIds = ownershipRows.map(row => row.id);
+    const [viewer] = await db.select({ email: users.email }).from(users).where(eq(users.id, viewerId));
+    if (viewer) {
+      const linkedTeamMember = await this.getLinkedTeamMemberForUser(viewerId, viewer.email);
+      if (linkedTeamMember) {
+        const ownershipRows = await db.select({ id: solutions.id })
+          .from(solutions)
+          .innerJoin(users, eq(solutions.userId, users.id))
+          .where(
+            and(
+              eq(solutions.isDeleted, false),
+              like(users.email, `%@${linkedTeamMember.domain}`),
+              sql`${solutions.owners} @> ARRAY[${linkedTeamMember.name}]::text[]`
+            )
+          );
+        ownershipSolutionIds = ownershipRows.map(row => row.id);
+      }
     }
     
     // Combine and deduplicate

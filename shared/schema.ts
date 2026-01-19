@@ -118,6 +118,7 @@ export const sessions = pgTable("sessions", {
 export const teamMembers = pgTable("team_members", {
   id: text("id").primaryKey(),
   userId: text("user_id").notNull(),
+  domain: text("domain").notNull(),
   name: text("name").notNull(),
   role: text("role"),
   photoUrl: text("photo_url"),
@@ -380,6 +381,7 @@ export interface Comment {
 export interface TeamMember {
   id: string;
   userId: string;
+  domain: string;
   name: string;
   role?: string;
   photoUrl?: string;

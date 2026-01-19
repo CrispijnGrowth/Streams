@@ -56,11 +56,18 @@ New users automatically receive example data upon approval or first login, inclu
 ### Team Members System
 Manages team members with names, roles, and photos (stored as base64 data URIs in PostgreSQL). Team member avatars are displayed on Stream, Solution, and Action cards.
 
+**Domain-Based Sharing:**
+- Team members are shared across all users with the same email domain (e.g., all @company.com users see the same team members)
+- `domain` column in team_members table stores the email domain
+- All CRUD operations validate domain access before proceeding
+- Domain is derived from creator's email when creating team members
+
 **User-Team Member Linking:**
 - Team members can be linked to registered users via the `linkedUserId` field
-- During admin approval, if a pending user's name matches an existing team member, the admin is prompted to link them
+- During admin approval, if a pending user's name matches an existing team member in the admin's domain, the admin is prompted to link them
+- Linking requires the user and team member to share the same email domain (security)
 - Linked users gain ownership-based access to streams/solutions where their team member name appears in the `owners` array
-- `getLinkedTeamMemberForUser(userId)` retrieves the linked team member for a user
+- `getLinkedTeamMemberForUser(userId, userEmail)` retrieves the linked team member (with domain validation)
 
 ### User Avatar System
 Users can upload and manage their profile avatars:
