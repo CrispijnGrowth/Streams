@@ -14,6 +14,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Check, UserPlus, Shield, Upload, FileSpreadsheet, AlertCircle, Users, Plus, Trash2, Pencil, X, Download, Keyboard } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import type { User, TeamMember } from "@shared/schema";
 
 interface ImportPreview {
@@ -53,6 +54,11 @@ export function SettingsPage() {
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const editPhotoInputRef = useRef<HTMLInputElement>(null);
   const addPhotoInputRef = useRef<HTMLInputElement>(null);
+  
+  const [matchingDialogOpen, setMatchingDialogOpen] = useState(false);
+  const [matchingTeamMembers, setMatchingTeamMembers] = useState<TeamMember[]>([]);
+  const [pendingApprovalUser, setPendingApprovalUser] = useState<User | null>(null);
+  const [isCheckingMatches, setIsCheckingMatches] = useState(false);
 
   const isAdmin = user?.role === "admin";
 
@@ -91,10 +97,11 @@ export function SettingsPage() {
   });
 
   const approveMutation = useMutation({
-    mutationFn: async (userId: string) => {
+    mutationFn: async ({ userId, teamMemberId }: { userId: string; teamMemberId?: string }) => {
       const res = await fetch(`/api/admin/approve/${userId}`, {
         method: "POST",
-        headers: getSessionHeaders(),
+        headers: { "Content-Type": "application/json", ...getSessionHeaders() },
+        body: teamMemberId ? JSON.stringify({ teamMemberId }) : undefined,
       });
       if (!res.ok) throw new Error("Failed to approve user");
       return res.json();
@@ -102,12 +109,40 @@ export function SettingsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-users"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/team-members"] });
       toast({ title: "User approved" });
+      setMatchingDialogOpen(false);
+      setPendingApprovalUser(null);
+      setMatchingTeamMembers([]);
     },
     onError: () => {
       toast({ title: "Failed to approve user", variant: "destructive" });
     },
   });
+  
+  const handleApproveClick = async (pendingUser: User) => {
+    setIsCheckingMatches(true);
+    try {
+      const res = await fetch(`/api/admin/matching-team-members/${pendingUser.id}`, {
+        headers: getSessionHeaders(),
+      });
+      if (!res.ok) throw new Error("Failed to fetch matching team members");
+      const matches: TeamMember[] = await res.json();
+      
+      if (matches.length > 0) {
+        setMatchingTeamMembers(matches);
+        setPendingApprovalUser(pendingUser);
+        setMatchingDialogOpen(true);
+      } else {
+        approveMutation.mutate({ userId: pendingUser.id });
+      }
+    } catch (error) {
+      toast({ title: "Failed to check for team member matches", variant: "destructive" });
+      approveMutation.mutate({ userId: pendingUser.id });
+    } finally {
+      setIsCheckingMatches(false);
+    }
+  };
 
   const updateRoleMutation = useMutation({
     mutationFn: async ({ userId, role }: { userId: string; role: "admin" | "member" }) => {
@@ -965,11 +1000,11 @@ export function SettingsPage() {
                       </div>
                       <Button
                         size="sm"
-                        onClick={() => approveMutation.mutate(pendingUser.id)}
-                        disabled={approveMutation.isPending}
+                        onClick={() => handleApproveClick(pendingUser)}
+                        disabled={approveMutation.isPending || isCheckingMatches}
                         data-testid={`button-approve-${pendingUser.id}`}
                       >
-                        {approveMutation.isPending ? (
+                        {(approveMutation.isPending || isCheckingMatches) ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
                           <>
@@ -1086,6 +1121,71 @@ export function SettingsPage() {
           </CardContent>
         </Card>
       )}
+
+      <AlertDialog open={matchingDialogOpen} onOpenChange={setMatchingDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle data-testid="matching-dialog-title">Link User to Team Member?</AlertDialogTitle>
+            <AlertDialogDescription data-testid="matching-dialog-description">
+              {pendingApprovalUser && matchingTeamMembers.length > 0 && (
+                <>
+                  This user's name "<strong>{pendingApprovalUser.name}</strong>" matches team member{matchingTeamMembers.length > 1 ? 's' : ''}{' '}
+                  {matchingTeamMembers.map((tm, i) => (
+                    <span key={tm.id}>
+                      <strong>{tm.name}</strong>{tm.role ? ` (${tm.role})` : ''}
+                      {i < matchingTeamMembers.length - 1 ? ', ' : ''}
+                    </span>
+                  ))}. Do you want to link them?
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel 
+              onClick={() => {
+                setMatchingDialogOpen(false);
+                setPendingApprovalUser(null);
+                setMatchingTeamMembers([]);
+              }}
+              data-testid="button-matching-cancel"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (pendingApprovalUser) {
+                  approveMutation.mutate({ userId: pendingApprovalUser.id });
+                }
+              }}
+              disabled={approveMutation.isPending}
+              data-testid="button-approve-without-linking"
+            >
+              {approveMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : null}
+              Approve without linking
+            </Button>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingApprovalUser && matchingTeamMembers.length > 0) {
+                  approveMutation.mutate({ 
+                    userId: pendingApprovalUser.id, 
+                    teamMemberId: matchingTeamMembers[0].id 
+                  });
+                }
+              }}
+              disabled={approveMutation.isPending}
+              data-testid="button-link-and-approve"
+            >
+              {approveMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : null}
+              Link and Approve
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

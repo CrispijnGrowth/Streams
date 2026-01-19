@@ -274,12 +274,31 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/admin/matching-team-members/:userId", authMiddleware, adminMiddleware, async (req, res) => {
+    try {
+      const pendingUser = await authStorage.getUserById(req.params.userId);
+      if (!pendingUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      const matchingTeamMembers = await storage.findMatchingTeamMembers(pendingUser.name);
+      res.json(matchingTeamMembers);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch matching team members" });
+    }
+  });
+
   app.post("/api/admin/approve/:userId", authMiddleware, adminMiddleware, async (req, res) => {
     try {
+      const { teamMemberId } = req.body || {};
       const user = await authStorage.approveUser(req.params.userId);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
+      
+      if (teamMemberId) {
+        await storage.linkUserToTeamMember(user.id, teamMemberId);
+      }
+      
       await storage.seedExampleData(user.id);
       sendApprovalEmail(user.email, user.name).catch(err =>
         console.error("[Auth] Failed to send approval email:", err)

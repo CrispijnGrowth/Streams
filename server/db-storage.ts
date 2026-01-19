@@ -180,6 +180,7 @@ function mapTeamMemberFromDb(row: any): TeamMember {
     role: row.role || undefined,
     photoUrl: row.photoUrl || undefined,
     photoData: row.photoData || undefined,
+    linkedUserId: row.linkedUserId || undefined,
     ordinal: row.ordinal,
     isDeleted: row.isDeleted,
   };
@@ -1856,6 +1857,28 @@ export class DatabaseStorage implements IStorage {
     
     await db.update(teamMembers).set({ isDeleted: true }).where(eq(teamMembers.id, id));
     return true;
+  }
+
+  async findMatchingTeamMembers(userName: string): Promise<TeamMember[]> {
+    const rows = await db.select().from(teamMembers).where(
+      and(
+        ilike(teamMembers.name, userName),
+        eq(teamMembers.isDeleted, false)
+      )
+    );
+    return rows.map(mapTeamMemberFromDb);
+  }
+
+  async linkUserToTeamMember(userId: string, teamMemberId: string): Promise<TeamMember | undefined> {
+    const [existing] = await db.select().from(teamMembers).where(
+      and(eq(teamMembers.id, teamMemberId), eq(teamMembers.isDeleted, false))
+    );
+    if (!existing) return undefined;
+    
+    await db.update(teamMembers).set({ linkedUserId: userId }).where(eq(teamMembers.id, teamMemberId));
+    
+    const [updated] = await db.select().from(teamMembers).where(eq(teamMembers.id, teamMemberId));
+    return mapTeamMemberFromDb(updated);
   }
 
   async getStakeholders(userId: string): Promise<Stakeholder[]> {

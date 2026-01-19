@@ -108,6 +108,8 @@ export interface IStorage {
   createTeamMember(userId: string, data: InsertTeamMember): Promise<TeamMember>;
   updateTeamMember(userId: string, id: string, data: Partial<InsertTeamMember>): Promise<TeamMember | undefined>;
   deleteTeamMember(userId: string, id: string): Promise<boolean>;
+  findMatchingTeamMembers(userName: string): Promise<TeamMember[]>;
+  linkUserToTeamMember(userId: string, teamMemberId: string): Promise<TeamMember | undefined>;
 
   getStakeholders(userId: string): Promise<Stakeholder[]>;
   getStakeholder(userId: string, id: string): Promise<Stakeholder | undefined>;
