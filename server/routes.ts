@@ -125,23 +125,30 @@ export async function registerRoutes(
   app.post("/api/auth/login", async (req, res) => {
     try {
       const { email, password } = req.body;
+      console.log(`[Login] Attempt for email: ${email}`);
       if (!email || !password) {
         return res.status(400).json({ error: "Email and password are required" });
       }
       const user = await authStorage.verifyPassword(email, password);
       if (!user) {
+        console.log(`[Login] Invalid credentials for: ${email}`);
         return res.status(401).json({ error: "Invalid email or password" });
       }
       if (user.role === UserRole.PENDING) {
         return res.status(403).json({ error: "Account pending admin approval" });
       }
+      console.log(`[Login] Creating session for user: ${user.id}`);
       const session = await authStorage.createSession(user.id);
+      console.log(`[Login] Session created: ${session.id}`);
+      console.log(`[Login] Seeding example data for user: ${user.id}`);
       await storage.seedExampleData(user.id);
+      console.log(`[Login] Example data seeded, responding`);
       res.json({ 
         sessionId: session.id, 
         user: { id: user.id, email: user.email, name: user.name, role: user.role, showDescriptions: user.showDescriptions, themePreference: user.themePreference }
       });
     } catch (error) {
+      console.error(`[Login] ERROR:`, error);
       res.status(500).json({ error: "Login failed" });
     }
   });
