@@ -316,6 +316,7 @@ export class DatabaseStorage implements IStorage {
 
   async getStreams(userId: string): Promise<StreamWithProgress[]> {
     const viewableStreamIds = await this.getViewableStreamIds(userId);
+    const viewableSolutionIds = await this.getViewableSolutionIds(userId);
     const whereCondition = and(
       eq(streams.isDeleted, false),
       viewableStreamIds.length > 0
@@ -333,9 +334,18 @@ export class DatabaseStorage implements IStorage {
       const stream = mapStreamFromDb(row);
       // Use the stream's owner userId for computing progress, not the viewing user
       const ownerUserId = row.userId;
-      const streamSolutions = await db.select().from(solutions).where(
+      const isOwner = row.userId === userId;
+      const isDirectStreamViewer = await this.isDirectStreamViewer(userId, stream.id);
+      
+      // Get all solutions for this stream
+      let streamSolutions = await db.select().from(solutions).where(
         and(eq(solutions.streamId, stream.id), eq(solutions.userId, ownerUserId), eq(solutions.isDeleted, false))
       );
+      
+      // Filter solutions if user is NOT owner and NOT a direct stream viewer
+      if (!isOwner && !isDirectStreamViewer) {
+        streamSolutions = streamSolutions.filter(sol => viewableSolutionIds.includes(sol.id));
+      }
       
       let totalProgress = 0;
       let doingCount = 0;
@@ -498,15 +508,22 @@ export class DatabaseStorage implements IStorage {
 
   async getSolutions(userId: string): Promise<SolutionWithProgress[]> {
     const viewableSolutionIds = await this.getViewableSolutionIds(userId);
-    const viewableStreamIds = await this.getViewableStreamIds(userId);
+    // Use DIRECT stream viewer IDs (not cascaded) for "show all solutions" access
+    const directStreamViewerIds = await this.getDirectStreamViewerIds(userId);
+    // Use ALL viewable stream IDs (including cascaded) for stream ordering
+    const allViewableStreamIds = await this.getViewableStreamIds(userId);
     
-    // Build conditions for solutions where user is owner OR viewer of solution OR viewer of parent stream
+    // Build conditions for solutions where user is:
+    // 1. Owner of the solution
+    // 2. Direct solution viewer
+    // 3. Direct STREAM viewer (can see ALL solutions in that stream)
     const orConditions: any[] = [eq(solutions.userId, userId)];
     if (viewableSolutionIds.length > 0) {
       orConditions.push(inArray(solutions.id, viewableSolutionIds));
     }
-    if (viewableStreamIds.length > 0) {
-      orConditions.push(inArray(solutions.streamId, viewableStreamIds));
+    if (directStreamViewerIds.length > 0) {
+      // Only direct stream viewers can see all solutions in a stream
+      orConditions.push(inArray(solutions.streamId, directStreamViewerIds));
     }
     
     const whereCondition = and(
@@ -523,11 +540,11 @@ export class DatabaseStorage implements IStorage {
       byStream.set(row.streamId, group);
     }
     
-    // Get stream ordinals for consistent ordering - include viewable streams
+    // Get stream ordinals for consistent ordering - include ALL viewable streams
     const streamWhereCondition = and(
       eq(streams.isDeleted, false),
-      viewableStreamIds.length > 0
-        ? or(eq(streams.userId, userId), inArray(streams.id, viewableStreamIds))
+      allViewableStreamIds.length > 0
+        ? or(eq(streams.userId, userId), inArray(streams.id, allViewableStreamIds))
         : eq(streams.userId, userId)
     );
     const streamRows = await db.select().from(streams).where(streamWhereCondition);
@@ -563,13 +580,20 @@ export class DatabaseStorage implements IStorage {
     if (!stream) return [];
     
     const isOwner = stream.userId === userId;
-    const isViewer = viewableStreamIds.includes(streamId);
-    if (!isOwner && !isViewer) return [];
+    const isStreamViewer = await this.isDirectStreamViewer(userId, streamId);
+    const hasAnyAccess = viewableStreamIds.includes(streamId);
+    if (!isOwner && !hasAnyAccess) return [];
     
     // Get solutions owned by the stream's owner
-    const rows = await db.select().from(solutions).where(
+    let rows = await db.select().from(solutions).where(
       and(eq(solutions.streamId, streamId), eq(solutions.userId, stream.userId), eq(solutions.isDeleted, false))
     );
+    
+    // If user is NOT owner and NOT a direct stream viewer, filter to only their viewable solutions
+    if (!isOwner && !isStreamViewer) {
+      const viewableSolutionIds = await this.getViewableSolutionIds(userId);
+      rows = rows.filter(row => viewableSolutionIds.includes(row.id));
+    }
     
     // Sort by ordinal to ensure consistent display key numbering
     rows.sort((a, b) => a.ordinal - b.ordinal);
@@ -595,14 +619,21 @@ export class DatabaseStorage implements IStorage {
     if (!stream) return [];
     
     const isOwner = stream.userId === userId;
-    const isViewer = viewableStreamIds.includes(streamId);
-    if (!isOwner && !isViewer) return [];
+    const isStreamViewer = await this.isDirectStreamViewer(userId, streamId);
+    const hasAnyAccess = viewableStreamIds.includes(streamId);
+    if (!isOwner && !hasAnyAccess) return [];
     
     // Get solutions owned by the stream's owner
     const ownerUserId = stream.userId;
-    const rows = await db.select().from(solutions).where(
+    let rows = await db.select().from(solutions).where(
       and(eq(solutions.streamId, streamId), eq(solutions.userId, ownerUserId), eq(solutions.isDeleted, false))
     );
+    
+    // If user is NOT owner and NOT a direct stream viewer, filter to only their viewable solutions
+    if (!isOwner && !isStreamViewer) {
+      const viewableSolutionIds = await this.getViewableSolutionIds(userId);
+      rows = rows.filter(row => viewableSolutionIds.includes(row.id));
+    }
     
     // Sort by ordinal to ensure consistent display key numbering
     rows.sort((a, b) => a.ordinal - b.ordinal);
@@ -748,15 +779,19 @@ export class DatabaseStorage implements IStorage {
 
   async getSolution(userId: string, id: string): Promise<Solution | undefined> {
     const viewableSolutionIds = await this.getViewableSolutionIds(userId);
-    const viewableStreamIds = await this.getViewableStreamIds(userId);
+    // Use DIRECT stream viewer IDs (not cascaded) for full stream access
+    const directStreamViewerIds = await this.getDirectStreamViewerIds(userId);
     
-    // Build conditions for solutions where user is owner OR viewer of solution OR viewer of parent stream
+    // Build conditions for solutions where user is:
+    // 1. Owner of the solution
+    // 2. Direct solution viewer
+    // 3. Direct STREAM viewer (can see ALL solutions in that stream)
     const orConditions: any[] = [eq(solutions.userId, userId)];
     if (viewableSolutionIds.length > 0) {
       orConditions.push(inArray(solutions.id, viewableSolutionIds));
     }
-    if (viewableStreamIds.length > 0) {
-      orConditions.push(inArray(solutions.streamId, viewableStreamIds));
+    if (directStreamViewerIds.length > 0) {
+      orConditions.push(inArray(solutions.streamId, directStreamViewerIds));
     }
     
     const whereCondition = and(
@@ -2228,6 +2263,49 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getViewableStreamIds(viewerId: string): Promise<string[]> {
+    // Get direct stream viewer permissions
+    const directStreamRows = await db.select().from(viewers).where(
+      and(
+        eq(viewers.viewerId, viewerId),
+        eq(viewers.entityType, ViewerEntityType.STREAM)
+      )
+    );
+    const directStreamIds = directStreamRows.map(row => row.entityId);
+    
+    // Get parent stream IDs from solution viewer permissions (cascading access)
+    const solutionViewerRows = await db.select().from(viewers).where(
+      and(
+        eq(viewers.viewerId, viewerId),
+        eq(viewers.entityType, ViewerEntityType.SOLUTION)
+      )
+    );
+    const viewableSolutionIds = solutionViewerRows.map(row => row.entityId);
+    
+    let parentStreamIds: string[] = [];
+    if (viewableSolutionIds.length > 0) {
+      const solutionRows = await db.select({ streamId: solutions.streamId })
+        .from(solutions)
+        .where(inArray(solutions.id, viewableSolutionIds));
+      parentStreamIds = solutionRows.map(row => row.streamId);
+    }
+    
+    // Combine and deduplicate
+    const allStreamIds = [...new Set([...directStreamIds, ...parentStreamIds])];
+    return allStreamIds;
+  }
+  
+  async isDirectStreamViewer(viewerId: string, streamId: string): Promise<boolean> {
+    const [row] = await db.select().from(viewers).where(
+      and(
+        eq(viewers.viewerId, viewerId),
+        eq(viewers.entityType, ViewerEntityType.STREAM),
+        eq(viewers.entityId, streamId)
+      )
+    );
+    return !!row;
+  }
+  
+  async getDirectStreamViewerIds(viewerId: string): Promise<string[]> {
     const rows = await db.select().from(viewers).where(
       and(
         eq(viewers.viewerId, viewerId),
