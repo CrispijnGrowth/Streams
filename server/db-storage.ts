@@ -265,16 +265,18 @@ export interface PermissionResult {
 }
 
 export class DatabaseStorage implements IStorage {
-  private async computeActionProgress(actionId: string, userId: string): Promise<{ progress: number; stepCount: number; doneStepCount: number }> {
+  private async computeActionProgress(actionId: string, _userId: string): Promise<{ progress: number; stepCount: number; doneStepCount: number }> {
+    // Get ALL steps in this action (not just one user's)
+    // This supports ownership-based access where different users may have created steps
     const actionSteps = await db.select().from(steps).where(
-      and(eq(steps.actionId, actionId), eq(steps.userId, userId), eq(steps.isDeleted, false))
+      and(eq(steps.actionId, actionId), eq(steps.isDeleted, false))
     );
     const doneStepCount = actionSteps.filter((s) => s.isDone).length;
     const stepCount = actionSteps.length;
     
     if (stepCount === 0) {
       const [action] = await db.select().from(actions).where(
-        and(eq(actions.id, actionId), eq(actions.userId, userId))
+        eq(actions.id, actionId)
       );
       if (!action) return { progress: 0, stepCount: 0, doneStepCount: 0 };
       switch (action.status) {
@@ -294,7 +296,7 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  private async computeSolutionProgress(solutionId: string, userId: string): Promise<{
+  private async computeSolutionProgress(solutionId: string, _userId: string): Promise<{
     progress: number;
     actionCount: number;
     deliverableCount: number;
@@ -302,11 +304,13 @@ export class DatabaseStorage implements IStorage {
     blockedCount: number;
     delegatedCount: number;
   }> {
+    // Get ALL actions and deliverables in this solution (not just one user's)
+    // This supports ownership-based access where different users may have created content
     const solutionActions = await db.select().from(actions).where(
-      and(eq(actions.solutionId, solutionId), eq(actions.userId, userId), eq(actions.isDeleted, false))
+      and(eq(actions.solutionId, solutionId), eq(actions.isDeleted, false))
     );
     const solutionDeliverables = await db.select().from(deliverables).where(
-      and(eq(deliverables.solutionId, solutionId), eq(deliverables.userId, userId), eq(deliverables.isDeleted, false))
+      and(eq(deliverables.solutionId, solutionId), eq(deliverables.isDeleted, false))
     );
 
     const actionCount = solutionActions.length;
@@ -321,7 +325,7 @@ export class DatabaseStorage implements IStorage {
 
     let totalProgress = 0;
     for (const action of solutionActions) {
-      const { progress } = await this.computeActionProgress(action.id, userId);
+      const { progress } = await this.computeActionProgress(action.id, action.userId);
       totalProgress += progress;
     }
 
@@ -363,9 +367,10 @@ export class DatabaseStorage implements IStorage {
         // Use pre-fetched data instead of per-stream query
         const isDirectStreamViewer = directStreamViewerIds.includes(stream.id);
       
-      // Get all solutions for this stream
+      // Get ALL solutions for this stream (not just stream owner's)
+      // This supports ownership-based access where different users may have created solutions
       let streamSolutions = await db.select().from(solutions).where(
-        and(eq(solutions.streamId, stream.id), eq(solutions.userId, ownerUserId), eq(solutions.isDeleted, false))
+        and(eq(solutions.streamId, stream.id), eq(solutions.isDeleted, false))
       );
       
       // Filter solutions if user is NOT owner and NOT a direct stream viewer
@@ -382,7 +387,7 @@ export class DatabaseStorage implements IStorage {
       const inProgressWithDates: { name: string; progress: number; milestoneDate?: string; priority?: number }[] = [];
 
       for (const sol of streamSolutions) {
-        const stats = await this.computeSolutionProgress(sol.id, ownerUserId);
+        const stats = await this.computeSolutionProgress(sol.id, sol.userId);
         totalProgress += stats.progress;
         doingCount += stats.doingCount;
         blockedCount += stats.blockedCount;
@@ -611,9 +616,10 @@ export class DatabaseStorage implements IStorage {
     const hasAnyAccess = viewableStreamIds.includes(streamId);
     if (!isOwner && !hasAnyAccess) return [];
     
-    // Get solutions owned by the stream's owner
+    // Get ALL solutions in this stream (not just stream owner's solutions)
+    // This supports ownership-based access where different users may create solutions
     let rows = await db.select().from(solutions).where(
-      and(eq(solutions.streamId, streamId), eq(solutions.userId, stream.userId), eq(solutions.isDeleted, false))
+      and(eq(solutions.streamId, streamId), eq(solutions.isDeleted, false))
     );
     
     // If user is NOT owner and NOT a direct stream viewer, filter to only their viewable solutions
@@ -650,10 +656,10 @@ export class DatabaseStorage implements IStorage {
     const hasAnyAccess = viewableStreamIds.includes(streamId);
     if (!isOwner && !hasAnyAccess) return [];
     
-    // Get solutions owned by the stream's owner
-    const ownerUserId = stream.userId;
+    // Get ALL solutions in this stream (not just stream owner's solutions)
+    // This supports ownership-based access where different users may create solutions
     let rows = await db.select().from(solutions).where(
-      and(eq(solutions.streamId, streamId), eq(solutions.userId, ownerUserId), eq(solutions.isDeleted, false))
+      and(eq(solutions.streamId, streamId), eq(solutions.isDeleted, false))
     );
     
     // If user is NOT owner and NOT a direct stream viewer, filter to only their viewable solutions
@@ -672,15 +678,18 @@ export class DatabaseStorage implements IStorage {
     for (const row of rows) {
       const sol = mapSolutionFromDb(row);
       // Use the solution's owner userId for computing progress
-      const stats = await this.computeSolutionProgress(sol.id, ownerUserId);
+      const solutionOwnerUserId = row.userId;
+      const stats = await this.computeSolutionProgress(sol.id, solutionOwnerUserId);
       
+      // Get ALL deliverables in this solution (not just one user's)
       const solutionDeliverables = await db.select().from(deliverables).where(
-        and(eq(deliverables.solutionId, sol.id), eq(deliverables.userId, ownerUserId), eq(deliverables.isDeleted, false))
+        and(eq(deliverables.solutionId, sol.id), eq(deliverables.isDeleted, false))
       );
       solutionDeliverables.sort((a, b) => a.ordinal - b.ordinal);
       
+      // Get ALL actions in this solution (not just one user's)
       const solutionActions = await db.select().from(actions).where(
-        and(eq(actions.solutionId, sol.id), eq(actions.userId, ownerUserId), eq(actions.isDeleted, false))
+        and(eq(actions.solutionId, sol.id), eq(actions.isDeleted, false))
       );
       
       const deliverableBreakdown: DeliverableBreakdown[] = solutionDeliverables.map((del) => {
@@ -717,7 +726,7 @@ export class DatabaseStorage implements IStorage {
         });
       }
       
-      const lastComment = await this.getLastComment(ownerUserId, CommentEntityType.SOLUTION, sol.id);
+      const lastComment = await this.getLastComment(solutionOwnerUserId, CommentEntityType.SOLUTION, sol.id);
       
       results.push({ ...sol, ...stats, deliverableBreakdown, lastComment, displayKey: `Solution ${displayIndex}` });
       displayIndex++;
@@ -948,23 +957,24 @@ export class DatabaseStorage implements IStorage {
     
     if (!hasAccess) return [];
     
-    const ownerUserId = solution.userId;
+    // Get ALL deliverables in this solution (not just one user's)
     const rows = await db.select().from(deliverables).where(
-      and(eq(deliverables.solutionId, solutionId), eq(deliverables.userId, ownerUserId), eq(deliverables.isDeleted, false))
+      and(eq(deliverables.solutionId, solutionId), eq(deliverables.isDeleted, false))
     );
     rows.sort((a, b) => a.ordinal - b.ordinal);
     
     const result: DeliverableWithActions[] = [];
     for (const row of rows) {
       const del = mapDeliverableFromDb(row);
+      // Get ALL actions for this deliverable (not just one user's)
       const delActions = await db.select().from(actions).where(
-        and(eq(actions.deliverableId, del.id), eq(actions.userId, ownerUserId), eq(actions.isDeleted, false))
+        and(eq(actions.deliverableId, del.id), eq(actions.isDeleted, false))
       );
       delActions.sort((a, b) => a.kanbanOrder - b.kanbanOrder);
       
       const actionsWithProgress: ActionWithProgress[] = [];
       for (const action of delActions) {
-        const stats = await this.computeActionProgress(action.id, ownerUserId);
+        const stats = await this.computeActionProgress(action.id, action.userId);
         actionsWithProgress.push({ ...mapActionFromDb(action), ...stats });
       }
       
@@ -1137,17 +1147,17 @@ export class DatabaseStorage implements IStorage {
     
     if (!hasAccess) return [];
     
-    const ownerUserId = solution.userId;
+    // Get ALL actions in this solution (not just one user's)
     const rows = await db.select().from(actions).where(
-      and(eq(actions.solutionId, solutionId), eq(actions.userId, ownerUserId), eq(actions.isDeleted, false))
+      and(eq(actions.solutionId, solutionId), eq(actions.isDeleted, false))
     );
     rows.sort((a, b) => a.kanbanOrder - b.kanbanOrder);
     
     const result: ActionWithLastComment[] = [];
     for (const row of rows) {
       const action = mapActionFromDb(row);
-      const stats = await this.computeActionProgress(action.id, ownerUserId);
-      const lastComment = await this.getLastComment(ownerUserId, "action", action.id);
+      const stats = await this.computeActionProgress(action.id, row.userId);
+      const lastComment = await this.getLastComment(row.userId, "action", action.id);
       result.push({ ...action, ...stats, lastComment });
     }
     return result;
