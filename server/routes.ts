@@ -4,6 +4,7 @@ import multer from "multer";
 import XLSX from "xlsx";
 import path from "path";
 import fs from "fs";
+import bcrypt from "bcrypt";
 import { storage } from "./storage";
 import { authStorage, generateMagicLinkUrl } from "./auth";
 import { sendMagicLinkEmail, sendNewUserNotification, sendApprovalEmail } from "./email";
@@ -369,6 +370,39 @@ export async function registerRoutes(
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to update name" });
+    }
+  });
+
+  app.post("/api/auth/change-password", authMiddleware, async (req, res) => {
+    try {
+      const { currentPassword, newPassword } = req.body;
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ error: "Current password and new password are required" });
+      }
+      if (newPassword.length < 8) {
+        return res.status(400).json({ error: "New password must be at least 8 characters" });
+      }
+      
+      const passwordHash = await authStorage.getPasswordHash(req.userId!);
+      if (!passwordHash) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      // Verify current password
+      const validPassword = await bcrypt.compare(currentPassword, passwordHash);
+      if (!validPassword) {
+        return res.status(401).json({ error: "Current password is incorrect" });
+      }
+      
+      // Update to new password
+      const updated = await authStorage.updatePassword(req.userId!, newPassword);
+      if (!updated) {
+        return res.status(500).json({ error: "Failed to update password" });
+      }
+      
+      res.json({ success: true, message: "Password updated successfully" });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to change password" });
     }
   });
 

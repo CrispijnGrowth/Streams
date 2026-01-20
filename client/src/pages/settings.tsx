@@ -65,6 +65,11 @@ export function SettingsPage() {
   
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState("");
+  
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   const isAdmin = user?.role === "admin";
 
@@ -123,6 +128,31 @@ export function SettingsPage() {
     },
     onError: (err) => {
       toast({ title: err instanceof Error ? err.message : "Failed to update name", variant: "destructive" });
+    },
+  });
+
+  const passwordMutation = useMutation({
+    mutationFn: async ({ currentPassword, newPassword }: { currentPassword: string; newPassword: string }) => {
+      const res = await fetch("/api/auth/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getSessionHeaders() },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to change password");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      setIsChangingPassword(false);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      toast({ title: "Password changed successfully" });
+    },
+    onError: (err) => {
+      toast({ title: err instanceof Error ? err.message : "Failed to change password", variant: "destructive" });
     },
   });
 
@@ -583,6 +613,99 @@ export function SettingsPage() {
           <div>
             <Label className="text-muted-foreground">Email</Label>
             <p className="font-medium">{user.email}</p>
+          </div>
+          <Separator />
+          <div>
+            <Label className="text-muted-foreground">Password</Label>
+            {isChangingPassword ? (
+              <div className="space-y-3 mt-2">
+                <div>
+                  <Label htmlFor="current-password" className="text-sm">Current Password</Label>
+                  <Input
+                    id="current-password"
+                    type="password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    placeholder="Enter current password"
+                    data-testid="input-current-password"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="new-password" className="text-sm">New Password</Label>
+                  <Input
+                    id="new-password"
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Enter new password (min. 8 characters)"
+                    data-testid="input-new-password"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="confirm-password" className="text-sm">Confirm New Password</Label>
+                  <Input
+                    id="confirm-password"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Confirm new password"
+                    data-testid="input-confirm-password"
+                  />
+                </div>
+                {newPassword && confirmPassword && newPassword !== confirmPassword && (
+                  <p className="text-sm text-destructive">Passwords do not match</p>
+                )}
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() => passwordMutation.mutate({ currentPassword, newPassword })}
+                    disabled={
+                      !currentPassword || 
+                      !newPassword || 
+                      newPassword.length < 8 ||
+                      newPassword !== confirmPassword || 
+                      passwordMutation.isPending
+                    }
+                    data-testid="button-save-password"
+                  >
+                    {passwordMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <Check className="h-4 w-4 mr-2" />
+                    )}
+                    Save Password
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setIsChangingPassword(false);
+                      setCurrentPassword("");
+                      setNewPassword("");
+                      setConfirmPassword("");
+                    }}
+                    disabled={passwordMutation.isPending}
+                    data-testid="button-cancel-password"
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 mt-1">
+                <p className="font-medium text-muted-foreground">••••••••</p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setIsChangingPassword(true)}
+                  data-testid="button-change-password"
+                >
+                  <Pencil className="h-3 w-3 mr-2" />
+                  Change Password
+                </Button>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

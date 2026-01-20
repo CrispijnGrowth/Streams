@@ -88,6 +88,14 @@ class AuthStorage {
     return !!updated;
   }
 
+  async getPasswordHash(userId: string): Promise<string | null> {
+    const result = await db.select({ passwordHash: users.passwordHash })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+    return result.length > 0 ? result[0].passwordHash : null;
+  }
+
   async approveUser(userId: string): Promise<User | undefined> {
     const [updated] = await db.update(users)
       .set({ role: UserRole.MEMBER })
