@@ -495,9 +495,10 @@ export class DatabaseStorage implements IStorage {
     return updated ? mapStreamFromDb(updated) : undefined;
   }
 
-  private async updateStreamMilestone(streamId: string, userId: string): Promise<void> {
+  private async updateStreamMilestone(streamId: string): Promise<void> {
+    // Get ALL solutions in the stream, not just user's own
     const streamSolutions = await db.select().from(solutions).where(
-      and(eq(solutions.streamId, streamId), eq(solutions.userId, userId), eq(solutions.isDeleted, false))
+      and(eq(solutions.streamId, streamId), eq(solutions.isDeleted, false))
     );
     
     const datedSolutions = streamSolutions.filter(s => s.milestoneDate);
@@ -830,16 +831,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createSolution(userId: string, data: InsertSolution): Promise<Solution> {
-    const [parentStream] = await db.select().from(streams).where(
-      and(eq(streams.id, data.streamId), eq(streams.userId, userId), eq(streams.isDeleted, false))
-    );
-    if (!parentStream) {
+    // Check stream permissions using the resolution system
+    const streamPerms = await this.resolveStreamPermissions(userId, data.streamId);
+    if (!streamPerms.canEdit) {
       throw new Error("Parent stream not found or access denied");
     }
     
     const id = randomUUID();
+    // Count ALL solutions in the stream for ordinal, not just user's own
     const existingSolutions = await db.select().from(solutions).where(
-      and(eq(solutions.streamId, data.streamId), eq(solutions.userId, userId))
+      and(eq(solutions.streamId, data.streamId), eq(solutions.isDeleted, false))
     );
     const ordinal = existingSolutions.length + 1;
     
@@ -863,7 +864,7 @@ export class DatabaseStorage implements IStorage {
     };
     
     await db.insert(solutions).values(newSolution);
-    await this.updateStreamMilestone(data.streamId, userId);
+    await this.updateStreamMilestone(data.streamId);
     await db.update(streams).set({ lastMovementAt: new Date().toISOString(), momentumStatus: MomentumStatus.ACTIVE }).where(eq(streams.id, data.streamId));
     return mapSolutionFromDb(newSolution);
   }
@@ -892,7 +893,7 @@ export class DatabaseStorage implements IStorage {
     const [updated] = await db.select().from(solutions).where(eq(solutions.id, id));
     
     if (updated) {
-      await this.updateStreamMilestone(updated.streamId, userId);
+      await this.updateStreamMilestone(updated.streamId);
     }
     
     return updated ? mapSolutionFromDb(updated) : undefined;
@@ -921,7 +922,7 @@ export class DatabaseStorage implements IStorage {
     }
     
     await db.update(solutions).set({ isDeleted: true }).where(eq(solutions.id, id));
-    await this.updateStreamMilestone(existing.streamId, userId);
+    await this.updateStreamMilestone(existing.streamId);
     return true;
   }
 
@@ -992,16 +993,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createDeliverable(userId: string, data: InsertDeliverable): Promise<Deliverable> {
-    const [parentSolution] = await db.select().from(solutions).where(
-      and(eq(solutions.id, data.solutionId), eq(solutions.userId, userId), eq(solutions.isDeleted, false))
-    );
-    if (!parentSolution) {
+    // Check solution permissions using the resolution system
+    const solutionPerms = await this.resolveSolutionPermissions(userId, data.solutionId);
+    if (!solutionPerms.canEdit) {
       throw new Error("Parent solution not found or access denied");
     }
     
     const id = randomUUID();
+    // Count ALL deliverables in the solution for ordinal, not just user's own
     const existingDeliverables = await db.select().from(deliverables).where(
-      and(eq(deliverables.solutionId, data.solutionId), eq(deliverables.userId, userId))
+      and(eq(deliverables.solutionId, data.solutionId), eq(deliverables.isDeleted, false))
     );
     const ordinal = data.ordinal ?? existingDeliverables.length + 1;
     
@@ -1176,16 +1177,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createAction(userId: string, data: InsertAction): Promise<Action> {
-    const [parentSolution] = await db.select().from(solutions).where(
-      and(eq(solutions.id, data.solutionId), eq(solutions.userId, userId), eq(solutions.isDeleted, false))
-    );
-    if (!parentSolution) {
+    // Check solution permissions using the resolution system
+    const solutionPerms = await this.resolveSolutionPermissions(userId, data.solutionId);
+    if (!solutionPerms.canEdit) {
       throw new Error("Parent solution not found or access denied");
     }
     
     const id = randomUUID();
+    // Count ALL actions in the solution for ordinal, not just user's own
     const existingActions = await db.select().from(actions).where(
-      and(eq(actions.solutionId, data.solutionId), eq(actions.userId, userId))
+      and(eq(actions.solutionId, data.solutionId), eq(actions.isDeleted, false))
     );
     const ordinal = existingActions.length + 1;
     
@@ -1322,16 +1323,24 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createStep(userId: string, data: InsertStep): Promise<Step> {
-    const [parentAction] = await db.select().from(actions).where(
-      and(eq(actions.id, data.actionId), eq(actions.userId, userId), eq(actions.isDeleted, false))
-    );
-    if (!parentAction) {
+    // Check action permissions using the resolution system
+    const actionPerms = await this.resolveActionPermissions(userId, data.actionId);
+    if (!actionPerms.canEdit) {
       throw new Error("Parent action not found or access denied");
     }
     
+    // Fetch the parent action to get its streamId and solutionId
+    const [parentAction] = await db.select().from(actions).where(
+      and(eq(actions.id, data.actionId), eq(actions.isDeleted, false))
+    );
+    if (!parentAction) {
+      throw new Error("Parent action not found");
+    }
+    
     const id = randomUUID();
+    // Count ALL steps in the action for ordinal, not just user's own
     const existingSteps = await db.select().from(steps).where(
-      and(eq(steps.actionId, data.actionId), eq(steps.userId, userId))
+      and(eq(steps.actionId, data.actionId), eq(steps.isDeleted, false))
     );
     const ordinal = existingSteps.length + 1;
     
