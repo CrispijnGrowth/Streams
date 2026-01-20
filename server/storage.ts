@@ -109,7 +109,7 @@ export interface IStorage {
   createTeamMember(userId: string, userEmail: string, data: InsertTeamMember): Promise<TeamMember>;
   updateTeamMember(userId: string, id: string, data: Partial<InsertTeamMember>, userEmail: string): Promise<TeamMember | undefined>;
   deleteTeamMember(userId: string, id: string, userEmail: string): Promise<boolean>;
-  findMatchingTeamMembers(adminEmail: string): Promise<TeamMember[]>;
+  findMatchingTeamMembers(adminEmail: string, pendingUserName: string): Promise<TeamMember[]>;
   linkUserToTeamMember(userId: string, userEmail: string, teamMemberId: string): Promise<TeamMember | undefined>;
   getLinkedTeamMemberForUser(userId: string, userEmail: string): Promise<TeamMember | null>;
 
@@ -1426,11 +1426,21 @@ export class MemStorage implements IStorage {
     return true;
   }
 
-  async findMatchingTeamMembers(adminEmail: string): Promise<TeamMember[]> {
+  async findMatchingTeamMembers(adminEmail: string, pendingUserName: string): Promise<TeamMember[]> {
     const domain = this.getEmailDomain(adminEmail);
     if (!domain) return [];
+    
+    const normalizedUserName = pendingUserName.toLowerCase().trim();
+    if (!normalizedUserName) return [];
+    
     return Array.from(this.teamMembers.values())
-      .filter((m) => m.domain === domain && !m.isDeleted);
+      .filter((m) => {
+        if (m.domain !== domain || m.isDeleted) return false;
+        const normalizedTeamMemberName = m.name.toLowerCase().trim();
+        return normalizedTeamMemberName === normalizedUserName ||
+               normalizedTeamMemberName.includes(normalizedUserName) ||
+               normalizedUserName.includes(normalizedTeamMemberName);
+      });
   }
 
   async linkUserToTeamMember(_userId: string, _userEmail: string, _teamMemberId: string): Promise<TeamMember | undefined> {

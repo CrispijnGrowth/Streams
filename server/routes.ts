@@ -354,7 +354,7 @@ export async function registerRoutes(
       if (!admin) {
         return res.status(401).json({ error: "Admin user not found" });
       }
-      const matchingTeamMembers = await storage.findMatchingTeamMembers(admin.email);
+      const matchingTeamMembers = await storage.findMatchingTeamMembers(admin.email, pendingUser.name);
       res.json(matchingTeamMembers);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch matching team members" });

@@ -1903,16 +1903,35 @@ export class DatabaseStorage implements IStorage {
     return true;
   }
 
-  async findMatchingTeamMembers(adminEmail: string): Promise<TeamMember[]> {
+  async findMatchingTeamMembers(adminEmail: string, pendingUserName: string): Promise<TeamMember[]> {
     const domain = getEmailDomain(adminEmail);
     if (!domain) return [];
+    
+    // Normalize the pending user's name for comparison
+    const normalizedUserName = pendingUserName.toLowerCase().trim();
+    if (!normalizedUserName) return [];
+    
+    // Get all team members in the domain
     const rows = await db.select().from(teamMembers).where(
       and(
         eq(teamMembers.domain, domain),
         eq(teamMembers.isDeleted, false)
       )
     );
-    return rows.map(mapTeamMemberFromDb);
+    
+    // Filter to only team members whose name matches the pending user's name
+    // Using case-insensitive exact match or close match
+    const matchingRows = rows.filter(row => {
+      const normalizedTeamMemberName = row.name.toLowerCase().trim();
+      // Exact match (case-insensitive)
+      if (normalizedTeamMemberName === normalizedUserName) return true;
+      // Check if names contain each other (for partial matches like "John" matching "John Smith")
+      if (normalizedTeamMemberName.includes(normalizedUserName) || 
+          normalizedUserName.includes(normalizedTeamMemberName)) return true;
+      return false;
+    });
+    
+    return matchingRows.map(mapTeamMemberFromDb);
   }
 
   async linkUserToTeamMember(userId: string, userEmail: string, teamMemberId: string): Promise<TeamMember | undefined> {
