@@ -17,7 +17,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { EditSolutionDialog } from "@/components/edit-solution-dialog";
 import { EditActionDialog } from "@/components/edit-action-dialog";
 import { EditDeliverablePopup } from "@/components/edit-deliverable-popup";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient, type ApiError } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { useMode } from "@/lib/mode-context";
@@ -138,6 +138,9 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
       queryClient.invalidateQueries({ queryKey: ["/api/solutions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
     },
+    onError: (error: ApiError) => {
+      toast({ title: error.message || "Failed to update action status", variant: "destructive" });
+    },
   });
 
   const updateSolutionStatus = useMutation({
@@ -189,6 +192,9 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/solutions", solutionId, "actions"] });
     },
+    onError: (error: ApiError) => {
+      toast({ title: error.message || "Failed to reorder action", variant: "destructive" });
+    },
   });
 
   const updateDeliverableOrdinal = useMutation({
@@ -197,6 +203,9 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/solutions", solutionId, "deliverables"] });
+    },
+    onError: (error: ApiError) => {
+      toast({ title: error.message || "Failed to reorder deliverable", variant: "destructive" });
     },
   });
 
@@ -208,6 +217,9 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
       queryClient.invalidateQueries({ queryKey: ["/api/solutions", solutionId, "actions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/solutions", solutionId, "deliverables"] });
     },
+    onError: (error: ApiError) => {
+      toast({ title: error.message || "Failed to move action", variant: "destructive" });
+    },
   });
 
   const updateActionDate = useMutation({
@@ -217,6 +229,9 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/solutions", solutionId, "actions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/solutions"] });
+    },
+    onError: (error: ApiError) => {
+      toast({ title: error.message || "Failed to update action date", variant: "destructive" });
     },
   });
 
@@ -229,8 +244,8 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
       queryClient.invalidateQueries({ queryKey: ["/api/deliverables"] });
       toast({ title: "Deliverable created" });
     },
-    onError: () => {
-      toast({ title: "Failed to create deliverable", variant: "destructive" });
+    onError: (error: ApiError) => {
+      toast({ title: error.message || "Failed to create deliverable", variant: "destructive" });
     },
   });
 
@@ -243,8 +258,8 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
       queryClient.invalidateQueries({ queryKey: ["/api/deliverables"] });
       toast({ title: "Deliverable updated" });
     },
-    onError: () => {
-      toast({ title: "Failed to update deliverable", variant: "destructive" });
+    onError: (error: ApiError) => {
+      toast({ title: error.message || "Failed to update deliverable", variant: "destructive" });
     },
   });
 
@@ -257,8 +272,8 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
       queryClient.invalidateQueries({ queryKey: ["/api/deliverables"] });
       toast({ title: "Deliverable moved to recycle bin" });
     },
-    onError: () => {
-      toast({ title: "Failed to delete deliverable", variant: "destructive" });
+    onError: (error: ApiError) => {
+      toast({ title: error.message || "Failed to delete deliverable", variant: "destructive" });
     },
   });
 
@@ -280,8 +295,8 @@ export function SolutionView({ streamId, solutionId, showDescriptions }: Solutio
       setEditingAction(newAction);
       toast({ title: "Action created" });
     },
-    onError: () => {
-      toast({ title: "Failed to create action", variant: "destructive" });
+    onError: (error: ApiError) => {
+      toast({ title: error.message || "Failed to create action", variant: "destructive" });
     },
   });
 

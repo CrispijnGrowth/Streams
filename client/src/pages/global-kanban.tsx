@@ -4,7 +4,8 @@ import { LayoutGrid } from "lucide-react";
 import { KanbanBoard } from "@/components/kanban-board";
 import { EmptyState } from "@/components/empty-state";
 import { KanbanSkeleton } from "@/components/loading-skeleton";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient, type ApiError } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import type { ActionWithLastComment } from "@shared/schema";
 
 interface GlobalKanbanProps {
@@ -13,6 +14,7 @@ interface GlobalKanbanProps {
 
 export function GlobalKanban({ showDescriptions }: GlobalKanbanProps) {
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
 
   const { data: actions, isLoading } = useQuery<ActionWithLastComment[]>({
     queryKey: ["/api/actions"],
@@ -27,6 +29,9 @@ export function GlobalKanban({ showDescriptions }: GlobalKanbanProps) {
       queryClient.invalidateQueries({ queryKey: ["/api/solutions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
     },
+    onError: (error: ApiError) => {
+      toast({ title: error.message || "Failed to update action status", variant: "destructive" });
+    },
   });
 
   const updateActionOrder = useMutation({
@@ -35,6 +40,9 @@ export function GlobalKanban({ showDescriptions }: GlobalKanbanProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
+    },
+    onError: (error: ApiError) => {
+      toast({ title: error.message || "Failed to reorder action", variant: "destructive" });
     },
   });
 

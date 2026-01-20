@@ -818,6 +818,16 @@ export async function registerRoutes(
       if (!parsed.success) {
         return res.status(400).json({ error: parsed.error.message });
       }
+      
+      // Check permissions on the parent solution before creating
+      const perms = await storage.resolveSolutionPermissions(req.userId!, parsed.data.solutionId);
+      if (!perms.canView) {
+        return res.status(404).json({ error: "Solution not found" });
+      }
+      if (!perms.canEdit) {
+        return res.status(403).json({ error: perms.denialReason || "You do not have permission to create deliverables in this solution", code: "VIEWER_ONLY" });
+      }
+      
       const deliverable = await storage.createDeliverable(req.userId!, parsed.data);
       res.status(201).json(deliverable);
     } catch (error) {
@@ -901,6 +911,16 @@ export async function registerRoutes(
       if (!parsed.success) {
         return res.status(400).json({ error: parsed.error.message });
       }
+      
+      // Check permissions on the parent solution before creating
+      const perms = await storage.resolveSolutionPermissions(req.userId!, parsed.data.solutionId);
+      if (!perms.canView) {
+        return res.status(404).json({ error: "Solution not found" });
+      }
+      if (!perms.canEdit) {
+        return res.status(403).json({ error: perms.denialReason || "You do not have permission to create actions in this solution", code: "VIEWER_ONLY" });
+      }
+      
       const action = await storage.createAction(req.userId!, parsed.data);
       res.status(201).json(action);
     } catch (error) {
