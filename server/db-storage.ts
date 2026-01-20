@@ -1953,6 +1953,69 @@ export class DatabaseStorage implements IStorage {
     return mapTeamMemberFromDb(updated);
   }
 
+  async ensureTeamMemberLinkedForUser(userId: string, userEmail: string, userName: string, creatorUserId: string, creatorEmail: string, avatarData?: string | null): Promise<TeamMember | null> {
+    const userDomain = getEmailDomain(userEmail);
+    const creatorDomain = getEmailDomain(creatorEmail);
+    
+    // Validate domain match for security - admin must be in same domain as user
+    if (!userDomain || !creatorDomain || userDomain !== creatorDomain) {
+      return null;
+    }
+
+    // Check if user already has a linked team member
+    const existingLinked = await this.getLinkedTeamMemberForUser(userId, userEmail);
+    if (existingLinked) return existingLinked;
+
+    // Look for existing team member with exact name match in the same domain
+    const normalizedUserName = userName.toLowerCase().trim();
+    const existingMembers = await db.select().from(teamMembers).where(
+      and(
+        eq(teamMembers.domain, userDomain),
+        eq(teamMembers.isDeleted, false)
+      )
+    );
+
+    // Find exact name match only (case-insensitive) where linkedUserId is empty or matches this user
+    const matchingMember = existingMembers.find(member => {
+      const normalizedMemberName = member.name.toLowerCase().trim();
+      const isNameMatch = normalizedMemberName === normalizedUserName;
+      // Only match if team member is unlinked or already linked to this user
+      const isAvailableForLinking = !member.linkedUserId || member.linkedUserId === userId;
+      return isNameMatch && isAvailableForLinking;
+    });
+
+    if (matchingMember) {
+      // Link the user to the existing team member (only if not already linked)
+      if (!matchingMember.linkedUserId) {
+        await db.update(teamMembers)
+          .set({ linkedUserId: userId })
+          .where(eq(teamMembers.id, matchingMember.id));
+      }
+      
+      const [updated] = await db.select().from(teamMembers).where(eq(teamMembers.id, matchingMember.id));
+      return mapTeamMemberFromDb(updated);
+    }
+
+    // No matching team member found - create a new one using createTeamMember pattern
+    const nameParts = userName.trim().split(/\s+/);
+    const firstName = nameParts[0] || userName;
+    const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+    const fullName = lastName ? `${firstName} ${lastName}` : firstName;
+    
+    const newMember = await this.createTeamMember(creatorUserId, creatorEmail, {
+      name: fullName,
+      photoData: avatarData || undefined,
+    });
+    
+    // Link the new team member to the user
+    await db.update(teamMembers)
+      .set({ linkedUserId: userId })
+      .where(eq(teamMembers.id, newMember.id));
+    
+    const [updated] = await db.select().from(teamMembers).where(eq(teamMembers.id, newMember.id));
+    return mapTeamMemberFromDb(updated);
+  }
+
   async getStakeholders(userId: string): Promise<Stakeholder[]> {
     const rows = await db.select().from(stakeholders).where(eq(stakeholders.userId, userId));
     return rows.map(mapStakeholderFromDb);

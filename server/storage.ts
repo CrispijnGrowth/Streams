@@ -112,6 +112,7 @@ export interface IStorage {
   findMatchingTeamMembers(adminEmail: string, pendingUserName: string): Promise<TeamMember[]>;
   linkUserToTeamMember(userId: string, userEmail: string, teamMemberId: string): Promise<TeamMember | undefined>;
   getLinkedTeamMemberForUser(userId: string, userEmail: string): Promise<TeamMember | null>;
+  ensureTeamMemberLinkedForUser(userId: string, userEmail: string, userName: string, creatorUserId: string, creatorEmail: string, avatarData?: string | null): Promise<TeamMember | null>;
 
   getStakeholders(userId: string): Promise<Stakeholder[]>;
   getStakeholder(userId: string, id: string): Promise<Stakeholder | undefined>;
@@ -1448,6 +1449,10 @@ export class MemStorage implements IStorage {
   }
 
   async getLinkedTeamMemberForUser(_userId: string, _userEmail: string): Promise<TeamMember | null> {
+    return null;
+  }
+
+  async ensureTeamMemberLinkedForUser(_userId: string, _userEmail: string, _userName: string, _creatorUserId: string, _creatorEmail: string, _avatarData?: string | null): Promise<TeamMember | null> {
     return null;
   }
 

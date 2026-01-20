@@ -369,8 +369,15 @@ export async function registerRoutes(
         return res.status(404).json({ error: "User not found" });
       }
       
+      // Get admin email for domain validation
+      const admin = await authStorage.getUserById(req.userId!);
+      
       if (teamMemberId) {
+        // Link to specific team member selected by admin
         await storage.linkUserToTeamMember(user.id, user.email, teamMemberId);
+      } else if (admin) {
+        // Auto-create or link to matching team member (using admin as creator for ownership consistency)
+        await storage.ensureTeamMemberLinkedForUser(user.id, user.email, user.name, req.userId!, admin.email);
       }
       
       // Only seed example data if user has no visible content (owned or shared)
