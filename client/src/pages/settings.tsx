@@ -61,6 +61,7 @@ export function SettingsPage() {
   const [matchingTeamMembers, setMatchingTeamMembers] = useState<TeamMember[]>([]);
   const [pendingApprovalUser, setPendingApprovalUser] = useState<User | null>(null);
   const [isCheckingMatches, setIsCheckingMatches] = useState(false);
+  const [selectedTeamMemberId, setSelectedTeamMemberId] = useState<string | null>(null);
 
   const isAdmin = user?.role === "admin";
 
@@ -179,6 +180,7 @@ export function SettingsPage() {
       if (matches.length > 0) {
         setMatchingTeamMembers(matches);
         setPendingApprovalUser(pendingUser);
+        setSelectedTeamMemberId(matches[0].id);
         setMatchingDialogOpen(true);
       } else {
         approveMutation.mutate({ userId: pendingUser.id });
@@ -1224,23 +1226,54 @@ export function SettingsPage() {
             <AlertDialogDescription data-testid="matching-dialog-description">
               {pendingApprovalUser && matchingTeamMembers.length > 0 && (
                 <>
-                  This user's name "<strong>{pendingApprovalUser.name}</strong>" matches team member{matchingTeamMembers.length > 1 ? 's' : ''}{' '}
-                  {matchingTeamMembers.map((tm, i) => (
-                    <span key={tm.id}>
-                      <strong>{tm.name}</strong>{tm.role ? ` (${tm.role})` : ''}
-                      {i < matchingTeamMembers.length - 1 ? ', ' : ''}
-                    </span>
-                  ))}. Do you want to link them?
+                  This user's name "<strong>{pendingApprovalUser.name}</strong>" matches {matchingTeamMembers.length === 1 ? 'a team member' : `${matchingTeamMembers.length} team members`}. 
+                  {matchingTeamMembers.length > 1 ? ' Select which team member to link:' : ' Do you want to link them?'}
                 </>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
+          
+          {pendingApprovalUser && matchingTeamMembers.length > 0 && (
+            <div className="py-2 space-y-2 max-h-60 overflow-y-auto">
+              {matchingTeamMembers.map((tm) => (
+                <div
+                  key={tm.id}
+                  onClick={() => setSelectedTeamMemberId(tm.id)}
+                  className={`flex items-center gap-3 p-3 rounded-md cursor-pointer border transition-colors ${
+                    selectedTeamMemberId === tm.id 
+                      ? 'border-primary bg-primary/10' 
+                      : 'border-border hover-elevate'
+                  }`}
+                  data-testid={`team-member-option-${tm.id}`}
+                >
+                  <Avatar className="h-10 w-10">
+                    {tm.photoData || tm.photoUrl ? (
+                      <AvatarImage src={tm.photoData || tm.photoUrl} alt={tm.name} />
+                    ) : null}
+                    <AvatarFallback className="text-sm">
+                      {tm.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium truncate">{tm.name}</div>
+                    {tm.role && (
+                      <div className="text-sm text-muted-foreground truncate">{tm.role}</div>
+                    )}
+                  </div>
+                  {selectedTeamMemberId === tm.id && (
+                    <Check className="h-5 w-5 text-primary flex-shrink-0" />
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
           <AlertDialogFooter>
             <AlertDialogCancel 
               onClick={() => {
                 setMatchingDialogOpen(false);
                 setPendingApprovalUser(null);
                 setMatchingTeamMembers([]);
+                setSelectedTeamMemberId(null);
               }}
               data-testid="button-matching-cancel"
             >
@@ -1263,14 +1296,14 @@ export function SettingsPage() {
             </Button>
             <AlertDialogAction
               onClick={() => {
-                if (pendingApprovalUser && matchingTeamMembers.length > 0) {
+                if (pendingApprovalUser && selectedTeamMemberId) {
                   approveMutation.mutate({ 
                     userId: pendingApprovalUser.id, 
-                    teamMemberId: matchingTeamMembers[0].id 
+                    teamMemberId: selectedTeamMemberId 
                   });
                 }
               }}
-              disabled={approveMutation.isPending}
+              disabled={approveMutation.isPending || !selectedTeamMemberId}
               data-testid="button-link-and-approve"
             >
               {approveMutation.isPending ? (
