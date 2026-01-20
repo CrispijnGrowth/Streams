@@ -14,8 +14,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ComboboxMultiSelect } from "@/components/ui/combobox-multi-select";
+import { OwnerMultiSelect } from "@/components/ui/owner-multi-select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useOwnerSuggestions } from "@/hooks/use-suggestions";
+import { useTeamMembers } from "@/hooks/use-suggestions";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { DeliverableBorderColor, type Deliverable, type DeliverableBorderColorType, type Comment, type Solution } from "@shared/schema";
@@ -64,7 +65,7 @@ export function EditDeliverablePopup({
   const [dueDate, setDueDate] = useState<string>("");
   const [newComment, setNewComment] = useState("");
   const [selectedSolutionId, setSelectedSolutionId] = useState<string>("");
-  const ownerSuggestions = useOwnerSuggestions();
+  const teamMembers = useTeamMembers();
 
   const { data: solutions = [] } = useQuery<Solution[]>({
     queryKey: ["/api/solutions"],
@@ -194,10 +195,10 @@ export function EditDeliverablePopup({
 
           <div className="space-y-2">
             <Label>Owners</Label>
-            <ComboboxMultiSelect
+            <OwnerMultiSelect
               value={owners}
               onChange={setOwners}
-              options={ownerSuggestions}
+              teamMembers={teamMembers}
               placeholder="Select or add owners..."
               emptyText="No owners found."
               data-testid="combobox-deliverable-owners"

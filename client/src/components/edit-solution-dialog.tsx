@@ -23,11 +23,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ComboboxMultiSelect } from "@/components/ui/combobox-multi-select";
+import { OwnerMultiSelect } from "@/components/ui/owner-multi-select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, MessageSquare, Send } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { useOwnerSuggestions, useLabelSuggestions } from "@/hooks/use-suggestions";
+import { useTeamMembers, useLabelSuggestions } from "@/hooks/use-suggestions";
 import { StakeholderTagPicker } from "@/components/stakeholder-tag-picker";
 import { ViewerPicker } from "@/components/viewer-picker";
 import { useAuth } from "@/lib/auth-context";
@@ -57,7 +58,7 @@ interface EditSolutionDialogProps {
 export function EditSolutionDialog({ solution, open, onOpenChange, onDeleted }: EditSolutionDialogProps) {
   const { toast } = useToast();
   const { user } = useAuth();
-  const ownerSuggestions = useOwnerSuggestions();
+  const teamMembers = useTeamMembers();
   const labelSuggestions = useLabelSuggestions();
   const [newComment, setNewComment] = useState("");
 
@@ -259,10 +260,10 @@ export function EditSolutionDialog({ solution, open, onOpenChange, onDeleted }: 
 
           <div className="space-y-2">
             <Label>Owners</Label>
-            <ComboboxMultiSelect
+            <OwnerMultiSelect
               value={owners}
               onChange={(value) => form.setValue("owners", value)}
-              options={ownerSuggestions}
+              teamMembers={teamMembers}
               placeholder="Select or add owners..."
               emptyText="No owners found."
               data-testid="combobox-solution-owners"

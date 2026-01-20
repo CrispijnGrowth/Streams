@@ -23,10 +23,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ComboboxMultiSelect } from "@/components/ui/combobox-multi-select";
+import { OwnerMultiSelect } from "@/components/ui/owner-multi-select";
 import { Plus, Loader2, X, MessageSquare, Send, CheckSquare, Trash2, ArrowRight } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { useOwnerSuggestions, useLabelSuggestions } from "@/hooks/use-suggestions";
+import { useTeamMembers, useLabelSuggestions } from "@/hooks/use-suggestions";
 import { StakeholderTagPicker } from "@/components/stakeholder-tag-picker";
 import type { Action, Deliverable, DeliverableBorderColorType, Comment, Step, Solution } from "@shared/schema";
 import { ActionStatus, DeliverableBorderColor } from "@shared/schema";
@@ -71,7 +72,7 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted, initia
   const [newStepName, setNewStepName] = useState("");
   const [moveTargetSolutionId, setMoveTargetSolutionId] = useState<string>("");
   const [moveTargetDeliverableId, setMoveTargetDeliverableId] = useState<string>("");
-  const ownerSuggestions = useOwnerSuggestions();
+  const teamMembers = useTeamMembers();
   const labelSuggestions = useLabelSuggestions();
 
   const { data: solutions = [] } = useQuery<Solution[]>({
@@ -461,8 +462,8 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted, initia
                       data-testid="input-new-deliverable-owner"
                     />
                     <datalist id="owner-suggestions">
-                      {ownerSuggestions.map((owner) => (
-                        <option key={owner} value={owner} />
+                      {teamMembers.map((member) => (
+                        <option key={member.id} value={member.name} />
                       ))}
                     </datalist>
                   </div>
@@ -554,10 +555,10 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted, initia
 
           <div className="space-y-2">
             <Label>Owners</Label>
-            <ComboboxMultiSelect
+            <OwnerMultiSelect
               value={owners}
               onChange={(value) => form.setValue("owners", value)}
-              options={ownerSuggestions}
+              teamMembers={teamMembers}
               placeholder="Select or add owners..."
               emptyText="No owners found."
               autoFocus={initialFocus === "owner"}
