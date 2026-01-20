@@ -361,9 +361,8 @@ export class DatabaseStorage implements IStorage {
       let displayIndex = 1;
       for (const row of rows) {
         const stream = mapStreamFromDb(row);
-        // Use the stream's owner userId for computing progress, not the viewing user
-        const ownerUserId = row.userId;
-        const isOwner = row.userId === userId;
+        // Use permission resolution to check if user has edit access (creator or ownership-based)
+        const streamPerms = await this.resolveStreamPermissions(userId, stream.id);
         // Use pre-fetched data instead of per-stream query
         const isDirectStreamViewer = directStreamViewerIds.includes(stream.id);
       
@@ -373,8 +372,8 @@ export class DatabaseStorage implements IStorage {
         and(eq(solutions.streamId, stream.id), eq(solutions.isDeleted, false))
       );
       
-      // Filter solutions if user is NOT owner and NOT a direct stream viewer
-      if (!isOwner && !isDirectStreamViewer) {
+      // Filter solutions if user doesn't have edit access and isn't a direct stream viewer
+      if (!streamPerms.canEdit && !isDirectStreamViewer) {
         streamSolutions = streamSolutions.filter(sol => viewableSolutionIds.includes(sol.id));
       }
       
@@ -605,16 +604,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getSolutionsByStream(userId: string, streamId: string): Promise<SolutionWithProgress[]> {
-    const viewableStreamIds = await this.getViewableStreamIds(userId);
-    
-    // Check if user owns the stream or is a viewer
-    const [stream] = await db.select().from(streams).where(eq(streams.id, streamId));
-    if (!stream) return [];
-    
-    const isOwner = stream.userId === userId;
-    const isStreamViewer = await this.isDirectStreamViewer(userId, streamId);
-    const hasAnyAccess = viewableStreamIds.includes(streamId);
-    if (!isOwner && !hasAnyAccess) return [];
+    // Use permission resolution to check access (handles creator, ownership-based, and viewer access)
+    const streamPerms = await this.resolveStreamPermissions(userId, streamId);
+    if (!streamPerms.canView) return [];
     
     // Get ALL solutions in this stream (not just stream owner's solutions)
     // This supports ownership-based access where different users may create solutions
@@ -622,10 +614,15 @@ export class DatabaseStorage implements IStorage {
       and(eq(solutions.streamId, streamId), eq(solutions.isDeleted, false))
     );
     
-    // If user is NOT owner and NOT a direct stream viewer, filter to only their viewable solutions
-    if (!isOwner && !isStreamViewer) {
-      const viewableSolutionIds = await this.getViewableSolutionIds(userId);
-      rows = rows.filter(row => viewableSolutionIds.includes(row.id));
+    // If user has edit access (creator or ownership-based), they see all solutions
+    // If user is a direct stream viewer, they see all solutions
+    // If user is a solution-level viewer only, filter to their viewable solutions
+    if (!streamPerms.canEdit) {
+      const isStreamViewer = await this.isDirectStreamViewer(userId, streamId);
+      if (!isStreamViewer) {
+        const viewableSolutionIds = await this.getViewableSolutionIds(userId);
+        rows = rows.filter(row => viewableSolutionIds.includes(row.id));
+      }
     }
     
     // Sort by ordinal to ensure consistent display key numbering
@@ -645,16 +642,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getSolutionsByStreamWithBreakdown(userId: string, streamId: string): Promise<SolutionWithBreakdownAndComment[]> {
-    const viewableStreamIds = await this.getViewableStreamIds(userId);
-    
-    // Check if user owns the stream or is a viewer
-    const [stream] = await db.select().from(streams).where(eq(streams.id, streamId));
-    if (!stream) return [];
-    
-    const isOwner = stream.userId === userId;
-    const isStreamViewer = await this.isDirectStreamViewer(userId, streamId);
-    const hasAnyAccess = viewableStreamIds.includes(streamId);
-    if (!isOwner && !hasAnyAccess) return [];
+    // Use permission resolution to check access (handles creator, ownership-based, and viewer access)
+    const streamPerms = await this.resolveStreamPermissions(userId, streamId);
+    if (!streamPerms.canView) return [];
     
     // Get ALL solutions in this stream (not just stream owner's solutions)
     // This supports ownership-based access where different users may create solutions
@@ -662,10 +652,15 @@ export class DatabaseStorage implements IStorage {
       and(eq(solutions.streamId, streamId), eq(solutions.isDeleted, false))
     );
     
-    // If user is NOT owner and NOT a direct stream viewer, filter to only their viewable solutions
-    if (!isOwner && !isStreamViewer) {
-      const viewableSolutionIds = await this.getViewableSolutionIds(userId);
-      rows = rows.filter(row => viewableSolutionIds.includes(row.id));
+    // If user has edit access (creator or ownership-based), they see all solutions
+    // If user is a direct stream viewer, they see all solutions
+    // If user is a solution-level viewer only, filter to their viewable solutions
+    if (!streamPerms.canEdit) {
+      const isStreamViewer = await this.isDirectStreamViewer(userId, streamId);
+      if (!isStreamViewer) {
+        const viewableSolutionIds = await this.getViewableSolutionIds(userId);
+        rows = rows.filter(row => viewableSolutionIds.includes(row.id));
+      }
     }
     
     // Sort by ordinal to ensure consistent display key numbering
