@@ -2605,11 +2605,9 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db.select({ email: users.email }).from(users).where(eq(users.id, userId));
     if (user) {
       const linkedTeamMember = await this.getLinkedTeamMemberForUser(userId, user.email);
-      console.log('[DEBUG resolveStreamPermissions] userId:', userId, 'streamId:', streamId, 'linkedTeamMember:', linkedTeamMember?.name, 'stream.owners:', stream.owners);
       if (linkedTeamMember && stream.owners?.includes(linkedTeamMember.name)) {
         // Verify domain matches the stream creator's domain
         const [streamCreator] = await db.select({ email: users.email }).from(users).where(eq(users.id, stream.userId));
-        console.log('[DEBUG resolveStreamPermissions] streamCreator:', streamCreator?.email, 'linkedTeamMember.domain:', linkedTeamMember.domain);
         if (streamCreator) {
           const creatorDomain = streamCreator.email.split('@')[1];
           if (creatorDomain === linkedTeamMember.domain) {
@@ -2642,23 +2640,18 @@ export class DatabaseStorage implements IStorage {
   async resolveSolutionPermissions(userId: string, solutionId: string): Promise<PermissionResult> {
     const [solution] = await db.select().from(solutions).where(eq(solutions.id, solutionId));
     
-    console.log('[DEBUG resolveSolutionPermissions] userId:', userId, 'solutionId:', solutionId, 'solution exists:', !!solution, 'isDeleted:', solution?.isDeleted);
-    
     if (!solution || solution.isDeleted) {
       return { canView: false, canEdit: false, isViewerOnly: false, denialReason: 'Solution not found', entityType: 'solution' };
     }
 
     // Check if user is the creator/owner
     if (solution.userId === userId) {
-      console.log('[DEBUG resolveSolutionPermissions] User is creator, granting edit access');
       return { canView: true, canEdit: true, isViewerOnly: false, entityType: 'solution' };
     }
 
     // Check parent stream permissions - stream owners can edit all children
     const streamPerms = await this.resolveStreamPermissions(userId, solution.streamId);
-    console.log('[DEBUG resolveSolutionPermissions] streamPerms:', streamPerms);
     if (streamPerms.canEdit) {
-      console.log('[DEBUG resolveSolutionPermissions] Stream canEdit=true, granting edit access');
       return { canView: true, canEdit: true, isViewerOnly: false, entityType: 'solution' };
     }
 
