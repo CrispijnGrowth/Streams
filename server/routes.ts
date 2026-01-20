@@ -293,6 +293,10 @@ export async function registerRoutes(
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
+      
+      // Sync avatar to linked team member
+      await storage.syncUserToLinkedTeamMember(user.id, user.email, { avatarData });
+      
       res.json({ 
         id: user.id, 
         email: user.email, 
@@ -321,6 +325,10 @@ export async function registerRoutes(
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
+      
+      // Sync avatar removal to linked team member
+      await storage.syncUserToLinkedTeamMember(user.id, user.email, { avatarData: null });
+      
       res.json({ 
         id: user.id, 
         email: user.email, 
@@ -332,6 +340,35 @@ export async function registerRoutes(
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to remove avatar" });
+    }
+  });
+
+  app.patch("/api/auth/name", authMiddleware, async (req, res) => {
+    try {
+      const { name } = req.body;
+      if (!name || typeof name !== "string" || name.trim().length === 0) {
+        return res.status(400).json({ error: "Name is required" });
+      }
+      
+      const user = await authStorage.updateUserName(req.userId!, name.trim());
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      // Sync name to linked team member
+      await storage.syncUserToLinkedTeamMember(user.id, user.email, { name: user.name });
+      
+      res.json({ 
+        id: user.id, 
+        email: user.email, 
+        name: user.name, 
+        role: user.role, 
+        showDescriptions: user.showDescriptions, 
+        themePreference: user.themePreference,
+        avatarData: user.avatarData 
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update name" });
     }
   });
 

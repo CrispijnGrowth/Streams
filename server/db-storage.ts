@@ -2016,6 +2016,35 @@ export class DatabaseStorage implements IStorage {
     return mapTeamMemberFromDb(updated);
   }
 
+  async syncUserToLinkedTeamMember(userId: string, userEmail: string, updates: { avatarData?: string | null; name?: string }): Promise<TeamMember | null> {
+    // Get the linked team member for this user
+    const linkedMember = await this.getLinkedTeamMemberForUser(userId, userEmail);
+    if (!linkedMember) return null;
+
+    // Build update data
+    const updateData: Partial<typeof teamMembers.$inferInsert> = {};
+    
+    if (updates.avatarData !== undefined) {
+      updateData.photoData = updates.avatarData;
+    }
+    
+    if (updates.name !== undefined) {
+      updateData.name = updates.name;
+    }
+    
+    // Only update if there's something to change
+    if (Object.keys(updateData).length === 0) {
+      return linkedMember;
+    }
+    
+    await db.update(teamMembers)
+      .set(updateData)
+      .where(eq(teamMembers.id, linkedMember.id));
+    
+    const [updated] = await db.select().from(teamMembers).where(eq(teamMembers.id, linkedMember.id));
+    return mapTeamMemberFromDb(updated);
+  }
+
   async getStakeholders(userId: string): Promise<Stakeholder[]> {
     const rows = await db.select().from(stakeholders).where(eq(stakeholders.userId, userId));
     return rows.map(mapStakeholderFromDb);

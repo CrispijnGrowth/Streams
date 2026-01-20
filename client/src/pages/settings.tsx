@@ -62,6 +62,9 @@ export function SettingsPage() {
   const [pendingApprovalUser, setPendingApprovalUser] = useState<User | null>(null);
   const [isCheckingMatches, setIsCheckingMatches] = useState(false);
   const [selectedTeamMemberId, setSelectedTeamMemberId] = useState<string | null>(null);
+  
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editedName, setEditedName] = useState("");
 
   const isAdmin = user?.role === "admin";
 
@@ -99,6 +102,30 @@ export function SettingsPage() {
     },
   });
 
+  const nameMutation = useMutation({
+    mutationFn: async (name: string) => {
+      const res = await fetch("/api/auth/name", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...getSessionHeaders() },
+        body: JSON.stringify({ name }),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to update name");
+      }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      updateUser(data);
+      setIsEditingName(false);
+      queryClient.invalidateQueries({ queryKey: ["/api/team-members"] });
+      toast({ title: "Name updated" });
+    },
+    onError: (err) => {
+      toast({ title: err instanceof Error ? err.message : "Failed to update name", variant: "destructive" });
+    },
+  });
+
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -117,6 +144,7 @@ export function SettingsPage() {
       }
       const updatedUser = await res.json();
       updateUser(updatedUser);
+      queryClient.invalidateQueries({ queryKey: ["/api/team-members"] });
       toast({ title: "Avatar updated" });
     } catch (err) {
       toast({ title: err instanceof Error ? err.message : "Failed to upload avatar", variant: "destructive" });
@@ -136,6 +164,7 @@ export function SettingsPage() {
       if (!res.ok) throw new Error("Failed to remove avatar");
       const updatedUser = await res.json();
       updateUser(updatedUser);
+      queryClient.invalidateQueries({ queryKey: ["/api/team-members"] });
       toast({ title: "Avatar removed" });
     } catch (err) {
       toast({ title: "Failed to remove avatar", variant: "destructive" });
@@ -486,9 +515,59 @@ export function SettingsPage() {
           </div>
           <Separator />
           <div className="flex items-center justify-between gap-4">
-            <div>
+            <div className="flex-1">
               <Label className="text-muted-foreground">Name</Label>
-              <p className="font-medium">{user.name}</p>
+              {isEditingName ? (
+                <div className="flex items-center gap-2 mt-1">
+                  <Input
+                    value={editedName}
+                    onChange={(e) => setEditedName(e.target.value)}
+                    className="h-8"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && editedName.trim()) {
+                        nameMutation.mutate(editedName.trim());
+                      } else if (e.key === "Escape") {
+                        setIsEditingName(false);
+                      }
+                    }}
+                    data-testid="input-edit-name"
+                  />
+                  <Button
+                    size="sm"
+                    onClick={() => nameMutation.mutate(editedName.trim())}
+                    disabled={!editedName.trim() || nameMutation.isPending}
+                    data-testid="button-save-name"
+                  >
+                    {nameMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setIsEditingName(false)}
+                    disabled={nameMutation.isPending}
+                    data-testid="button-cancel-edit-name"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <p className="font-medium">{user.name}</p>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-6 w-6"
+                    onClick={() => {
+                      setEditedName(user.name);
+                      setIsEditingName(true);
+                    }}
+                    data-testid="button-edit-name"
+                  >
+                    <Pencil className="h-3 w-3" />
+                  </Button>
+                </div>
+              )}
             </div>
             <Badge variant={user.role === "admin" ? "default" : "secondary"}>
               {user.role === "admin" ? (
