@@ -5,10 +5,11 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { MomentumBadge } from "@/components/status-badge";
 import { ProgressBar } from "@/components/progress-bar";
 import { CardStakeholderTags } from "@/components/card-stakeholder-tags";
-import { Calendar } from "lucide-react";
+import { Calendar, Crown, KeyRound, Glasses } from "lucide-react";
 import { format } from "date-fns";
 import { useTeamMembers } from "@/hooks/use-suggestions";
 import { useMode } from "@/lib/mode-context";
+import { useAuth } from "@/lib/auth-context";
 import type { StreamWithProgress, MomentumStatusType } from "@shared/schema";
 import { SolutionStatus } from "@shared/schema";
 
@@ -23,6 +24,7 @@ interface StreamCardProps {
 export function StreamCard({ stream, onClick, onEdit, onMomentumClick, showDescription = true }: StreamCardProps) {
   const teamMembers = useTeamMembers();
   const { isEditMode } = useMode();
+  const { user } = useAuth();
   const [, setLocation] = useLocation();
   const isOnHold = stream.status === SolutionStatus.ON_HOLD;
   
@@ -36,6 +38,16 @@ export function StreamCard({ stream, onClick, onEdit, onMomentumClick, showDescr
     const member = teamMembers.find((m) => m.name === ownerName);
     return member;
   };
+  
+  const getPermissionType = (): "creator" | "owner" | "viewer" | null => {
+    if (!user) return null;
+    if (stream.userId === user.id) return "creator";
+    const linkedTeamMember = teamMembers.find((m) => m.linkedUserId === user.id);
+    if (linkedTeamMember && stream.owners?.includes(linkedTeamMember.name)) return "owner";
+    return "viewer";
+  };
+  
+  const permissionType = getPermissionType();
   
   const getInitials = (name: string) => {
     return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
@@ -206,6 +218,28 @@ export function StreamCard({ stream, onClick, onEdit, onMomentumClick, showDescr
 
       <div className="flex items-center justify-between mt-3 pt-2 border-t border-border/50">
         <CardStakeholderTags entityType="stream" entityId={stream.id} />
+        {permissionType && (
+          <div className="flex items-center gap-1 text-xs text-muted-foreground" data-testid={`permission-indicator-${stream.id}`}>
+            {permissionType === "creator" && (
+              <>
+                <Crown className="h-3.5 w-3.5" />
+                <span>Creator</span>
+              </>
+            )}
+            {permissionType === "owner" && (
+              <>
+                <KeyRound className="h-3.5 w-3.5" />
+                <span>Owner</span>
+              </>
+            )}
+            {permissionType === "viewer" && (
+              <>
+                <Glasses className="h-3.5 w-3.5" />
+                <span>Viewer</span>
+              </>
+            )}
+          </div>
+        )}
       </div>
     </Card>
   );
