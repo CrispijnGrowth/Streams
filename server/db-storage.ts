@@ -2605,9 +2605,11 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db.select({ email: users.email }).from(users).where(eq(users.id, userId));
     if (user) {
       const linkedTeamMember = await this.getLinkedTeamMemberForUser(userId, user.email);
+      console.log('[DEBUG resolveStreamPermissions] userId:', userId, 'streamId:', streamId, 'linkedTeamMember:', linkedTeamMember?.name, 'stream.owners:', stream.owners);
       if (linkedTeamMember && stream.owners?.includes(linkedTeamMember.name)) {
         // Verify domain matches the stream creator's domain
         const [streamCreator] = await db.select({ email: users.email }).from(users).where(eq(users.id, stream.userId));
+        console.log('[DEBUG resolveStreamPermissions] streamCreator:', streamCreator?.email, 'linkedTeamMember.domain:', linkedTeamMember.domain);
         if (streamCreator) {
           const creatorDomain = streamCreator.email.split('@')[1];
           if (creatorDomain === linkedTeamMember.domain) {
