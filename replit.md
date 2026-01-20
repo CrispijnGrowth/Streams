@@ -98,11 +98,33 @@ Allows owners to grant read-only access to streams or solutions for other regist
 - **Stream Viewers**: Can see the stream AND all solutions within it
 - **Solution Viewers**: Can see the parent stream AND only their authorized solution(s) within it. Progress/counts on stream cards reflect only visible solutions.
 
+**Permission Resolution Helpers (db-storage.ts):**
+The permission system uses a set of helper functions that return `PermissionResult`:
+```typescript
+{ canView: boolean, canEdit: boolean, isViewerOnly: boolean, denialReason?: string, entityType: string }
+```
+
+- `resolveStreamPermissions(userId, streamId)`: Checks stream ownership, ownership-based access via linked team member, direct stream viewer, and solution-based viewer access
+- `resolveSolutionPermissions(userId, solutionId)`: Checks solution ownership, parent stream edit access, ownership-based access, direct solution viewer, and DIRECT stream viewer (not solution-based)
+- `resolveDeliverablePermissions(userId, deliverableId)`: Inherits from solution permissions
+- `resolveActionPermissions(userId, actionId)`: Inherits from solution permissions
+- `resolveStepPermissions(userId, stepId)`: Inherits from action permissions
+
+**Parent Ownership Cascade:**
+- Stream owners/editors can edit ALL children (solutions, deliverables, actions, steps)
+- Solution owners/editors can edit ALL children within their solution (deliverables, actions, steps)
+- Deliverable, action, and step ownership does NOT cascade
+
 **Implementation Details:**
 - `getViewableStreamIds()`: Returns direct stream viewer IDs plus parent stream IDs from solution viewer permissions
 - `getDirectStreamViewerIds()`: Returns only direct stream viewer IDs (used for full stream access checks)
 - `isDirectStreamViewer()`: Checks if user has direct stream-level viewer access
 - Solution queries filter based on viewer type to prevent data leakage
+
+**API Error Responses for Viewers:**
+- 403 status with `{error: "You currently have Viewer rights for this [stream/solution]", code: "VIEWER_ONLY"}` when viewers attempt edits
+- 404 status when user has no access at all
+- Frontend displays viewer-specific error messages via the `ApiError` type in queryClient.ts
 
 ## External Dependencies
 
