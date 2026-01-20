@@ -1684,6 +1684,23 @@ export class DatabaseStorage implements IStorage {
     return userStreams.some(s => s.name.includes("[Example]"));
   }
 
+  async userHasVisibleContent(userId: string): Promise<boolean> {
+    // Check if user owns any streams
+    const ownedStreams = await db.select({ id: streams.id }).from(streams)
+      .where(and(eq(streams.userId, userId), eq(streams.isDeleted, false)))
+      .limit(1);
+    if (ownedStreams.length > 0) return true;
+
+    // Check if user has viewer access to any streams or solutions
+    const viewableStreamIds = await this.getViewableStreamIds(userId);
+    if (viewableStreamIds.length > 0) return true;
+
+    const viewableSolutionIds = await this.getViewableSolutionIds(userId);
+    if (viewableSolutionIds.length > 0) return true;
+
+    return false;
+  }
+
   private async getEntityOwnerAndAccess(userId: string, entityType: CommentEntityTypeValue, entityId: string): Promise<{ ownerUserId: string | null; hasAccess: boolean }> {
     // Handles all CommentEntityType values: solution, action, deliverable, step
     if (entityType === "solution") {
@@ -1860,14 +1877,13 @@ export class DatabaseStorage implements IStorage {
     );
     if (!existing) return undefined;
     
-    // Strip domain from updates - it can only be set during creation
-    const { domain: _, ...safeData } = data;
-    
+    // Domain is not in InsertTeamMember - it's derived from user email at creation only
+    // Security is enforced by checking domain match in the WHERE clause above
     const updateData: any = {};
-    if (safeData.name !== undefined) updateData.name = safeData.name;
-    if (safeData.role !== undefined) updateData.role = safeData.role || null;
-    if (safeData.photoUrl !== undefined) updateData.photoUrl = safeData.photoUrl || null;
-    if (safeData.photoData !== undefined) updateData.photoData = safeData.photoData || null;
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.role !== undefined) updateData.role = data.role || null;
+    if (data.photoUrl !== undefined) updateData.photoUrl = data.photoUrl || null;
+    if (data.photoData !== undefined) updateData.photoData = data.photoData || null;
     
     await db.update(teamMembers).set(updateData).where(eq(teamMembers.id, id));
     

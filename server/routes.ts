@@ -136,7 +136,11 @@ export async function registerRoutes(
         return res.status(403).json({ error: "Account pending admin approval" });
       }
       const session = await authStorage.createSession(user.id);
-      await storage.seedExampleData(user.id);
+      // Only seed example data if user has no visible content (owned or shared)
+      const hasContent = await storage.userHasVisibleContent(user.id);
+      if (!hasContent) {
+        await storage.seedExampleData(user.id);
+      }
       res.json({ 
         sessionId: session.id, 
         user: { id: user.id, email: user.email, name: user.name, role: user.role, showDescriptions: user.showDescriptions, themePreference: user.themePreference, avatarData: user.avatarData }
@@ -369,7 +373,11 @@ export async function registerRoutes(
         await storage.linkUserToTeamMember(user.id, user.email, teamMemberId);
       }
       
-      await storage.seedExampleData(user.id);
+      // Only seed example data if user has no visible content (owned or shared)
+      const hasContent = await storage.userHasVisibleContent(user.id);
+      if (!hasContent) {
+        await storage.seedExampleData(user.id);
+      }
       sendApprovalEmail(user.email, user.name).catch(err =>
         console.error("[Auth] Failed to send approval email:", err)
       );

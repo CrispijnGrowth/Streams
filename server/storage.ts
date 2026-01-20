@@ -96,6 +96,7 @@ export interface IStorage {
 
   seedExampleData(userId: string): Promise<void>;
   hasExampleData(userId: string): Promise<boolean>;
+  userHasVisibleContent(userId: string): Promise<boolean>;
 
   getComments(userId: string, entityType: CommentEntityTypeValue, entityId: string): Promise<Comment[]>;
   getLastComment(userId: string, entityType: CommentEntityTypeValue, entityId: string): Promise<Comment | undefined>;
@@ -1102,6 +1103,15 @@ export class MemStorage implements IStorage {
     return this.seededUsers.has(userId);
   }
 
+  async userHasVisibleContent(userId: string): Promise<boolean> {
+    // Check if user owns any streams
+    for (const stream of this.streams.values()) {
+      if (stream.userId === userId && !stream.isDeleted) return true;
+    }
+    // MemStorage doesn't fully implement viewer system, so just check owned streams
+    return false;
+  }
+
   async seedExampleData(userId: string): Promise<void> {
     if (this.seededUsers.has(userId)) return;
     this.seededUsers.add(userId);
@@ -1401,9 +1411,8 @@ export class MemStorage implements IStorage {
     if (!domain) return undefined;
     const member = this.teamMembers.get(id);
     if (!member || member.domain !== domain || member.isDeleted) return undefined;
-    // Strip domain from updates - it can only be set during creation
-    const { domain: _, ...safeData } = data;
-    const updated = { ...member, ...safeData };
+    // Domain is not in InsertTeamMember - it's derived from user email at creation only
+    const updated = { ...member, ...data };
     this.teamMembers.set(id, updated);
     return updated;
   }
