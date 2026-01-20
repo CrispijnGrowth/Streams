@@ -473,9 +473,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateStream(userId: string, id: string, data: Partial<InsertStream & { isDeleted?: boolean; lastMovementAt?: string; momentumStatus?: string }>): Promise<Stream | undefined> {
-    const [existing] = await db.select().from(streams).where(
-      and(eq(streams.id, id), eq(streams.userId, userId))
-    );
+    // Note: Permission validation is done at the route level via resolveStreamPermissions
+    // We no longer filter by userId here to support ownership-based access
+    const [existing] = await db.select().from(streams).where(eq(streams.id, id));
     if (!existing) return undefined;
     
     const updateData: any = {};
@@ -869,9 +869,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateSolution(userId: string, id: string, data: Partial<InsertSolution & { isDeleted?: boolean; lastMovementAt?: string; momentumStatus?: string; priority?: number | null }>): Promise<Solution | undefined> {
-    const [existing] = await db.select().from(solutions).where(
-      and(eq(solutions.id, id), eq(solutions.userId, userId))
-    );
+    // Note: Permission validation is done at the route level via resolveSolutionPermissions
+    // We no longer filter by userId here to support ownership-based access
+    const [existing] = await db.select().from(solutions).where(eq(solutions.id, id));
     if (!existing) return undefined;
     
     const updateData: any = {};
@@ -1028,9 +1028,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateDeliverable(userId: string, id: string, data: Partial<InsertDeliverable & { isDeleted?: boolean }>): Promise<Deliverable | undefined> {
-    const [existing] = await db.select().from(deliverables).where(
-      and(eq(deliverables.id, id), eq(deliverables.userId, userId))
-    );
+    // Note: Permission validation is done at the route level via resolveDeliverablePermissions
+    // We no longer filter by userId here to support ownership-based access
+    const [existing] = await db.select().from(deliverables).where(eq(deliverables.id, id));
     if (!existing) return undefined;
     
     const updateData: any = {};
@@ -1221,9 +1221,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateAction(userId: string, id: string, data: Partial<InsertAction & { isDeleted?: boolean; kanbanOrder?: number }>): Promise<Action | undefined> {
-    const [existing] = await db.select().from(actions).where(
-      and(eq(actions.id, id), eq(actions.userId, userId))
-    );
+    // Note: Permission validation is done at the route level via resolveActionPermissions
+    // We no longer filter by userId here to support ownership-based access
+    const [existing] = await db.select().from(actions).where(eq(actions.id, id));
     if (!existing) return undefined;
     
     const updateData: any = {};
@@ -1356,9 +1356,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateStep(userId: string, id: string, data: Partial<InsertStep & { isDeleted?: boolean }>): Promise<Step | undefined> {
-    const [existing] = await db.select().from(steps).where(
-      and(eq(steps.id, id), eq(steps.userId, userId))
-    );
+    // Note: Permission validation is done at the route level via resolveStepPermissions
+    // We no longer filter by userId here to support ownership-based access
+    const [existing] = await db.select().from(steps).where(eq(steps.id, id));
     if (!existing) return undefined;
     
     const updateData: any = {};
