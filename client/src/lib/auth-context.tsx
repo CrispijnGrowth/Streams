@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import type { User } from "@shared/schema";
+import { queryClient } from "./queryClient";
 
 interface AuthContextValue {
   user: User | null;
@@ -72,6 +73,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem(SESSION_KEY);
     setSessionId(null);
     setUser(null);
+    queryClient.clear();
   }, [sessionId]);
 
   const updateUser = useCallback((updates: Partial<User>) => {
