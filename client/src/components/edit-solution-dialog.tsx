@@ -26,7 +26,7 @@ import { ComboboxMultiSelect } from "@/components/ui/combobox-multi-select";
 import { OwnerMultiSelect } from "@/components/ui/owner-multi-select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, MessageSquare, Send } from "lucide-react";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient, type ApiError } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useTeamMembers, useLabelSuggestions } from "@/hooks/use-suggestions";
 import { StakeholderTagPicker } from "@/components/stakeholder-tag-picker";
@@ -134,21 +134,8 @@ export function EditSolutionDialog({ solution, open, onOpenChange, onDeleted }: 
       toast({ title: "Solution updated successfully" });
       onOpenChange(false);
     },
-    onError: (error: any) => {
-      let message = "Failed to update solution";
-      if (error?.message) {
-        // Try to extract JSON error from message like "409: {"error":"..."}"
-        const match = error.message.match(/^\d+:\s*(.+)$/);
-        if (match) {
-          try {
-            const parsed = JSON.parse(match[1]);
-            message = parsed.error || message;
-          } catch {
-            message = match[1] || message;
-          }
-        }
-      }
-      toast({ title: message, variant: "destructive" });
+    onError: (error: ApiError) => {
+      toast({ title: error.message || "Failed to update solution", variant: "destructive" });
     },
   });
 
@@ -163,8 +150,8 @@ export function EditSolutionDialog({ solution, open, onOpenChange, onDeleted }: 
       onOpenChange(false);
       onDeleted?.();
     },
-    onError: () => {
-      toast({ title: "Failed to delete solution", variant: "destructive" });
+    onError: (error: ApiError) => {
+      toast({ title: error.message || "Failed to delete solution", variant: "destructive" });
     },
   });
 

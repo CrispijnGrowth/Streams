@@ -7,10 +7,29 @@ function getSessionHeaders(): HeadersInit {
   return sessionId ? { "x-session-id": sessionId } : {};
 }
 
+export interface ApiError extends Error {
+  status: number;
+  code?: string;
+  message: string;
+}
+
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+    let errorMessage = text;
+    let errorCode: string | undefined;
+    
+    try {
+      const json = JSON.parse(text);
+      errorMessage = json.error || text;
+      errorCode = json.code;
+    } catch {
+    }
+    
+    const error = new Error(errorMessage) as ApiError;
+    error.status = res.status;
+    error.code = errorCode;
+    throw error;
   }
 }
 

@@ -25,7 +25,7 @@ import {
 import { ComboboxMultiSelect } from "@/components/ui/combobox-multi-select";
 import { OwnerMultiSelect } from "@/components/ui/owner-multi-select";
 import { Plus, Loader2, X, MessageSquare, Send, CheckSquare, Trash2, ArrowRight } from "lucide-react";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient, type ApiError } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useTeamMembers, useLabelSuggestions } from "@/hooks/use-suggestions";
 import { StakeholderTagPicker } from "@/components/stakeholder-tag-picker";
@@ -144,8 +144,8 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted, initia
       queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
       toast({ title: "Step added" });
     },
-    onError: () => {
-      toast({ title: "Failed to add step", variant: "destructive" });
+    onError: (error: ApiError) => {
+      toast({ title: error.message || "Failed to add step", variant: "destructive" });
     },
   });
 
@@ -159,8 +159,8 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted, initia
       queryClient.invalidateQueries({ queryKey: ["/api/solutions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
     },
-    onError: () => {
-      toast({ title: "Failed to update step", variant: "destructive" });
+    onError: (error: ApiError) => {
+      toast({ title: error.message || "Failed to update step", variant: "destructive" });
     },
   });
 
@@ -175,8 +175,8 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted, initia
       queryClient.invalidateQueries({ queryKey: ["/api/streams"] });
       toast({ title: "Step deleted" });
     },
-    onError: () => {
-      toast({ title: "Failed to delete step", variant: "destructive" });
+    onError: (error: ApiError) => {
+      toast({ title: error.message || "Failed to delete step", variant: "destructive" });
     },
   });
 
@@ -197,8 +197,8 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted, initia
       setMoveTargetDeliverableId("");
       onOpenChange(false);
     },
-    onError: () => {
-      toast({ title: "Failed to move action", variant: "destructive" });
+    onError: (error: ApiError) => {
+      toast({ title: error.message || "Failed to move action", variant: "destructive" });
     },
   });
 
@@ -216,8 +216,8 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted, initia
       queryClient.invalidateQueries({ queryKey: ["/api/actions"] });
       toast({ title: "Comment added" });
     },
-    onError: () => {
-      toast({ title: "Failed to add comment", variant: "destructive" });
+    onError: (error: ApiError) => {
+      toast({ title: error.message || "Failed to add comment", variant: "destructive" });
     },
   });
 
@@ -287,9 +287,9 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted, initia
       setIsCreatingDeliverable(false);
       onOpenChange(false);
     },
-    onError: () => {
+    onError: (error: ApiError) => {
       setIsSubmittingWithNewDeliverable(false);
-      toast({ title: "Failed to update action", variant: "destructive" });
+      toast({ title: error.message || "Failed to update action", variant: "destructive" });
     },
   });
 
@@ -305,8 +305,8 @@ export function EditActionDialog({ action, open, onOpenChange, onDeleted, initia
       onOpenChange(false);
       onDeleted?.();
     },
-    onError: () => {
-      toast({ title: "Failed to delete action", variant: "destructive" });
+    onError: (error: ApiError) => {
+      toast({ title: error.message || "Failed to delete action", variant: "destructive" });
     },
   });
 

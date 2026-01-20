@@ -17,7 +17,7 @@ import { ComboboxMultiSelect } from "@/components/ui/combobox-multi-select";
 import { OwnerMultiSelect } from "@/components/ui/owner-multi-select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useTeamMembers } from "@/hooks/use-suggestions";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient, type ApiError } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { DeliverableBorderColor, type Deliverable, type DeliverableBorderColorType, type Comment, type Solution } from "@shared/schema";
 import { Loader2, Trash2, Calendar, MessageSquare, Send, ArrowRight } from "lucide-react";
@@ -86,8 +86,8 @@ export function EditDeliverablePopup({
       toast({ title: "Deliverable moved successfully" });
       onOpenChange(false);
     },
-    onError: () => {
-      toast({ title: "Failed to move deliverable", variant: "destructive" });
+    onError: (error: ApiError) => {
+      toast({ title: error.message || "Failed to move deliverable", variant: "destructive" });
     },
   });
 
@@ -117,8 +117,8 @@ export function EditDeliverablePopup({
       queryClient.invalidateQueries({ queryKey: ["/api/deliverables"] });
       toast({ title: "Comment added" });
     },
-    onError: () => {
-      toast({ title: "Failed to add comment", variant: "destructive" });
+    onError: (error: ApiError) => {
+      toast({ title: error.message || "Failed to add comment", variant: "destructive" });
     },
   });
 

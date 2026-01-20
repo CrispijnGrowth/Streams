@@ -18,7 +18,7 @@ import { Label } from "@/components/ui/label";
 import { ComboboxMultiSelect } from "@/components/ui/combobox-multi-select";
 import { OwnerMultiSelect } from "@/components/ui/owner-multi-select";
 import { Loader2 } from "lucide-react";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient, type ApiError } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useTeamMembers, useLabelSuggestions } from "@/hooks/use-suggestions";
 import { StakeholderTagPicker } from "@/components/stakeholder-tag-picker";
@@ -82,8 +82,8 @@ export function EditStreamDialog({ stream, open, onOpenChange, onDeleted, initia
       toast({ title: "Stream updated successfully" });
       onOpenChange(false);
     },
-    onError: () => {
-      toast({ title: "Failed to update stream", variant: "destructive" });
+    onError: (error: ApiError) => {
+      toast({ title: error.message || "Failed to update stream", variant: "destructive" });
     },
   });
 
@@ -97,8 +97,8 @@ export function EditStreamDialog({ stream, open, onOpenChange, onDeleted, initia
       onOpenChange(false);
       onDeleted?.();
     },
-    onError: () => {
-      toast({ title: "Failed to delete stream", variant: "destructive" });
+    onError: (error: ApiError) => {
+      toast({ title: error.message || "Failed to delete stream", variant: "destructive" });
     },
   });
 

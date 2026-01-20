@@ -43,6 +43,14 @@ import {
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
+export interface PermissionResult {
+  canView: boolean;
+  canEdit: boolean;
+  isViewerOnly: boolean;
+  denialReason?: string;
+  entityType?: 'stream' | 'solution' | 'deliverable' | 'action' | 'step';
+}
+
 export interface IStorage {
   getStreams(userId: string): Promise<StreamWithProgress[]>;
   getStream(userId: string, id: string): Promise<Stream | undefined>;
@@ -135,6 +143,13 @@ export interface IStorage {
   removeViewer(ownerId: string, viewerId: string, entityType: ViewerEntityTypeValue, entityId: string): Promise<boolean>;
   getViewableStreamIds(viewerId: string): Promise<string[]>;
   getViewableSolutionIds(viewerId: string): Promise<string[]>;
+  
+  // Permission resolution with viewer-aware error messages
+  resolveStreamPermissions(userId: string, streamId: string): Promise<PermissionResult>;
+  resolveSolutionPermissions(userId: string, solutionId: string): Promise<PermissionResult>;
+  resolveDeliverablePermissions(userId: string, deliverableId: string): Promise<PermissionResult>;
+  resolveActionPermissions(userId: string, actionId: string): Promise<PermissionResult>;
+  resolveStepPermissions(userId: string, stepId: string): Promise<PermissionResult>;
 
   getMeetings(userId: string): Promise<MeetingWithItems[]>;
   getMeeting(userId: string, id: string): Promise<MeetingWithItems | undefined>;
@@ -1559,6 +1574,26 @@ export class MemStorage implements IStorage {
 
   async deleteMeetingItem(_userId: string, _itemId: string): Promise<void> {
     throw new Error("Not implemented");
+  }
+
+  async resolveStreamPermissions(_userId: string, _streamId: string): Promise<PermissionResult> {
+    return { canView: false, canEdit: false, isViewerOnly: false, denialReason: 'Not implemented' };
+  }
+
+  async resolveSolutionPermissions(_userId: string, _solutionId: string): Promise<PermissionResult> {
+    return { canView: false, canEdit: false, isViewerOnly: false, denialReason: 'Not implemented' };
+  }
+
+  async resolveDeliverablePermissions(_userId: string, _deliverableId: string): Promise<PermissionResult> {
+    return { canView: false, canEdit: false, isViewerOnly: false, denialReason: 'Not implemented' };
+  }
+
+  async resolveActionPermissions(_userId: string, _actionId: string): Promise<PermissionResult> {
+    return { canView: false, canEdit: false, isViewerOnly: false, denialReason: 'Not implemented' };
+  }
+
+  async resolveStepPermissions(_userId: string, _stepId: string): Promise<PermissionResult> {
+    return { canView: false, canEdit: false, isViewerOnly: false, denialReason: 'Not implemented' };
   }
 }
 

@@ -256,6 +256,14 @@ function mapViewerFromDb(row: any): Viewer {
   };
 }
 
+export interface PermissionResult {
+  canView: boolean;
+  canEdit: boolean;
+  isViewerOnly: boolean;
+  denialReason?: string;
+  entityType?: 'stream' | 'solution' | 'deliverable' | 'action' | 'step';
+}
+
 export class DatabaseStorage implements IStorage {
   private async computeActionProgress(actionId: string, userId: string): Promise<{ progress: number; stepCount: number; doneStepCount: number }> {
     const actionSteps = await db.select().from(steps).where(
@@ -2579,5 +2587,188 @@ export class DatabaseStorage implements IStorage {
     // Combine and deduplicate
     const allSolutionIds = [...new Set([...directSolutionIds, ...ownershipSolutionIds])];
     return allSolutionIds;
+  }
+
+  async resolveStreamPermissions(userId: string, streamId: string): Promise<PermissionResult> {
+    const [stream] = await db.select().from(streams).where(eq(streams.id, streamId));
+    
+    if (!stream || stream.isDeleted) {
+      return { canView: false, canEdit: false, isViewerOnly: false, denialReason: 'Stream not found', entityType: 'stream' };
+    }
+
+    // Check if user is the creator/owner
+    if (stream.userId === userId) {
+      return { canView: true, canEdit: true, isViewerOnly: false, entityType: 'stream' };
+    }
+
+    // Check if user has ownership-based access via linked team member
+    const [user] = await db.select({ email: users.email }).from(users).where(eq(users.id, userId));
+    if (user) {
+      const linkedTeamMember = await this.getLinkedTeamMemberForUser(userId, user.email);
+      if (linkedTeamMember && stream.owners?.includes(linkedTeamMember.name)) {
+        // Verify domain matches the stream creator's domain
+        const [streamCreator] = await db.select({ email: users.email }).from(users).where(eq(users.id, stream.userId));
+        if (streamCreator) {
+          const creatorDomain = streamCreator.email.split('@')[1];
+          if (creatorDomain === linkedTeamMember.domain) {
+            return { canView: true, canEdit: true, isViewerOnly: false, entityType: 'stream' };
+          }
+        }
+      }
+    }
+
+    // Check if user is a viewer
+    const isViewer = await this.isDirectStreamViewer(userId, streamId);
+    if (isViewer) {
+      return { canView: true, canEdit: false, isViewerOnly: true, denialReason: 'You currently have Viewer rights for this stream', entityType: 'stream' };
+    }
+
+    // Check if user has solution-level viewer access (can view parent stream read-only)
+    const viewableSolutionIds = await this.getViewableSolutionIds(userId);
+    if (viewableSolutionIds.length > 0) {
+      const solutionRows = await db.select({ streamId: solutions.streamId })
+        .from(solutions)
+        .where(and(inArray(solutions.id, viewableSolutionIds), eq(solutions.streamId, streamId)));
+      if (solutionRows.length > 0) {
+        return { canView: true, canEdit: false, isViewerOnly: true, denialReason: 'You currently have Viewer rights for this stream', entityType: 'stream' };
+      }
+    }
+
+    return { canView: false, canEdit: false, isViewerOnly: false, denialReason: 'Stream not found', entityType: 'stream' };
+  }
+
+  async resolveSolutionPermissions(userId: string, solutionId: string): Promise<PermissionResult> {
+    const [solution] = await db.select().from(solutions).where(eq(solutions.id, solutionId));
+    
+    if (!solution || solution.isDeleted) {
+      return { canView: false, canEdit: false, isViewerOnly: false, denialReason: 'Solution not found', entityType: 'solution' };
+    }
+
+    // Check if user is the creator/owner
+    if (solution.userId === userId) {
+      return { canView: true, canEdit: true, isViewerOnly: false, entityType: 'solution' };
+    }
+
+    // Check parent stream permissions - stream owners can edit all children
+    const streamPerms = await this.resolveStreamPermissions(userId, solution.streamId);
+    if (streamPerms.canEdit) {
+      return { canView: true, canEdit: true, isViewerOnly: false, entityType: 'solution' };
+    }
+
+    // Check if user has ownership-based access via linked team member for this solution
+    const [user] = await db.select({ email: users.email }).from(users).where(eq(users.id, userId));
+    if (user) {
+      const linkedTeamMember = await this.getLinkedTeamMemberForUser(userId, user.email);
+      if (linkedTeamMember && solution.owners?.includes(linkedTeamMember.name)) {
+        // Verify domain matches the solution creator's domain
+        const [solutionCreator] = await db.select({ email: users.email }).from(users).where(eq(users.id, solution.userId));
+        if (solutionCreator) {
+          const creatorDomain = solutionCreator.email.split('@')[1];
+          if (creatorDomain === linkedTeamMember.domain) {
+            return { canView: true, canEdit: true, isViewerOnly: false, entityType: 'solution' };
+          }
+        }
+      }
+    }
+
+    // Check if user is a direct solution viewer
+    const [solutionViewerRow] = await db.select().from(viewers).where(
+      and(
+        eq(viewers.viewerId, userId),
+        eq(viewers.entityType, ViewerEntityType.SOLUTION),
+        eq(viewers.entityId, solutionId)
+      )
+    );
+    if (solutionViewerRow) {
+      return { canView: true, canEdit: false, isViewerOnly: true, denialReason: 'You currently have Viewer rights for this solution', entityType: 'solution' };
+    }
+
+    // Check if user is a DIRECT stream viewer (can view all solutions read-only)
+    // Note: We check isDirectStreamViewer, not streamPerms.isViewerOnly, because
+    // solution-based stream viewers should ONLY see their authorized solutions
+    const isDirectViewer = await this.isDirectStreamViewer(userId, solution.streamId);
+    if (isDirectViewer) {
+      return { canView: true, canEdit: false, isViewerOnly: true, denialReason: 'You currently have Viewer rights for this stream', entityType: 'solution' };
+    }
+
+    return { canView: false, canEdit: false, isViewerOnly: false, denialReason: 'Solution not found', entityType: 'solution' };
+  }
+
+  async resolveDeliverablePermissions(userId: string, deliverableId: string): Promise<PermissionResult> {
+    const [deliverable] = await db.select().from(deliverables).where(eq(deliverables.id, deliverableId));
+    
+    if (!deliverable || deliverable.isDeleted) {
+      return { canView: false, canEdit: false, isViewerOnly: false, denialReason: 'Deliverable not found', entityType: 'deliverable' };
+    }
+
+    // Check if user is the creator/owner
+    if (deliverable.userId === userId) {
+      return { canView: true, canEdit: true, isViewerOnly: false, entityType: 'deliverable' };
+    }
+
+    // Check parent solution permissions - solution owners can edit all children
+    const solutionPerms = await this.resolveSolutionPermissions(userId, deliverable.solutionId);
+    if (solutionPerms.canEdit) {
+      return { canView: true, canEdit: true, isViewerOnly: false, entityType: 'deliverable' };
+    }
+
+    // If viewer at solution/stream level, can view but not edit
+    if (solutionPerms.isViewerOnly) {
+      return { canView: true, canEdit: false, isViewerOnly: true, denialReason: solutionPerms.denialReason, entityType: 'deliverable' };
+    }
+
+    return { canView: false, canEdit: false, isViewerOnly: false, denialReason: 'Deliverable not found', entityType: 'deliverable' };
+  }
+
+  async resolveActionPermissions(userId: string, actionId: string): Promise<PermissionResult> {
+    const [action] = await db.select().from(actions).where(eq(actions.id, actionId));
+    
+    if (!action || action.isDeleted) {
+      return { canView: false, canEdit: false, isViewerOnly: false, denialReason: 'Action not found', entityType: 'action' };
+    }
+
+    // Check if user is the creator/owner
+    if (action.userId === userId) {
+      return { canView: true, canEdit: true, isViewerOnly: false, entityType: 'action' };
+    }
+
+    // Check parent solution permissions - solution owners can edit all children
+    const solutionPerms = await this.resolveSolutionPermissions(userId, action.solutionId);
+    if (solutionPerms.canEdit) {
+      return { canView: true, canEdit: true, isViewerOnly: false, entityType: 'action' };
+    }
+
+    // If viewer at solution/stream level, can view but not edit
+    if (solutionPerms.isViewerOnly) {
+      return { canView: true, canEdit: false, isViewerOnly: true, denialReason: solutionPerms.denialReason, entityType: 'action' };
+    }
+
+    return { canView: false, canEdit: false, isViewerOnly: false, denialReason: 'Action not found', entityType: 'action' };
+  }
+
+  async resolveStepPermissions(userId: string, stepId: string): Promise<PermissionResult> {
+    const [step] = await db.select().from(steps).where(eq(steps.id, stepId));
+    
+    if (!step || step.isDeleted) {
+      return { canView: false, canEdit: false, isViewerOnly: false, denialReason: 'Step not found', entityType: 'step' };
+    }
+
+    // Check if user is the creator/owner
+    if (step.userId === userId) {
+      return { canView: true, canEdit: true, isViewerOnly: false, entityType: 'step' };
+    }
+
+    // Check parent action permissions - action's parent solution owners can edit
+    const actionPerms = await this.resolveActionPermissions(userId, step.actionId);
+    if (actionPerms.canEdit) {
+      return { canView: true, canEdit: true, isViewerOnly: false, entityType: 'step' };
+    }
+
+    // If viewer at action/solution/stream level, can view but not edit
+    if (actionPerms.isViewerOnly) {
+      return { canView: true, canEdit: false, isViewerOnly: true, denialReason: actionPerms.denialReason, entityType: 'step' };
+    }
+
+    return { canView: false, canEdit: false, isViewerOnly: false, denialReason: 'Step not found', entityType: 'step' };
   }
 }

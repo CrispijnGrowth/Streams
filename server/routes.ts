@@ -561,6 +561,15 @@ export async function registerRoutes(
 
   app.patch("/api/streams/:id", authMiddleware, async (req, res) => {
     try {
+      // Check permissions first
+      const perms = await storage.resolveStreamPermissions(req.userId!, req.params.id);
+      if (!perms.canView) {
+        return res.status(404).json({ error: "Stream not found" });
+      }
+      if (!perms.canEdit) {
+        return res.status(403).json({ error: perms.denialReason || "You do not have permission to edit this stream", code: "VIEWER_ONLY" });
+      }
+      
       const allowedFields = ["name", "description", "phases", "owners", "labels", "status", "momentumStatus"];
       const updateData: Record<string, any> = {};
       for (const field of allowedFields) {
@@ -601,6 +610,15 @@ export async function registerRoutes(
 
   app.delete("/api/streams/:id", authMiddleware, async (req, res) => {
     try {
+      // Check permissions first
+      const perms = await storage.resolveStreamPermissions(req.userId!, req.params.id);
+      if (!perms.canView) {
+        return res.status(404).json({ error: "Stream not found" });
+      }
+      if (!perms.canEdit) {
+        return res.status(403).json({ error: perms.denialReason || "You do not have permission to delete this stream", code: "VIEWER_ONLY" });
+      }
+      
       const deleted = await storage.deleteStream(req.userId!, req.params.id);
       if (!deleted) {
         return res.status(404).json({ error: "Stream not found" });
@@ -674,6 +692,15 @@ export async function registerRoutes(
 
   app.patch("/api/solutions/:id", authMiddleware, async (req, res) => {
     try {
+      // Check permissions first
+      const perms = await storage.resolveSolutionPermissions(req.userId!, req.params.id);
+      if (!perms.canView) {
+        return res.status(404).json({ error: "Solution not found" });
+      }
+      if (!perms.canEdit) {
+        return res.status(403).json({ error: perms.denialReason || "You do not have permission to edit this solution", code: "VIEWER_ONLY" });
+      }
+      
       const allowedFields = ["name", "description", "milestoneDate", "priority", "phases", "owners", "labels", "status", "momentumStatus", "isDeleted"];
       const validStatuses = ["In Progress", "On Hold"];
       const validMomentumStatuses = ["Active", "Slowing", "Stalled"];
@@ -727,6 +754,15 @@ export async function registerRoutes(
 
   app.delete("/api/solutions/:id", authMiddleware, async (req, res) => {
     try {
+      // Check permissions first
+      const perms = await storage.resolveSolutionPermissions(req.userId!, req.params.id);
+      if (!perms.canView) {
+        return res.status(404).json({ error: "Solution not found" });
+      }
+      if (!perms.canEdit) {
+        return res.status(403).json({ error: perms.denialReason || "You do not have permission to delete this solution", code: "VIEWER_ONLY" });
+      }
+      
       const deleted = await storage.deleteSolution(req.userId!, req.params.id);
       if (!deleted) {
         return res.status(404).json({ error: "Solution not found" });
@@ -791,6 +827,15 @@ export async function registerRoutes(
 
   app.patch("/api/deliverables/:id", authMiddleware, async (req, res) => {
     try {
+      // Check permissions first
+      const perms = await storage.resolveDeliverablePermissions(req.userId!, req.params.id);
+      if (!perms.canView) {
+        return res.status(404).json({ error: "Deliverable not found" });
+      }
+      if (!perms.canEdit) {
+        return res.status(403).json({ error: perms.denialReason || "You do not have permission to edit this deliverable", code: "VIEWER_ONLY" });
+      }
+      
       const allowedFields = ["name", "description", "ordinal", "borderColor", "owners", "dueDate", "isMilestoneLinked", "solutionId"];
       const updateData: Record<string, any> = {};
       for (const field of allowedFields) {
@@ -810,6 +855,15 @@ export async function registerRoutes(
 
   app.delete("/api/deliverables/:id", authMiddleware, async (req, res) => {
     try {
+      // Check permissions first
+      const perms = await storage.resolveDeliverablePermissions(req.userId!, req.params.id);
+      if (!perms.canView) {
+        return res.status(404).json({ error: "Deliverable not found" });
+      }
+      if (!perms.canEdit) {
+        return res.status(403).json({ error: perms.denialReason || "You do not have permission to delete this deliverable", code: "VIEWER_ONLY" });
+      }
+      
       const deleted = await storage.deleteDeliverable(req.userId!, req.params.id);
       if (!deleted) {
         return res.status(404).json({ error: "Deliverable not found" });
@@ -856,6 +910,15 @@ export async function registerRoutes(
 
   app.patch("/api/actions/:id", authMiddleware, async (req, res) => {
     try {
+      // Check permissions first
+      const perms = await storage.resolveActionPermissions(req.userId!, req.params.id);
+      if (!perms.canView) {
+        return res.status(404).json({ error: "Action not found" });
+      }
+      if (!perms.canEdit) {
+        return res.status(403).json({ error: perms.denialReason || "You do not have permission to edit this action", code: "VIEWER_ONLY" });
+      }
+      
       const allowedFields = ["name", "description", "status", "dueDate", "effort", "owners", "labels", "kanbanOrder", "deliverableId", "solutionId"];
       const validStatuses = ["Backlog", "To Execute", "Executing", "Blocked", "Delegated", "Done", "Archive"];
       const updateData: Record<string, any> = {};
@@ -879,6 +942,15 @@ export async function registerRoutes(
 
   app.delete("/api/actions/:id", authMiddleware, async (req, res) => {
     try {
+      // Check permissions first
+      const perms = await storage.resolveActionPermissions(req.userId!, req.params.id);
+      if (!perms.canView) {
+        return res.status(404).json({ error: "Action not found" });
+      }
+      if (!perms.canEdit) {
+        return res.status(403).json({ error: perms.denialReason || "You do not have permission to delete this action", code: "VIEWER_ONLY" });
+      }
+      
       const deleted = await storage.deleteAction(req.userId!, req.params.id);
       if (!deleted) {
         return res.status(404).json({ error: "Action not found" });
@@ -934,6 +1006,15 @@ export async function registerRoutes(
 
   app.patch("/api/steps/:id", authMiddleware, async (req, res) => {
     try {
+      // Check permissions first
+      const perms = await storage.resolveStepPermissions(req.userId!, req.params.id);
+      if (!perms.canView) {
+        return res.status(404).json({ error: "Step not found" });
+      }
+      if (!perms.canEdit) {
+        return res.status(403).json({ error: perms.denialReason || "You do not have permission to edit this step", code: "VIEWER_ONLY" });
+      }
+      
       const allowedFields = ["name", "note", "isDone", "dueDate", "owner"];
       const updateData: Record<string, any> = {};
       for (const field of allowedFields) {
@@ -953,6 +1034,15 @@ export async function registerRoutes(
 
   app.delete("/api/steps/:id", authMiddleware, async (req, res) => {
     try {
+      // Check permissions first
+      const perms = await storage.resolveStepPermissions(req.userId!, req.params.id);
+      if (!perms.canView) {
+        return res.status(404).json({ error: "Step not found" });
+      }
+      if (!perms.canEdit) {
+        return res.status(403).json({ error: perms.denialReason || "You do not have permission to delete this step", code: "VIEWER_ONLY" });
+      }
+      
       const deleted = await storage.deleteStep(req.userId!, req.params.id);
       if (!deleted) {
         return res.status(404).json({ error: "Step not found" });
