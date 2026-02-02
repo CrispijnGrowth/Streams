@@ -67,6 +67,25 @@ const pool = new Pool({
 
 const db = drizzle(pool);
 
+// Calculate momentum status based on time elapsed since lastMovementAt
+function computeMomentumStatus(lastMovementAt: string | undefined | null, storedStatus: string): string {
+  if (!lastMovementAt) {
+    return storedStatus || MomentumStatus.ACTIVE;
+  }
+  
+  const now = Date.now();
+  const lastMovement = new Date(lastMovementAt).getTime();
+  const daysSinceMovement = (now - lastMovement) / (1000 * 60 * 60 * 24);
+  
+  if (daysSinceMovement <= 7) {
+    return MomentumStatus.ACTIVE;
+  } else if (daysSinceMovement <= 14) {
+    return MomentumStatus.SLOWING;
+  } else {
+    return MomentumStatus.STALLED;
+  }
+}
+
 function mapStreamFromDb(row: any): Stream {
   return {
     id: row.id,
@@ -78,7 +97,7 @@ function mapStreamFromDb(row: any): Stream {
     owners: row.owners || [],
     labels: row.labels || [],
     status: row.status || SolutionStatus.IN_PROGRESS,
-    momentumStatus: row.momentumStatus as any,
+    momentumStatus: computeMomentumStatus(row.lastMovementAt, row.momentumStatus) as any,
     computedMilestoneDate: row.computedMilestoneDate || undefined,
     lastMovementAt: row.lastMovementAt || undefined,
     ordinal: row.ordinal,
@@ -100,7 +119,7 @@ function mapSolutionFromDb(row: any): Solution {
     owners: row.owners || [],
     labels: row.labels || [],
     status: row.status as any,
-    momentumStatus: (row.momentumStatus as any) || MomentumStatus.ACTIVE,
+    momentumStatus: computeMomentumStatus(row.lastMovementAt, row.momentumStatus) as any,
     lastMovementAt: row.lastMovementAt || undefined,
     ordinal: row.ordinal,
     isDeleted: row.isDeleted,
